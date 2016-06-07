@@ -154,6 +154,8 @@ instance HasExpr expr => HasMachine (Machine' expr) expr where
 instance HasExpr expr => HasMachine (MachinePO' expr) expr where
     type Internal (MachinePO' expr) expr = MachinePO' expr
     empty_machine = view content' . fromSyntax . empty_machine
+instance HasExpr expr => HasDefs (MachinePO' expr) (Map Name expr) where
+    defs = machineBase.defs
 
 instance HasExpr expr => HasInvariant (MachinePO' expr) where
     invariant m = do

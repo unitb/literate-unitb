@@ -142,7 +142,7 @@ machine0 = newMachine trainName $ do
                     , basic_theory
                     , arithmetic
                     ]
-            ,  _defs = symbol_table
+            ,  _theoryDefs = symbol_table
                     [  train_def
                     ,  loc_def
                     ,  block_def ]
@@ -284,8 +284,8 @@ data AxiomOption = WithPFun
 
 
 
-path0 :: String
-path0 = "Tests/train-station.tex"
+path0 :: FilePath
+path0 = [path|Tests/train-station.tex|]
 
 case0 :: IO (Either [Error] [MachineAST])
 case0 = (traverse.traverse %~ view' syntax) <$> parse path0
@@ -4854,8 +4854,8 @@ result7 = unlines
     , "    unrecognized term: t" 
     ]
 
-path7 :: String
-path7 = "Tests/train-station-err0.tex"
+path7 :: FilePath
+path7 = [path|Tests/train-station-err0.tex|]
 
 case7 :: IO String
 case7 = find_errors path7
@@ -4866,8 +4866,8 @@ result8 = unlines
     , "    event 'leave' is undeclared"
     ]
 
-path8 :: String
-path8 = "Tests/train-station-err1.tex"
+path8 :: FilePath
+path8 = [path|Tests/train-station-err1.tex|]
 
 case8 :: IO String
 case8 = find_errors path8
@@ -4878,8 +4878,8 @@ result9 = unlines
     , "    event 'leave' is undeclared" 
     ]
 
-path9 :: String
-path9 = "Tests/train-station-err2.tex"
+path9 :: FilePath
+path9 = [path|Tests/train-station-err2.tex|]
 
 case9 :: IO String
 case9 = find_errors path9
@@ -4890,8 +4890,8 @@ result10 = unlines
     , "    event 'leave' is undeclared" 
     ]
 
-path10 :: String
-path10 = "Tests/train-station-err3.tex"
+path10 :: FilePath
+path10 = [path|Tests/train-station-err3.tex|]
 
 case10 :: IO String
 case10 = find_errors path10
@@ -4902,14 +4902,14 @@ result11 = unlines
     , "    event 'leave' is undeclared" 
     ]
 
-path11 :: String
-path11 = "Tests/train-station-err4.tex"
+path11 :: FilePath
+path11 = [path|Tests/train-station-err4.tex|]
 
 case11 :: IO String
 case11 = find_errors path11
 
-path13 :: String
-path13 = "Tests/train-station-err5.tex"
+path13 :: FilePath
+path13 = [path|Tests/train-station-err5.tex|]
 
 result13 :: String
 result13 = unlines
@@ -4989,8 +4989,8 @@ case13 :: IO String
 case13 = find_errors path13
 
 
-path14 :: String
-path14 = "Tests/train-station-err6.tex"
+path14 :: FilePath
+path14 = [path|Tests/train-station-err6.tex|]
 
 result14 :: String
 result14 = unlines
@@ -5085,8 +5085,8 @@ result14 = unlines
 case14 :: IO (String, Table Label Sequent)
 case14 = verify path14 0
     
-path15 :: String
-path15 = "Tests/train-station-err7.tex"
+path15 :: FilePath
+path15 = [path|Tests/train-station-err7.tex|]
 
 result15 :: String
 result15 = unlines
@@ -5186,8 +5186,8 @@ result15 = unlines
 case15 :: IO (String, Table Label Sequent)
 case15 = verify path15 0
 
-path16 :: String
-path16 = "Tests/train-station-t2.tex"
+path16 :: FilePath
+path16 = [path|Tests/train-station-t2.tex|]
 
 result16 :: String
 result16 = unlines 
@@ -5306,8 +5306,8 @@ result16 = unlines
 case16 :: IO (String, Table Label Sequent)
 case16 = verify path16 0
 
-path17 :: String
-path17 = "Tests/train-station-err8.tex"
+path17 :: FilePath
+path17 = [path|Tests/train-station-err8.tex|]
 
 result17 :: String
 result17 = unlines 
@@ -5319,8 +5319,8 @@ result17 = unlines
 case17 :: IO String
 case17 = find_errors path17
 
-path22 :: String
-path22 = "Tests/train-station-err11.tex"
+path22 :: FilePath
+path22 = [path|Tests/train-station-err11.tex|]
 
 result22 :: String
 result22 = unlines 
@@ -5330,8 +5330,8 @@ result22 = unlines
 case22 :: IO String
 case22 = find_errors path22
         
-path18 :: String
-path18 = "Tests/train-station-err9.tex"
+path18 :: FilePath
+path18 = [path|Tests/train-station-err9.tex|]
 
 result18 :: String
 result18 = unlines 
@@ -5361,7 +5361,7 @@ case18 :: IO String
 case18 = find_errors path18
 
 path21 :: FilePath
-path21 = "Tests/train-station-err10.tex"
+path21 = [path|Tests/train-station-err10.tex|]
 
 case21 :: IO String
 case21 = find_errors path21

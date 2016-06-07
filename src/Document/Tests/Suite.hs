@@ -271,4 +271,3 @@ edit :: FilePath -> IO ()
 edit str = do
     readProcess "edit" [] str
     return ()
-

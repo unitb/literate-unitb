@@ -55,15 +55,15 @@ test = test_cases "small machine example" [
         (stringCase "test 12 name clash between coarse schedule and co properties" 
             case12 result12) ]
 
-path0 :: String
-path0 = "Tests/small_machine_t0.tex"
+path0 :: FilePath
+path0 = [path|Tests/small_machine_t0.tex|]
 
 case0 :: IO (Either [Error] [Machine])
 case0 = do
     parse path0
     
-path1 :: String
-path1 = "Tests/small_machine_t1.tex"
+path1 :: FilePath
+path1 = [path|Tests/small_machine_t1.tex|]
 
 case1 :: IO (Either [Error] [Machine])
 case1 = do
@@ -99,8 +99,8 @@ result2 = unlines
     , "passed 23 / 25"
     ]
 
-path2 :: String
-path2 = "Tests/small_machine_t2.tex"
+path2 :: FilePath
+path2 = [path|Tests/small_machine_t2.tex|]
 
 case2 :: IO (String, Table Label Sequent)
 case2 =  verify path2 0
@@ -131,8 +131,8 @@ result3 = unlines
     , "passed 20 / 21"
     ]
 
-path3 :: String
-path3 = "Tests/small_machine.tex"
+path3 :: FilePath
+path3 = [path|Tests/small_machine.tex|]
 
 case3 :: IO (String, Table Label Sequent)
 case3 = verify path3 0
@@ -235,8 +235,8 @@ result6 = unlines
     , "passed 21 / 22"
     ]
 
-path6 :: String
-path6 = "Tests/small_machine_t3.tex"
+path6 :: FilePath
+path6 = [path|Tests/small_machine_t3.tex|]
 
 case6 :: IO (String, Table Label Sequent)
 case6 = verify path6 0
@@ -271,7 +271,7 @@ case7 :: IO String
 case7 = show_po path6 "m0/inc/SCH/grd0"
 
 path8 :: FilePath
-path8 = "Tests/small_machine_t4.tex"
+path8 = [path|Tests/small_machine_t4.tex|]
 
 result8 :: String
 result8 = unlines 
@@ -466,8 +466,8 @@ m1_props = m0_props
                 (_inv m0_props)
         }
 
-path12 :: String
-path12 = "Tests/small_machine_t12.tex"
+path12 :: FilePath
+path12 = [path|Tests/small_machine_t12.tex|]
 
 case12 :: IO String
 case12 = do

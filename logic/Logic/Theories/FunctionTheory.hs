@@ -112,7 +112,7 @@ function_theory = Theory { .. }
 --        set_ths  = 
         fun_set t0 t1 = set_type (fun_type t0 t1)
         _types    = symbol_table [fun_sort]
-        _defs = 
+        _theoryDefs = 
             symbol_table
                 [ 
                   -- Def [t0,t1] "ovl" [f1_decl,f2_decl] (fun_type t0 t1) 

@@ -38,17 +38,17 @@ test = test_cases
             , aCase "partial instantiation of theorems in calc. hints" case7 result7
             ]
 
-path0 :: String
-path0 = "Tests/indirect-equality.tex"
+path0 :: FilePath
+path0 = [path|Tests/indirect-equality.tex|]
 
-path1 :: String
-path1 = "Tests/indirect-equality-t1.tex"
+path1 :: FilePath
+path1 = [path|Tests/indirect-equality-t1.tex|]
 
-path2 :: String
-path2 = "Tests/indirect-equality-t2.tex"
+path2 :: FilePath
+path2 = [path|Tests/indirect-equality-t2.tex|]
 
-path3 :: String
-path3 = "Tests/indirect-equality-t3.tex"
+path3 :: FilePath
+path3 = [path|Tests/indirect-equality-t3.tex|]
 
 case0 :: IO (String, Map Label Sequent)
 case0 = verify path0 0

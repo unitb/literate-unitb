@@ -3,6 +3,7 @@
 \constant{text / comment}
 \constraint{fresh-name}{expression}
 \cschedule{concrete event-name}{fresh-name}{expression}
+\definition{variable}{expression}
 \dummy{text / comment}
 \evassignment{concrete event-name}{fresh-name}{expression}
 \evbcmeq{concrete event-name}{fresh-name}{variable}{expression}

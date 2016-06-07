@@ -187,8 +187,7 @@ data Satisfiability = Sat | Unsat | SatUnknown
 data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable, Generic)
 
-data Command = Decl 
-        (FODecl FOQuantifier) 
+data Command = Decl FODecl 
         | Assert FOExpr (Maybe String)
         | SetOption String String
         | CheckSat 

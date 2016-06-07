@@ -60,7 +60,7 @@ library
   default-extensions:    QuasiQuotes, ConstraintKinds, TypeOperators, TemplateHaskell, RankNTypes, TupleSections, FlexibleInstances, TypeSynonymInstances, FlexibleContexts
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, data-default >=0.5 && <0.6, containers >=0.5 && <0.6, data-ordlist >=0.4 && <0.5, template-haskell >=2.10 && <2.11, mtl >=2.2 && <2.3, data-map-class, bipartite-graph, unordered-containers
+  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, data-default >=0.5 && <0.6, containers >=0.5 && <0.6, data-ordlist >=0.4 && <0.5, template-haskell >=2.10 && <2.11, mtl >=2.2 && <2.3, data-map-class, bipartite-graph, unordered-containers, invariants
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

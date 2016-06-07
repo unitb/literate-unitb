@@ -5,6 +5,7 @@ module Main where
 import Build
 
 import Control.Concurrent
+import Control.Exception
 import Control.Monad.Except
 
 import Data.Char
@@ -47,6 +48,9 @@ run phase cmd  = do
         ExitSuccess -> return ()
         ExitFailure _ -> throwError ("phase '" ++ phase ++ "' failed")
 
+lineCount :: FilePath -> IO Int
+lineCount = evaluate . length . lines <=< readFile
+
 general :: IO ExitCode
 general = do
         let c1 = ExitSuccess
@@ -62,7 +66,7 @@ general = do
                 c1 <- system $ execCommand "test" "result.txt"
                 t1 <- getCurrentTime
                 ys' <- lines `liftM` readProcess "git" ["ls-files","*hs"] ""
-                zs' <- mapM (liftM (length . lines) . readFile) ys'
+                zs' <- mapM lineCount ys'
                 let -- ys  = "total" : ys'
                     zs  = sum zs' : zs'
                     lc  = filter (\(_,x) -> not $ "test" `isInfixOf` map toLower x) $ zip zs' ys'

@@ -17,8 +17,8 @@ test = test_cases
                 (verify path0 1) result1)
             ]
 
-path0 :: String
-path0 = "Tests/unless-except.tex"
+path0 :: FilePath
+path0 = [path|Tests/unless-except.tex|]
 
 result0 :: String
 result0 = unlines

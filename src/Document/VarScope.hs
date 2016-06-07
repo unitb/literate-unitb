@@ -81,14 +81,21 @@ data TheoryDef = TheoryDef
     deriving (Eq,Ord,Show,Typeable,Generic)
 
 data MachineVar = 
-        Machine 
+        MchVar
             { var :: Var
             , _machineVarDeclSource :: DeclSource
             , _machineVarLineInfo :: LineInfo }
-        | DelMch 
+        | DelMchVar 
             { mvar :: Maybe Var
             , _machineVarDeclSource :: DeclSource
             , _machineVarLineInfo :: LineInfo }
+    deriving (Eq,Ord,Show,Typeable,Generic)
+
+data MachineDef = MchDef 
+            { _machineDefName :: Name 
+            , _term :: StringLi
+            , _machineDefDeclSource :: DeclSource 
+            , _machineDefLineInfo :: LineInfo }
     deriving (Eq,Ord,Show,Typeable,Generic)
 
 data EvtDecls = Evt (Table (Maybe EventId) EventDecl)
@@ -119,6 +126,7 @@ makePrisms ''EvtScope
 makeFields ''TheoryConst
 makeFields ''TheoryDef
 makeFields ''MachineVar
+makeFields ''MachineDef
 makeFields ''EvtDecls
 
 varDecl :: Getter EventDecl (Maybe Var)
@@ -142,13 +150,18 @@ instance Scope TheoryDef where
     kind _ = "constant"
     rename_events' _ e = [e]
 
+instance ZoomEq MachineDef where
+instance Scope MachineDef where
+    kind _ = "definition"
+    rename_events' _ e = [e]
+
 instance ZoomEq MachineVar where
 instance Scope MachineVar where
-    merge_scopes' (DelMch Nothing s _) (Machine v Inherited li) = Just $ DelMch (Just v) s li
-    merge_scopes' (Machine v Inherited li) (DelMch Nothing s _) = Just $ DelMch (Just v) s li
+    merge_scopes' (DelMchVar Nothing s _) (MchVar v Inherited li) = Just $ DelMchVar (Just v) s li
+    merge_scopes' (MchVar v Inherited li) (DelMchVar Nothing s _) = Just $ DelMchVar (Just v) s li
     merge_scopes' _ _ = Nothing
-    kind (DelMch _ _ _)   = "deleted variable"
-    kind (Machine _ _ _)  = "state variable"
+    kind (DelMchVar _ _ _)   = "deleted variable"
+    kind (MchVar _ _ _)  = "state variable"
     rename_events' _ e = [e]
 
 instance ZoomEq EventDecl where
@@ -216,6 +229,10 @@ instance Arbitrary TheoryConst where
     shrink = genericShrink
 
 instance Arbitrary MachineVar where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary MachineDef where
     arbitrary = genericArbitrary
     shrink = genericShrink
 

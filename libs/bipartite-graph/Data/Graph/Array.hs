@@ -6,7 +6,7 @@ module Data.Graph.Array
     ( top_sort, closure, closure'
     , graph, graphWith, u_scc
     , GraphImp (..), run_tests 
-    , from_map, cycles
+    , from_map, cycles, acyclic
     , topological_sort )
 where
 
@@ -180,8 +180,8 @@ top_sort' g = runST $ do
         r  <- readSTRef res
         rs <- forM r $ readArray cycles 
         return $ zipWith (\r b -> if b 
-                then CyclicSCC (m M.! r) 
-                else AcyclicSCC (head $ m M.! r)
+                then CyclicSCC (m ! r) 
+                else AcyclicSCC (head $ m ! r)
                 ) r rs
     where
         nn  = vcount g
@@ -223,8 +223,8 @@ from_map vs es = GraphImp vs es' i2e i2v v2i fwd bwd f f' nn mm
         i2e = runSTArray $ do
                 ar <- newArray (V 0,V $ nn-1) []
                 forM_ (M.toList es) $ \(u,vs) -> do
-                    let i  = v2i M.! u
-                        js = map (v2i M.!) vs
+                    let i  = v2i ! u
+                        js = map (v2i !) vs
                     writeArray ar i js
                 return ar
         v2i = M.fromList $ zip vs' [V 0..]
@@ -241,7 +241,7 @@ graph :: forall v. Ord v => [v] -> [(v,v)] -> GraphImp v
 graph vs es = GraphImp vs' es i2e i2v v2i fwd bwd f f' nn mm
     where
         f' i j = j `S.member` (mi2e ! i)
-        f  u v = f' (v2i M.! u) (v2i M.! v)
+        f  u v = f' (v2i ! u) (v2i ! v)
         mi2e = amap S.fromList i2e
         vs'  = OL.nubSort vs
         nn   = length vs'
@@ -252,8 +252,8 @@ graph vs es = GraphImp vs' es i2e i2v v2i fwd bwd f f' nn mm
         i2e = runSTArray $ do
                 ar <- newArray (V 0,V $ nn-1) []
                 forM_ es $ \(u,v) -> do
-                    let i = v2i M.! u
-                        j = v2i M.! v
+                    let i = v2i ! u
+                        j = v2i ! v
                     js <- readArray ar i
                     writeArray ar i (j:js)
                 return ar
@@ -373,6 +373,10 @@ is_cycle :: SCC v -> Bool
 is_cycle (CyclicSCC _)  = True
 is_cycle (AcyclicSCC _) = False
 
+acyclic :: Pre => SCC v -> v
+acyclic (AcyclicSCC v) = v
+acyclic (CyclicSCC _)  = undefined'
+
 prop_top_sort_cycles :: Ord a => Graph a -> Bool
 prop_top_sort_cycles (Graph vs es) = all (\xs -> and [ connected g x y | x <- xs, y <- xs ]) top
     where
@@ -400,8 +404,8 @@ connected g u v = evalState (aux u v) (S.singleton u)
     where
         aux u v = do
             s <- get
-            let xs = filter (`S.notMember` s) $ tab M.! u
-            if v `elem` tab M.! u
+            let xs = filter (`S.notMember` s) $ tab ! u
+            if v `elem` tab ! u
                 then return True
                 else 
                     fix (\rec xs -> 
@@ -420,15 +424,15 @@ prop_closure_complete :: Ord a => Graph a -> Bool
 prop_closure_complete (Graph vs es) = OL.nubSort vs == M.keys (closure vs es)
 
 prop_closure_contain_all_edges :: Ord a => Graph a -> Bool
-prop_closure_contain_all_edges (Graph vs es) = all (\(u,v) -> v `elem` cl M.! u) es
+prop_closure_contain_all_edges (Graph vs es) = all (\(u,v) -> v `elem` cl ! u) es
     where
         cl = closure vs es
 
 prop_closure_closed :: Ord a => Graph a -> Bool
-prop_closure_closed (Graph vs es) = all (\(u,v) -> v `elem` cl M.! u) edge_pairs
+prop_closure_closed (Graph vs es) = all (\(u,v) -> v `elem` cl ! u) edge_pairs
     where
         cl = closure vs es
-        edge_pairs = [ (u,w) | u <- M.keys cl, v <- cl M.! u, w <- cl M.! v ]
+        edge_pairs = [ (u,w) | u <- M.keys cl, v <- cl ! u, w <- cl ! v ]
 
 prop_closure_minimal :: Ord a => Graph a -> Bool
 prop_closure_minimal (Graph vs es) = all (\(u,v) -> connected g u v) all_edges

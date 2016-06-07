@@ -10,6 +10,7 @@ import Logic.Operator
 import Control.Applicative
 import Control.DeepSeq
 import Control.Lens hiding (Context,elements)
+import Control.Lens.Extras
 import Control.Lens.HierarchyTH
 import Control.Monad.RWS
 import Control.Precondition
@@ -17,6 +18,7 @@ import Control.Precondition
 import Data.Char
 import Data.Default
 import Data.List as L
+import Data.List.Ordered as L
 import Data.Map.Class    as M hiding ( map, Unordered )
 import Data.Maybe  as MM hiding (fromJust)
 import Data.PartialOrd
@@ -74,7 +76,7 @@ data GenSequent name t q expr = Sequent
         , _genSequentContext  :: GenContext name t q
         , _genSequentSyntacticThm :: SyntacticProp
         , _genSequentNameless :: [expr] 
-        , _genSequentNamed :: Table Label (expr)
+        , _genSequentNamed :: Table Label expr
         , _genSequentGoal  :: expr }
     deriving (Eq, Generic, Show, Functor, Foldable, Traversable)
 
@@ -177,11 +179,16 @@ checkSequent s = byPred msg (const $ L.null xs) (Pretty s) s
                 & definitions %~ symbol_table 
                 & constants %~ symbol_table
                 & functions %~ symbol_table
-                & dummies %~ symbol_table
+                & dummies   %~ symbol_table
         travAsserts = traverseOf_ traverseExprs checkScopes' s
-        f (Def _ _ ts _ e) = local (constants %~ M.union (symbol_table ts)) $ checkScopes' e
-        travDefs = local (definitions .~ M.empty) 
-                $ traverseOf_ traverse f $ ctx^.definitions
+        checkDef (Def _ _ ts _ e) = local (constants %~ M.union (symbol_table ts)) $ checkScopes' e
+        travDefs' [] = return ()
+        travDefs' (x:xs) = do
+                    checkDef x 
+                    local (definitions %~ insert_symbol x) 
+                          (travDefs' xs)
+        travDefs  = local (definitions .~ M.empty) 
+                $ travDefs' $ sortDefs $ ctx^.definitions
         xs :: [Expr]
         xs  = snd $ execRWS (travAsserts >> travDefs) ctx ()
 
@@ -241,7 +248,7 @@ instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) wher
             asms   = map (indent 1) $ 
                     ["sort: " ++ intercalate ", " (L.filter (not.L.null) $ MM.mapMaybe f $ toList ss)]
                     ++ (map pretty $ ascElems fs)
-                    ++ (map pretty $ ascElems ds)
+                    ++ (map pretty $ sortDefs ds)
                     ++ (map pretty $ ascElems vs)
                     ++ map showWithLabel hs
                     ++ map pretty_print' hs'
@@ -264,7 +271,7 @@ instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) wher
 remove_type_vars :: Sequent' -> FOSequent
 remove_type_vars (Sequent tout res ctx m asm hyp goal) = Sequent tout res ctx' m asm' hyp' goal'
     where
-        (Context sorts _ _ dd _) = ctx
+        (Context ss _ _ dd _) = ctx
         _ = dd :: Table InternalName Def'
         asm_types = MM.catMaybes 
                     $ map type_strip_generics 
@@ -275,15 +282,15 @@ remove_type_vars (Sequent tout res ctx m asm hyp goal) = Sequent tout res ctx' m
 
         decl_types :: S.Set FOType
         decl_types = S.unions $ map used_types $ goal' : asm' ++ M.elems hyp'
-        
         ctx' :: FOContext
-        ctx'  = to_fol_ctx decl_types ctx
+        ctx'  = to_fol_ctx decl_types $ ctx
+                    & sorts %~ M.union (symbol_table $ nubSort $ S.toList decl_types^.partsOf (traverse.foldSorts.filtered (is _RecordSort)))
         asm' :: [FOExpr]
         asm' = map snd $ concatMap (gen_to_fol seq_types (label "")) asm
         hyp' :: Table Label FOExpr
         hyp' = M.fromList $ concat $ M.elems $ M.mapWithKey (gen_to_fol seq_types) hyp
         goal' :: FOExpr
-        goal' = vars_to_sorts sorts goal
+        goal' = vars_to_sorts ss goal
 
 one_point :: (IsQuantifier q, TypeSystem2 t,IsName n) 
           => GenSequent n t q (AbsExpr n t q) 

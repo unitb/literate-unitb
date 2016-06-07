@@ -178,16 +178,16 @@ lambda_def = do
 delambdify :: Sequent -> Sequent'
 delambdify po = -- (Sequent ctx asm hyps goal) = 
         evalState (do
-            asm'   <- forM (po^.nameless) lambdas
-            hyps'  <- T.forM (po^.named) lambdas
+            asm'  <- forM (po^.nameless) lambdas
+            hyps' <- T.forM (po^.named) lambdas
             goal' <- lambdas $ po^.goal
-            defs  <- lambda_def
-            decl  <- lambda_decl
             let Context ss vs fs _ dd = po^.context
             ds' <- T.forM (po^.definitions) $ \(Def tp fn arg rt e) -> do
                     Def tp (asInternal fn) 
                            (L.map translate arg) rt
                         <$> lambdas e
+            defs  <- lambda_def
+            decl  <- lambda_decl
             let ctx' = Context ss 
                             (symbol_table $ M.map translate vs) 
                             (M.mapKeys asInternal $ fs & traverse.namesOf %~ asInternal)

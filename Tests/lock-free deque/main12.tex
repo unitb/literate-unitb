@@ -33,8 +33,10 @@
       \cschedule{handle}{m0:sch0}{ \neg req = \emptyset } \\
       \evguard{handle}{m0:grd0}{ r \in req } \\
       \evbcmeq{handle}{m0:act0}{req}{ req \setminus \{ r \} } 
+      \invariant{inv777}{ var \in Req }
+      \[ \variable{var : \{ 'req : \REQ \} } ]
   \end{align*}
-
+\definition{Req}{ [ 'req : \REQ ] }
 \noindent
 \end{machine}
 \section{Model m1 --- Version numbers and individual fairness}

@@ -470,16 +470,24 @@ zident = Right $ FunApp ident_fun []
 zrecord' :: MapSyntax Name (ExprPG n t q) () -> ExprPG n t q
 zrecord' = zrecord . runMap'
 zrecord :: M.Map Name (ExprPG n t q) -> ExprPG n t q
-zrecord = fmap (Record . RecLit) . traverseValidation id
+zrecord = fmap (Record . RecLit . M.mapKeys Field) . traverseValidation id
+
 
 zrec_update :: ExprPG n t q 
             -> MapSyntax Name (ExprPG n t q) ()
             -> ExprPG n t q
-zrec_update e m = Record <$> liftA2 RecUpdate e (traverseValidation id $ runMap' m)
+zrec_update e = zrec_update' e . runMap'
+
+zrec_update' :: ExprPG n t q 
+             -> M.Map Name (ExprPG n t q)
+             -> ExprPG n t q
+zrec_update' e m = Record <$> liftA2 RecUpdate e (fmap (M.mapKeysMonotonic Field)
+                                                  . traverseValidation id $ m)
 
 zfield :: (IsName n,TypeSystem t,IsQuantifier q) 
        => ExprPG n t q -> Name -> ExprPG n t q
-zfield e field = do
+zfield e field' = do
+    let field = Field field'
     e' <- e
     let msg1 = [printf|Field lookup requires a record type:\n  in expression %s\n  of type: %s|] 
                     (pretty e')

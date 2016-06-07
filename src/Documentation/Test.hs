@@ -32,6 +32,7 @@ test_case = test_cases
         , aCase "progress properties of m2" case3 result3
         , aCase "File structure" case4 result4
         , aCase "Root machine" case5 result5
+        , aCase "definitions of m2" case6 result6
         ]
 
 result0 :: String
@@ -68,8 +69,8 @@ case0 = makeReport $ do
     return $ getListing $
             event_summary' m lbl evt
 
-path0 :: String
-path0 = "Tests/train-station-set.tex"
+path0 :: FilePath
+path0 = [path|Tests/train-station-set.tex|]
 
 result1 :: String
 result1 = unlines
@@ -171,6 +172,7 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/m3_m3-ctr-plf.tex" ## True
         "dir/file/machine_m0.tex" ## True
         "dir/file/machine_m0_co.tex"    ## True
+        "dir/file/machine_m0_def.tex"   ## True
         "dir/file/machine_m0_inv.tex"   ## True
         "dir/file/machine_m0_prog.tex"  ## True
         "dir/file/machine_m0_props.tex" ## True
@@ -179,6 +181,7 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/machine_m0_trans.tex" ## True
         "dir/file/machine_m1.tex" ## True
         "dir/file/machine_m1_co.tex"    ## True
+        "dir/file/machine_m1_def.tex"   ## True
         "dir/file/machine_m1_inv.tex"   ## True
         "dir/file/machine_m1_prog.tex"  ## True
         "dir/file/machine_m1_props.tex" ## True
@@ -187,6 +190,7 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/machine_m1_trans.tex" ## True
         "dir/file/machine_m2.tex" ## True
         "dir/file/machine_m2_co.tex"    ## True
+        "dir/file/machine_m2_def.tex"   ## True
         "dir/file/machine_m2_inv.tex"   ## True
         "dir/file/machine_m2_prog.tex"  ## True
         "dir/file/machine_m2_props.tex" ## True
@@ -195,6 +199,7 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/machine_m2_trans.tex" ## True
         "dir/file/machine_m3.tex" ## True
         "dir/file/machine_m3_co.tex"    ## True
+        "dir/file/machine_m3_def.tex"   ## True
         "dir/file/machine_m3_inv.tex"   ## True
         "dir/file/machine_m3_prog.tex"  ## True
         "dir/file/machine_m3_props.tex" ## True
@@ -248,3 +253,20 @@ result5 = Right . Just . unlines $
     , "  \\end{block}"
     , "  \\item   \\textbf{end} \\\\"
     , "\\end{block}" ]
+
+path6 :: FilePath
+path6 = [path|Tests/lock-free deque/main12.tex|]
+
+result6 :: String
+result6 = unlines
+    [ "\\textbf{definitions}"
+    , "\\begin{block}"
+    , "  \\item[] {$Req\\3\\triangleq[ 'req : \\REQ ]$} %"
+    , "\\end{block}"
+    ]
+
+case6 :: IO String
+case6 = makeReport $ do
+    m <- parse_machine' path6 2
+    return $ getListing $
+        defs_sum m

@@ -122,8 +122,8 @@ result0 = unlines
     , "passed 48 / 49"
     ]
 
-path0 :: String
-path0 = "Tests/cubes-t0.tex"
+path0 :: FilePath
+path0 = [path|Tests/cubes-t0.tex|]
 
 result1 :: String
 result1 = unlines
@@ -191,8 +191,8 @@ result1 = unlines
     , "passed 61 / 61"
     ]
 
-path1 :: String
-path1 = "Tests/cubes-t1.tex"
+path1 :: FilePath
+path1 = [path|Tests/cubes-t1.tex|]
 
 result2 :: String
 result2 = unlines
@@ -269,8 +269,8 @@ result2 = unlines
     , "passed 70 / 70"
     ]
 
-path2 :: String
-path2 = "Tests/cubes-t2.tex"
+path2 :: FilePath
+path2 = [path|Tests/cubes-t2.tex|]
 
 result3 :: String
 result3 = unlines
@@ -349,8 +349,8 @@ result3 = unlines
     , "passed 72 / 72"
     ]
 
-path3 :: String
-path3 = "Tests/cubes-t3.tex"
+path3 :: FilePath
+path3 = [path|Tests/cubes-t3.tex|]
 
 result4 :: Either [Error] (Table ProgId ProgressProp)
 result4 = M.map (fmap (DispExpr "")) <$> either g Right (do
@@ -382,8 +382,8 @@ result4 = M.map (fmap (DispExpr "")) <$> either g Right (do
         li         = LI path4 0 0
         g xs = Left $ map (`Error` li) xs
 
-path4 :: String
-path4 = "Tests/cubes-t6.tex"
+path4 :: FilePath
+path4 = [path|Tests/cubes-t6.tex|]
 
 case4 :: IO (Either [Error] (Table ProgId ProgressProp))
 case4 = runEitherT (do
@@ -534,8 +534,8 @@ result6 = unlines
     , "passed 103 / 107"
     ]
 
-path6 :: String
-path6 = "Tests/cubes-t5.tex"
+path6 :: FilePath
+path6 = [path|Tests/cubes-t5.tex|]
 
 case7 :: IO (String, Table Label Sequent)
 case7 = verify path7 0
@@ -667,8 +667,8 @@ result7 = unlines
     , "passed 111 / 122"
     ]
 
-path7 :: String
-path7 = "Tests/cubes-t4.tex"
+path7 :: FilePath
+path7 = [path|Tests/cubes-t4.tex|]
 
 case8 :: IO (String, Table Label Sequent)
 case8 = verify path8 0
@@ -789,8 +789,8 @@ result8 = unlines
     , "passed 110 / 111"
     ]
   
-path8 :: String
-path8 = "Tests/cubes-t7.tex"
+path8 :: FilePath
+path8 = [path|Tests/cubes-t7.tex|]
 
 result9 :: String
 result9 = unlines
@@ -922,11 +922,11 @@ result9 = unlines
     ]
 
 
-path9 :: String
-path9 = "Tests/cubes-t8.tex"
+path9 :: FilePath
+path9 = [path|Tests/cubes-t8.tex|]
      
-path10 :: String
-path10 = "Tests/cubes-t9.tex"
+path10 :: FilePath
+path10 = [path|Tests/cubes-t9.tex|]
 
 result10 :: String
 result10 = unlines
@@ -1289,8 +1289,8 @@ result11 = unlines
     , "; m0/evt/INV/inv5/main goal/step 4"
     ]
 
-path12 :: String
-path12 = "Tests/cubes-t10.tex"
+path12 :: FilePath
+path12 = [path|Tests/cubes-t10.tex|]
 
 result12 :: String
 result12 = unlines 

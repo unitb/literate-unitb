@@ -43,7 +43,7 @@ data FOType      = FOT Sort [FOType]
 
 data Sort =
         BoolSort | IntSort | RealSort 
-        | RecordSort (Table Name ())
+        | RecordSort (Table Field ())
         | DefSort 
             Name            -- Latex name
             InternalName    -- Type name
@@ -53,8 +53,11 @@ data Sort =
         | Datatype 
             [Name]      -- Parameters
             Name        -- type name
-            [(Name, [(Name,GenericType)])] 
+            [(Name, [(InternalName,GenericType)])] 
                         -- alternatives and named components
+    deriving (Eq, Ord, Show, Typeable, Data, Generic)
+
+newtype Field = Field Name
     deriving (Eq, Ord, Show, Typeable, Data, Generic)
 
 type Type = GenericType
@@ -108,12 +111,13 @@ instance TypeSystem FOType where
 
 instance PrettyPrintable Sort where
     pretty (RecordSort m) = [printf|{ %s }|] $ intercalate ", " 
-                $ zipWith (\f -> [printf|%s :: a%d|] (render f)) (M.keys m) [0..]
+                $ zipWith (\f -> [printf|'%s :: a%d|] (fieldName f)) (M.keys m) [0..]
     pretty s = render $ s^.name
 
 instance Hashable FOType where
 instance Hashable GenericType where
 instance Hashable Sort where
+instance Hashable Field where
 
 instance Typed () where
     type TypeOf () = ()
@@ -171,16 +175,28 @@ instance PrettyPrintable FOType where
     pretty (FOT s []) = (render $ z3_name s)
     pretty (FOT s ts) = [printf|%s %s|] (render $ s^.name) (show $ map Pretty ts)
 
+instance PrettyPrintable Field where
+    pretty (Field n) = pretty n
+
 instance PrettyPrintable GenericType where
     pretty (GENERIC n)         = "_" ++ render n 
     pretty (VARIABLE n)        = "'" ++ render n 
     pretty (Gen (RecordSort m) xs) = [printf|{ %s }|] $ intercalate ", " 
-                $ zipWith (\f t -> [printf|%s :: %s|] (render f) (pretty t)) (M.keys m) xs
+                $ zipWith (\f t -> [printf|'%s :: %s|] (fieldName f) (pretty t)) (M.keys m) xs
     pretty (Gen s []) = render $ s^.name
     pretty (Gen s ts) = [printf|%s %s|] (render $ s^.name) (show $ map Pretty ts)
 
-recordName :: Table Name a -> Name
-recordName m = makeZ3Name $ "Record-" ++ intercalate "-" (map z3Render $ M.keys m)
+recordName :: Table Field a -> Name
+recordName m = makeZ3Name $ "Record-" ++ intercalate "-" (map fieldName $ M.keys m)
+
+accessor :: Field -> String
+accessor = render . accessorName
+
+accessorName :: Pre => Field -> InternalName
+accessorName (Field n) = addPrefix "field" $ asInternal n
+
+fieldName :: Field -> String
+fieldName (Field n) = [printf|%s|] (render n)
 
 instance HasName Sort Name where
     name = to $ \case 
@@ -211,6 +227,9 @@ instance Named Sort where
     z3_name RealSort   = [smt|Real|]
 
 instance Lift Sort where
+    lift = genericLift
+
+instance Lift Field where
     lift = genericLift
 
 pair_sort :: Sort
@@ -261,8 +280,11 @@ set_sort = make DefSort "\\set" "set" [[smt|a|]] (array gA bool)
 set_type :: TypeSystem t => t -> t
 set_type t = make_type set_sort [t]
 
+record_sort :: Table Name t -> Sort
+record_sort fields = RecordSort $ M.mapKeys Field $ () <$ fields
+
 record_type :: TypeSystem t => Table Name t -> t
-record_type fields = make_type (RecordSort $ () <$ fields) (M.elems fields)
+record_type fields = make_type (record_sort fields) (M.elems fields)
 
 _ElementType :: TypeSystem t => Prism' t t
 _ElementType = _FromSort.swapped.below (only set_sort).first._Cons.below _Empty.first
@@ -280,6 +302,9 @@ int  = make_type IntSort []
 
 real :: TypeSystem t => t
 real = make_type RealSort []
+
+instance Arbitrary Field where
+    arbitrary = genericArbitrary
 
 instance Arbitrary Sort where
     arbitrary = oneof
@@ -327,7 +352,9 @@ z3_decoration' t = do
 
 instance Serialize Sort where
 instance Serialize Type where
+instance Serialize Field where
 
+instance ZoomEq Field where
 instance ZoomEq Sort where
 instance ZoomEq GenericType where
 
@@ -390,3 +417,4 @@ instance Arbitrary GenericType where
 instance NFData FOType
 instance NFData GenericType
 instance NFData Sort
+instance NFData Field

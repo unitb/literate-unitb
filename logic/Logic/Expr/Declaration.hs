@@ -13,17 +13,22 @@ import Control.Arrow
 import Control.DeepSeq
 import Control.Lens hiding (rewrite,Context,elements
                            ,Const,Context',List,rewriteM)
+import Control.Monad.Reader
+import Control.Precondition
 
+import Data.Graph.Array
 import qualified Data.Map.Class as M
 import Data.Typeable
 
 import GHC.Generics.Instances
 
+import Text.Pretty
+
 import Utilities.Functor
 
-type Decl = AbsDecl GenericType
+type Decl = AbsDecl GenericType HOQuantifier
 
-type FODecl = AbsDecl FOType
+type FODecl = AbsDecl FOType FOQuantifier
 
 data AbsDecl t q = 
         FunDecl [t] InternalName [t] t
@@ -33,7 +38,7 @@ data AbsDecl t q =
     deriving (Generic)
 
 class Symbol a t q where
-    decl :: a -> [AbsDecl t q]
+    decl :: Pre => a -> [AbsDecl t q]
 
 instance IsName n => Symbol (AbsVar n t) t q where
     decl (Var name typ)        = [ConstDecl (asInternal name) typ]
@@ -85,11 +90,12 @@ instance (TypeSystem t, IsQuantifier q) => Tree (AbsDecl t q) where
     as_tree' (SortDecl BoolSort)   = return $ Str "; comment: we don't need to declare the sort Bool" 
     as_tree' (SortDecl RealSort)   = return $ Str "; comment: we don't need to declare the sort Real"
     as_tree' (SortDecl (RecordSort m)) = as_tree' (SortDecl (Datatype args rec 
-            [(make,zip (M.keys m) (GENERIC . asInternal <$> args))]) :: AbsDecl t q)
+            [(make,zip fields (GENERIC . asInternal <$> args))]) :: AbsDecl t q)
         where
             args = [ makeZ3Name $ "a" ++ show i | i <- [1..M.size m] ]
-            rec  = recordName m
-            make = makeZ3Name $ z3Render rec
+            rec    = recordName m
+            make   = makeZ3Name $ z3Render rec
+            fields = accessorName <$> M.keys m
     as_tree' (SortDecl s@(Sort _ _ n)) = do
             return $ List [ 
                 Str "declare-sort",
@@ -119,6 +125,10 @@ instance (TypeSystem t, IsQuantifier q) => Tree (AbsDecl t q) where
                 return $ List [Str n, t']
     rewriteM _ = pure
 
+instance (IsQuantifier t,TypeSystem n) 
+        => PrettyPrintable (AbsDecl n t) where
+    pretty e = pretty $ runReader (as_tree' e) UserOutput
+
 instance Symbol Sort t q where
     decl s = [SortDecl s]
 
@@ -130,13 +140,28 @@ instance IsName n => Symbol (AbsDef n t q) t q where
     decl (Def xs name ps typ ex)  = [
             FunDef xs (asInternal name) (map translate ps) typ $ fmap3 asInternal ex]
 
-instance IsName n => Symbol (GenContext n t q) t q where
+instance (IsName n,Ord t,IsQuantifier q,TypeSystem t) 
+        => Symbol (GenContext n t q) t q where
     decl (Context sorts cons fun defs _) = -- dums) = 
                 concatMap decl (M.ascElems sorts)
 --            ++  concatMap decl (elems (cons `merge` dums)) 
             ++  concatMap decl (M.ascElems cons) 
             ++  concatMap decl (M.ascElems fun) 
-            ++  concatMap decl (M.ascElems defs) 
+            ++  concatMap decl (sortDefs defs)
+
+sortDefs :: ( IsName n,Ord t,Ord q
+            , IsQuantifier q 
+            , TypeSystem t )
+         => M.Map n (AbsDef n t q) 
+         -> [AbsDef n t q]
+sortDefs defs = M.ascElems defA
+                    ++ (acyclic <$> top_sort (M.ascElems defB) es)
+                            
+        where
+            edges d v = d `M.intersection` used_var' (v^.defExpr)
+            (defA,defB) = M.partition (M.null . edges defs) defs
+            es = [ (v,v') | v  <- M.elems defB
+                          , v' <- M.elems $ edges defB v ]
 
 mk_context :: TypeSystem t => [AbsDecl t q] -> GenContext InternalName t q
 mk_context (x:xs) = 

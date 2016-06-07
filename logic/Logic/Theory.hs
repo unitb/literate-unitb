@@ -13,7 +13,8 @@ module Logic.Theory
     , empty_theory'
     , basic_theory
     , symbols
-    , types, defs, funs, consts, theorems
+    , HasDefs(..)
+    , types, funs, consts, theorems
     , thm_depend, notation, extends )
 where
 
@@ -100,7 +101,7 @@ th_notation' ths = res
 theory_ctx :: Theory -> Context
 theory_ctx th = 
         merge_all_ctx $
-            (Context ts c new_fun (_defs th) dums) : L.map theory_ctx (M.ascElems d)
+            (Context ts c new_fun (th^.defs) dums) : L.map theory_ctx (M.ascElems d)
     where
         d      = _extends th
         ts     = _types th

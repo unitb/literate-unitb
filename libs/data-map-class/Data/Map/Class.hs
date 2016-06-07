@@ -68,6 +68,7 @@ class IsMap (map :: * -> * -> *) where
         -- filtering
     filter :: (a -> Bool) -> map k a -> map k a
     filterWithKey :: (k -> a -> Bool) -> map k a -> map k a
+    partition :: (a -> Bool) -> map k a -> (map k a,map k a)
     partitionWithKey :: (k -> a -> Bool) -> map k a -> (map k a,map k a)
     split :: Ord k => k -> map k a -> (map k a, map k a)
         -- Combination
@@ -172,6 +173,8 @@ instance IsMap M.Map where
     filter = M.filter
     {-# INLINE filterWithKey #-}
     filterWithKey = M.filterWithKey
+    {-# INLINE partition #-}
+    partition = M.partition
     {-# INLINE partitionWithKey #-}
     partitionWithKey = M.partitionWithKey
     {-# INLINE split #-}
@@ -298,6 +301,7 @@ instance IsMap HM.HashMap where
     filter = HM.filter
     {-# INLINE filterWithKey #-}
     filterWithKey = HM.filterWithKey
+    partition f = partitionWithKey (const f)
     partitionWithKey f = mapEitherWithKey f'
         where f' k x | f k x     = Left x
                      | otherwise = Right x

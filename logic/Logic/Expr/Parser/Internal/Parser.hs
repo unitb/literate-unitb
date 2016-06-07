@@ -102,11 +102,13 @@ from m = attempt $ do
                 Just x  -> return x
 
 type_t :: Parser Type
-type_t = do
+type_t = choose_la 
+    [ add_context "foo" $ recordType
+    , do
         t  <- choiceP 
             [ word_or_command
             , operator ]
-            (fail "expecting word or command") 
+            (liftP read_char >>= \c -> fail $ "expecting word or command: " ++ lexeme c) 
             return
         b1 <- look_aheadP $ read_listP [Open Square]
         ts <- if b1
@@ -135,7 +137,7 @@ type_t = do
             read_listP [Ident "\\pfun"]
             t2 <- type_t
             return $ fun_type t t2
-        else return t
+        else return t ]
 
 get_type :: Context -> Name -> Maybe Sort
 get_type (Context ts _ _ _ _) x = M.lookup x m
@@ -222,7 +224,7 @@ check_types e =
 apply_fun_op :: Command -> Expr -> Parser Term
 apply_fun_op (Command _ _ _ fop) x = do
         e <- check_types $ typ_fun1 fop (Right x)
-        return $ Right e
+        return $ E e
 
 suggestion :: Name -> Table Name String -> [String]
 suggestion xs m = map (\(x,y) -> render x ++ " (" ++ y ++ ")") $ toAscList ws
@@ -242,13 +244,26 @@ assignTok = getToken _Assign ":=" >> pure (,)
 colonTok :: Parser (a -> b -> (a,b))
 colonTok = getToken _Colon ":" >> pure (,)
 
-
 binding :: Parser (Expr -> LineInfo -> a) -> Parser (Name,a)
-binding tok = do
-    li <- liftP get_line_info
-    liftM2 (,) nameLit (tok <*> expr <*> pure li)
+binding = binding' expr
 
-type Term = Either Command Expr
+binding' :: Parser term
+         -> Parser (term -> LineInfo -> a) 
+         -> Parser (Name,a)
+binding' term tok = do
+    li <- liftP get_line_info
+    liftM2 (,) nameLit (tok <*> term <*> pure li)
+
+data Term = 
+        Cmd Command 
+        | Field Name
+        | E Expr
+    deriving (Show)
+
+instance PrettyPrintable Term where
+    pretty (Cmd c)   = [printf|Command: %s|] (pretty c)
+    pretty (E e)     = [printf|Expr:  %s|] (pretty e)
+    pretty (Field n) = [printf|Field: %s|] (pretty n)
 
 term :: Parser Term
 term = do
@@ -264,14 +279,14 @@ term = do
                             e <- expr
                             read_listP [Close Curly]
                             e <- check_types $ typ_fun1 f (Right e)
-                            return $ Right e)
-                        (return $ Left c)
+                            return $ E e)
+                        (return $ Cmd c)
                 else do
                     args <- replicateM n $
                         brackets Curly expr
                     e <- check_types $ check_type f (map Right args)
-                    return $ Right e
-        , Right <$> recordSetOrLit
+                    return $ E e
+        , E <$> recordSetOrLit
         , do    quant <- from quants 
                 ns <- brackets Curly
                     $ sep1P word_or_command comma
@@ -306,18 +321,18 @@ term = do
                         r' = substitute ts' r
                         t' = substitute ts' t
                         vs' = map snd ts
-                    Right <$> check_types (zquantifier quant vs' (Right r') (Right t'))
+                    E <$> check_types (zquantifier quant vs' (Right r') (Right t'))
         , do    from oftype
                 e <- brackets Curly expr
                 t <- brackets Curly type_t
                 case zcast t (Right e) of
-                    Right new_e -> return $ Right new_e
+                    Right new_e -> return $ E new_e
                     Left msg -> fail $ unlines msg
         , attempt $ do    
                 xs' <- word_or_command
                 vs <- get_vars
                 case M.lookup xs' vs of
-                    Just e -> return $ Right e
+                    Just e -> return $ E e
                     Nothing -> fail ""
         , do    xs <- attempt word_or_command
                 vs <- get_vars
@@ -332,8 +347,9 @@ term = do
                       ++ render xs ++ if not $ L.null sug then
                             "\nPerhaps you meant:\n"
                       ++ unlines sug else "")
-        , do    xs <- number
-                return $ Right $ zint $ read xs
+        , do    xs <- attempt number
+                return $ E $ zint $ read xs
+        , do    Field <$> nameLit
         ]
 
 recordSetOrLit :: Parser Expr
@@ -373,6 +389,19 @@ validateFields xs = raiseErrors $ traverseWithKey f xs'
         raiseErrors = either (liftP . Scanner . const . Left) 
                              return . validationToEither
 
+recordType :: Parser Type
+recordType = do
+        let field = binding' type_t colonTok
+            field :: Parser (Name, (Type, LineInfo))
+        attempt open_curly
+        xs <- choose_la 
+            [ attempt close_curly >> return []
+            , do xs <- sep1P field comma
+                 close_curly
+                 return xs
+            ]
+        record_type <$> validateFields xs
+
 recordFields :: Parser (Name,(a,LineInfo)) -> Parser (Table Name a)
 recordFields field = do
         attempt open_square
@@ -411,17 +440,21 @@ close_curly :: Parser [ExprToken]
 close_curly = read_listP [Close QuotedCurly]
 
 applyRecUpdate :: [Map Name Expr] -> Term -> Parser Term
-applyRecUpdate rUpd (Right e) = return $ Right $ foldl (fmap Record . RecUpdate) e rUpd
-applyRecUpdate xs e@(Left op)
+applyRecUpdate rUpd (E e) = fmap E . check_types $ foldl (zrec_update') (Right e) (fmap Right <$> rUpd)
+applyRecUpdate xs e@(Cmd op)
         | L.null xs = return e
         | otherwise = fail $ "Cannot apply a record update to an operator: " ++ pretty op
+applyRecUpdate xs e@(Field op)
+        | L.null xs = return e
+        | otherwise = fail $ "Cannot apply a record update to a record field: " ++ pretty op
 
 expr :: Parser Expr
 expr = do
         r <- read_term []
         case r of
-            Right e -> return e
-            Left op -> fail $ [printf|unapplied functional operator: %s|] (pretty op)
+            E e -> return e
+            Cmd op -> fail $ [printf|unapplied functional operator: %s|] (pretty op)
+            Field n -> fail $ [printf|record field out of context: %s|] (pretty n)
     where
         read_term :: [([UnaryOperator], Term, BinOperator)] 
                   -> Parser Term
@@ -432,13 +465,13 @@ expr = do
                         e <- expr
                         close_brack
                         add_context "parsing (" $
-                            read_op xs us (Right e) 
+                            read_op xs us (E e) 
                 , do    attempt open_curly
                         rs <- sep1P expr comma
                         close_curly
                         e <- check_types $ zset_enum $ map Right rs
                         add_context "parsing \\{" $
-                            read_op xs us $ Right e 
+                            read_op xs us $ E e 
                 ,   add_context ("ready for <term>: " ++ show xs) $
                         do  t  <- term
                             rUpd <- manyP (recordFields $ binding assignTok)
@@ -510,29 +543,39 @@ binds x0 x1 = do
 apply_unary :: UnaryOperator -> Term -> Parser Term
 apply_unary op e = do
         case e of 
-            Right e -> do
+            E e -> do
                 x2 <- check_types $ mk_unary op e
-                return $ Right x2
-            Left oper -> fail $ err_msg (pretty oper) (pretty op)
+                return $ E x2
+            Cmd oper -> fail $ err_msg (pretty oper) (pretty op)
+            Field n  -> fail $ err_msg_2 (pretty n) (pretty op)
     where
-        err_msg = [printf|functional operator cannot be the operand of any unary operator: %s, %s|]
+        err_msg   = [printf|functional operator cannot be the operand of any unary operator: %s, %s|]
+        err_msg_2 = [printf|field names cannot be the operand of any unary operator: %s, %s|]
         
 apply_op :: BinOperator -> Term -> Term -> Parser Term
 apply_op op x0 x1 = do
         case x1 of
-            Right e1 -> do
+            E e1 -> do
                 case x0 of
-                    Right e0 -> do
+                    E e0 -> do
                         e2 <- check_types $ mk_expr op e0 e1
-                        return $ Right e2
-                    Left oper ->
+                        return $ E e2
+                    Cmd oper ->
                         if op == apply then
                             apply_fun_op oper e1
                         else fail $ err_msg (pretty oper) (pretty op)
-            Left e1 -> 
+                    Field n -> fail $ err_msg_2 (pretty n) (pretty op)
+            Cmd e1  -> 
                 fail $ err_msg (pretty e1) (pretty op)
+            Field n 
+                | op == apply -> case x0 of
+                    E e0 -> E <$> check_types (zfield (Right e0) n)
+                    Field n -> fail $ err_msg_2 (pretty n) (pretty op)
+                    Cmd cmd -> fail $ err_msg (pretty cmd) (pretty op)
+                | otherwise   -> fail $ err_msg_2 (pretty n) (pretty op)
     where
         err_msg = [printf|functional operator cannot be the operand of any binary operator: %s, %s|]
+        err_msg_2 = [printf|field name is not a valid operand: %s, %s|]
 
 parse_expression :: ParserSetting
                  -> StringLi

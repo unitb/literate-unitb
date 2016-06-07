@@ -1,5 +1,5 @@
 {-# LANGUAGE StandaloneDeriving,TypeFamilies
-    , ConstraintKinds
+    , ConstraintKinds, RecordWildCards
     #-}
 module Document.Phase.Types where
 
@@ -31,6 +31,7 @@ import Utilities.Table
 
 class (MchType a (AEvtType a) (CEvtType a) (ThyType a) ~ a) 
         => IsMachine a where
+    type DefType a :: *
     type MchType a :: * -> * -> * -> *
     type ThyType a :: *
     type AEvtType a :: *
@@ -50,26 +51,33 @@ data MachineP1' ae ce thy = MachineP1
     } deriving (Show,Typeable,Generic,Eq)
 
 instance IsMachine (MachineP1' ae ce thy) where
+    type DefType (MachineP1' ae ce thy) = ()
     type MchType (MachineP1' ae ce thy) = MachineP1'
     type AEvtType (MachineP1' ae ce thy) = ae
     type CEvtType (MachineP1' ae ce thy) = ce
     type ThyType (MachineP1' ae ce thy) = thy
 
-type MachineP2 = MachineP2' EventP2 EventP2 TheoryP2
+type MachineP2  = MachineP2'' Expr EventP2 EventP2 TheoryP2
+type MachineP2' = MachineP2'' Expr
+type MachineP2RawDef  = MachineP2RawDef' EventP2 EventP2 TheoryP2
+type MachineP2RawDef' = MachineP2'' StringLi
 
-data MachineP2' ae ce thy = MachineP2
+data MachineP2'' def ae ce thy = MachineP2
     { _p1 :: MachineP1' ae ce thy
+    , _pMchOldDef :: Table Name def
+    , _pMchDef    :: Table Name def
     , _pDelVars   :: Table Name (Var,LineInfo)
     , _pStateVars :: Table Name Var             -- machine variables
     , _pAbstractVars :: Table Name Var          -- abstract machine variables
     , _pMchSynt   :: ParserSetting                  -- parsing invariants and properties
     } deriving (Show,Typeable,Generic,Eq)
 
-instance IsMachine (MachineP2' ae ce thy) where
-    type MchType (MachineP2' ae ce thy) = MachineP2'
-    type AEvtType (MachineP2' ae ce thy) = ae
-    type CEvtType (MachineP2' ae ce thy) = ce
-    type ThyType (MachineP2' ae ce thy) = thy
+instance IsMachine (MachineP2'' def ae ce thy) where
+    type DefType (MachineP2'' def ae ce thy) = def
+    type MchType (MachineP2'' def ae ce thy) = MachineP2'' def
+    type AEvtType (MachineP2'' def ae ce thy) = ae
+    type CEvtType (MachineP2'' def ae ce thy) = ce
+    type ThyType (MachineP2'' def ae ce thy) = thy
 
 type MachineP3 = MachineP3' EventP3 EventP3 TheoryP3
 
@@ -87,6 +95,7 @@ data MachineP3' ae ce thy = MachineP3
     } deriving (Show,Typeable,Generic,Eq)
 
 instance IsMachine (MachineP3' ae ce thy) where
+    type DefType (MachineP3' ae ce thy) = Expr
     type MchType (MachineP3' ae ce thy) = MachineP3'
     type AEvtType (MachineP3' ae ce thy) = ae
     type CEvtType (MachineP3' ae ce thy) = ce
@@ -111,6 +120,7 @@ instance (Eq ea,Eq ce,Eq thy) => Eq (MachineP4' ea ce thy) where
             cmp f (x,y) = f x == f y
 
 instance IsMachine (MachineP4' ae ce thy) where
+    type DefType (MachineP4' ae ce thy) = Expr
     type MchType (MachineP4' ae ce thy) = MachineP4'
     type AEvtType (MachineP4' ae ce thy) = ae
     type CEvtType (MachineP4' ae ce thy) = ce
@@ -217,8 +227,8 @@ type CTable = Table ContextId
 instance NFData MachineP0
 instance (NFData ae,NFData ce,NFData thy) 
         => NFData (MachineP1' ae ce thy)
-instance (NFData ae,NFData ce,NFData thy) 
-        => NFData (MachineP2' ae ce thy)
+instance (NFData def,NFData ae,NFData ce,NFData thy) 
+        => NFData (MachineP2'' def ae ce thy)
 instance (NFData ae,NFData ce,NFData thy) 
         => NFData (MachineP3' ae ce thy)
 instance (NFData ae,NFData ce,NFData thy) 
@@ -237,7 +247,7 @@ instance NFData TheoryP3
 instance NFData (Tactic Proof) where
     rnf x = seq x () 
 
-makeRecordConstr ''MachineP2'
+makeRecordConstr ''MachineP2''
 makeRecordConstr ''MachineP3'
 makeRecordConstr ''MachineP4'
 
@@ -248,13 +258,65 @@ makeRecordConstr ''EventP4
 makeRecordConstr ''TheoryP2
 makeRecordConstr ''TheoryP3
 
+type MachineP2'Field = MachineP2''Field StringLi
+
 makeLenses ''SystemP
 
+class HasMachineP2' (mch :: * -> * -> * -> *) where
+    machineP2' :: -- IsMachine (mch ae0 ce0 thy0)
+                Lens (mch ae0 ce0 thy0) (mch ae1 ce1 thy1) 
+                       (MachineP2'' (DefType (mch ae0 ce0 thy0)) ae0 ce0 thy0)
+                       (MachineP2'' (DefType (mch ae0 ce0 thy0)) ae1 ce1 thy1)
+
+p1 :: HasMachineP2' mch 
+   => Lens (mch ae0 ce0 thy0) 
+           (mch ae1 ce1 thy1) 
+           (MachineP1' ae0 ce0 thy0)
+           (MachineP1' ae1 ce1 thy1)
+p1 = machineP2' . lens _p1 (\p2 x -> p2 { _p1 = x })
+
+pDelVars   :: HasMachineP2' mch 
+           => Lens' (mch ae ce thy) 
+                    (Table Name (Var,LineInfo)) 
+pDelVars = machineP2' . $(oneLens '_pDelVars)
+pDefs  :: Traversal (MachineP2'' def ae ce thy) 
+                    (MachineP2'' def' ae ce thy) 
+                    (Table Name def)
+                    (Table Name def')
+pDefs = (\f (MachineP2 { .. }) -> 
+               (\x' y' -> MachineP2 _p1 x' y' _pDelVars _pStateVars 
+                                 _pAbstractVars _pMchSynt) 
+                    <$> f _pMchOldDef <*> f _pMchDef)
+pMchDef    :: HasMachineP2' mch 
+           => Lens (mch ae ce thy) 
+                   (mch ae ce thy) 
+                   (Table Name (DefType (mch ae ce thy)))
+                   (Table Name (DefType (mch ae ce thy)))
+pMchDef = machineP2' . $(oneLens '_pMchDef)
+pMchOldDef :: HasMachineP2' mch 
+           => Lens (mch ae ce thy) 
+                   (mch ae ce thy) 
+                   (Table Name (DefType (mch ae ce thy)))
+                   (Table Name (DefType (mch ae ce thy)))
+pMchOldDef = machineP2' . $(oneLens '_pMchOldDef)
+pStateVars :: HasMachineP2' mch 
+           => Lens' (mch ae ce thy) 
+                    (Table Name Var)
+pStateVars = machineP2' . $(oneLens '_pStateVars)
+pAbstractVars :: HasMachineP2' mch 
+           => Lens' (mch ae ce thy) 
+                    (Table Name Var)
+pAbstractVars = machineP2' . $(oneLens '_pAbstractVars)
+pMchSynt   :: HasMachineP2' mch 
+           => Lens' (mch ae ce thy) 
+                    ParserSetting 
+pMchSynt = machineP2' . $(oneLens '_pMchSynt)
+
 createHierarchy 
-        [ (''MachineP1' ,'_p0)
-        , (''MachineP2' ,'_p1)
-        , (''MachineP3' ,'_p2)
-        , (''MachineP4' ,'_p3)
+        [ (''MachineP1'  ,'_p0)
+        , (''MachineP2'  ,'_p1)
+        , (''MachineP3'  ,'_p2)
+        , (''MachineP4'  ,'_p3)
         -- , (''MachineBaseP1, '_pContext)
         , (''TheoryP1, '_t0)
         , (''TheoryP2, '_t1)

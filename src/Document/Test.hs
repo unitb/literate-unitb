@@ -7,6 +7,7 @@ import Document.Document
 
 -- import qualified Document.Tests.CompCalc as CC
 import qualified Document.Tests.Cubes as Cubes 
+import qualified Document.Tests.Definitions as Defs
 -- import qualified Document.Tests.IndirectEq as Ind
 import qualified Document.Tests.Lambdas as Lambdas
 import qualified Document.Tests.LockFreeDeque as LFD
@@ -59,6 +60,7 @@ test = test_cases
         , UE.test_case
         , PhTest.test_case
         , Cubes.test_case
+        , Defs.test_case
         , Train.test_case
         , Lambdas.test_case
         , Phase.test_case
@@ -94,8 +96,8 @@ result1 = unlines
     , "passed 12 / 12"
     ]
 
-path1 :: String
-path1 = "Tests/new_syntax.tex"
+path1 :: FilePath
+path1 = [path|Tests/new_syntax.tex|]
 
 case1 :: IO String
 case1 = do
@@ -111,8 +113,8 @@ result2 = concat [
         "[Error \"predicate is undefined: 'a1'\" (LI \"\" 23 12)]"
     ]
 
-path2 :: String
-path2 = "Tests/new_syntax-err0.tex"
+path2 :: FilePath
+path2 = [path|Tests/new_syntax-err0.tex|]
 
 case2 :: IO String
 case2 = do

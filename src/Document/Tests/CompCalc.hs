@@ -24,7 +24,7 @@ test = test_cases
             ]            
 
 path0 :: FilePath
-path0 = "Tests/comp-calc.tex"
+path0 = [path|Tests/comp-calc.tex|]
 
 result0 :: String
 result0 = unlines [" xxx THM/CC:10i"]

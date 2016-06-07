@@ -29,7 +29,7 @@ test_case = test_cases
     ]
 
 path0 :: FilePath
-path0 = "Tests/garbage collector/main.tex"
+path0 = [path|Tests/garbage collector/main.tex|]
 
 case0 :: IO POResult
 case0 = verify path0 0

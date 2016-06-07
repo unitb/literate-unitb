@@ -160,6 +160,7 @@ instance IsMap HashTable where
         -- filtering
     filter f = hashTable %~ IM.mapMaybe (notNull . filter f)
     filterWithKey f = hashTable %~ IM.mapMaybe (notNull . filterWithKey f)
+    partition = partitionWithKey . const
     partitionWithKey f = mapEitherWithKey f'
         where f' k x | f k x     = Left x
                      | otherwise = Right x

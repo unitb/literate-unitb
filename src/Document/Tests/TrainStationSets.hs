@@ -304,8 +304,8 @@ result2 = unlines
     , "passed 131 / 131"
     ]
 
-path0 :: String
-path0 = "Tests/train-station-set.tex"
+path0 :: FilePath
+path0 = [path|Tests/train-station-set.tex|]
 
 result3 :: String
 result3 = unlines
@@ -319,14 +319,14 @@ result3 = unlines
     , ""
     ]
 
-path3 :: String
-path3 = "Tests/train-station-set-err0.tex"
+path3 :: FilePath
+path3 = [path|Tests/train-station-set-err0.tex|]
 
 case3 :: IO String
 case3 = find_errors path3
 
-path4 :: String
-path4 = "Tests/train-station-set-err1.tex"
+path4 :: FilePath
+path4 = [path|Tests/train-station-set-err1.tex|]
 
 case4 :: IO String
 case4 = find_errors path4

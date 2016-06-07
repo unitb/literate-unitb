@@ -23,6 +23,7 @@ import Latex.Monad
 import Logic.Expr.Parser
 import Logic.Theory
 
+import Logic.Theories
 import Logic.Theories.Arithmetic
 import Logic.Theories.SetTheory
 
@@ -42,6 +43,7 @@ import Control.Lens.Misc
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
+import Control.Precondition
 
 import Data.Default
 import Data.Existential
@@ -92,7 +94,7 @@ case0 = do
         thy = M.fromList 
                 [ (mId "m0", symbol_table $ arithmetic:thy2) 
                 , (mId "m1", symbol_table $ set_theory:thy2) ]
-        thy2 = [basic_theory,arithmetic]
+        thy2 = M.elems preludeTheories
         s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue
@@ -196,7 +198,7 @@ result0 = M.fromList
         pdef1  = [as_pair' (view _1) (z3Def [] "sl$S1" [] (set_type s1') (se s1'),Local,li)]
         thy0 = symbol_table $ arithmetic:thy2
         thy1 = symbol_table $ set_theory:thy2
-        thy2 = [basic_theory,arithmetic]
+        thy2 = M.elems preludeTheories
         li = LI "file.ext" 1 1
 
 name1 :: TestName
@@ -269,16 +271,16 @@ case2 = return $ do
         s1 = z3Sort "\\S1" "sl$S1" 0
         s1' = make_type s1 [] 
         vs0 = M.fromList
-                [ ([tex|x|],makeCell $ Machine (z3Var "x" int) Local li) 
-                , ([tex|y|],makeCell $ Machine (z3Var "y" int) Local li)
+                [ ([tex|x|],makeCell $ MchVar (z3Var "x" int) Local li) 
+                , ([tex|y|],makeCell $ MchVar (z3Var "y" int) Local li)
                 , ([tex|p|],makeCell $ Evt $ M.singleton (Just "ae1b") (EventDecl (Param $ z3Var "p" bool) ("ae1b":|[]) Local li))
                 , ([tex|S0|],makeCell $ TheoryDef (z3Def [] "S0" [] (set_type s0') (se s0')) Local li) ]
         vs1 = M.fromList
-                [ ([tex|z|],makeCell $ Machine (z3Var "z" int) Local li) 
-                , ([tex|y|],makeCell $ Machine (z3Var "y" int) Inherited li) 
+                [ ([tex|z|],makeCell $ MchVar (z3Var "z" int) Local li) 
+                , ([tex|y|],makeCell $ MchVar (z3Var "y" int) Inherited li) 
                 , ([tex|p|],makeCell $ Evt $ M.singleton (Just "ce1") (EventDecl (Param $ z3Var "p" bool) ("ae1b":|[]) Inherited li))
                 , ([tex|q|],makeCell $ Evt $ M.singleton (Just "ce2") (EventDecl (Index $ z3Var "q" int) ("ce2":|[]) Local li))
-                , ([tex|x|],makeCell $ DelMch (Just $ z3Var "x" int) Local li) 
+                , ([tex|x|],makeCell $ DelMchVar (Just $ z3Var "x" int) Local li) 
                 , ([tex|S0|],makeCell $ TheoryDef (z3Def [] "S0" [] (set_type s0') (se s0')) Local li)
                 , ([tex|\S1|],makeCell $ TheoryDef (z3Def [] "sl$S1" [] (set_type s1') (se s1')) Local li) ]
         vs = M.fromList 
@@ -314,7 +316,7 @@ result2 = do
                       -> MachineP1' EventP1 EventP1 TheoryP2
                       -> MachineP2' EventP1 EventP1 TheoryP2
                       -> MachineP2' EventP1 EventP1 TheoryP2
-            upMachine mid m m' = makeMachineP2' m 
+            upMachine mid m m' = makeMachineP2'' m 
                         (m^.pCtxSynt & decls %~ M.union (m'^.pAllVars) 
                                      & primed_vars %~ M.union (m'^.pAllVars)) 
                         (fieldsM mid)
@@ -338,7 +340,7 @@ result2 = do
                 | eid == Right "ce2"  = [make' EIndices "q" (z3Var "q" int)]
                 | otherwise           = []
         return $ sys & mchTable.withKey.traverse %~ \(mid,m) -> 
-                layeredUpgradeRec (upTheory mid) (upMachine mid) upEvent upEvent m
+                    layeredUpgradeRec (upTheory mid) (upMachine mid) upEvent upEvent m
         -- (\m -> makeMachineP2' (f m) _ [])
 
 name3 :: TestName
@@ -436,11 +438,15 @@ result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
             when b $ expected_type `assign` Nothing
         c  = c_aux False
         c' = c_aux True
+        newMch :: MachineId 
+               -> MachineP2' ae ce thy 
+               -> MachineP3' ae ce thy 
         newMch mid m 
-            | mid == "m0" = makeMachineP3' m empty_property_set 
+            | mid == "m0" = makeMachineP3' m
+                    empty_property_set 
                     (makePropertySet' [Inv "inv0" $ c [expr| x \le y |]])
                     [PInvariant "inv0" $ c [expr| x \le y |]]
-            | otherwise = makeMachineP3' m 
+            | otherwise = makeMachineP3' m
                     (makePropertySet' [Inv "inv0" $ c [expr| x \le y |]])
                     (makePropertySet' 
                         [ Progress "prog1" prog1

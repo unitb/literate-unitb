@@ -3,6 +3,7 @@ module Logic.Test where
 
     -- Modules
 import Logic.Expr
+import Logic.Expr.Type (Field (..))
 import Logic.Expr.Const
 import Logic.Expr.Parser
 import Logic.Proof.Monad
@@ -216,6 +217,8 @@ test = test_cases "genericity"
         , aCase "QuasiQuotes with proof monads" case18 result18
         , aCase "QuasiQuotes with proof monads and set theory" case19 result19
         , aCase "QuasiQuotes with proof monads and assumptions" case20 result20
+        , aCase "Records lookup syntax" case21 result21
+        , aCase "Proofs with record lookup" case22 result22
         ]
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
@@ -369,13 +372,14 @@ result10 = unlines
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
-    , "(declare-datatypes (a1 a2) ( (Record-b-x (Record-b-x (b a1) (x a2))) ))"
+    , "(declare-datatypes (a1 a2)"
+    , "                   ( (Record-b-x (Record-b-x (@@field@@_b a1) (@@field@@_x a2))) ))"
     , "; comment: we don't need to declare the sort Bool"
     , "; comment: we don't need to declare the sort Int"
     , "(declare-const v1 (Record-b-x Bool Int))"
     , "(declare-const v2 (Record-b-x Bool Int))"
     , "(assert (= v1 (Record-b-x true 7)))"
-    , "(assert (= v2 (Record-b-x (b v1) 7)))"
+    , "(assert (= v2 (Record-b-x (@@field@@_b v1) 7)))"
     , "(assert (not (= v1 v2)))"
     , "(check-sat-using (or-else (then qe smt)"
     , "                          (then simplify smt)"
@@ -405,7 +409,8 @@ result11 = unlines
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
-    , "(declare-datatypes (a1 a2) ( (Record-b-x (Record-b-x (b a1) (x a2))) ))"
+    , "(declare-datatypes (a1 a2)"
+    , "                   ( (Record-b-x (Record-b-x (@@field@@_b a1) (@@field@@_x a2))) ))"
     , "; comment: we don't need to declare the sort Bool"
     , "; comment: we don't need to declare the sort Int"
     , "(define-sort set (a) (Array a Bool))"
@@ -659,8 +664,8 @@ result11 = unlines
     , "                  (@@fv@@_1 (set Int))"
     , "                  (@@bv@@_0 (Record-b-x Bool Int)) )"
     , "                (! (= (elem@Open@@Record-b-x@@Bool@@Int@Close @@bv@@_0 (@@lambda@@_0 @@fv@@_0 @@fv@@_1))"
-    , "                      (and (elem@@Bool (b @@bv@@_0) @@fv@@_0)"
-    , "                           (elem@@Int (x @@bv@@_0) @@fv@@_1)))"
+    , "                      (and (elem@@Bool (@@field@@_b @@bv@@_0) @@fv@@_0)"
+    , "                           (elem@@Int (@@field@@_x @@bv@@_0) @@fv@@_1)))"
     , "                   :pattern"
     , "                   ( (elem@Open@@Record-b-x@@Bool@@Int@Close @@bv@@_0 (@@lambda@@_0 @@fv@@_0 @@fv@@_1)) ))))"
     , "(assert (not (= v1 v2)))"
@@ -820,3 +825,40 @@ case20 = discharge("case15") $ runSequent $ do
 
 result20 :: Validity
 result20 = Invalid
+
+case21 :: IO Expr
+case21 = return $ getExpr $ c [expr| r.'x = 7 |]
+    where
+        c = ctx $ do
+                decls %= M.union (symbol_table [(Var r t)])
+                expected_type .= Nothing
+        t = record_type $ runMap' $ do
+                x ## int
+                bar ## bool
+        r = [smt|r|]
+        x = [smt|x|]
+        bar = [smt|bar|]
+
+result21 :: Expr
+result21 = Record (FieldLookup r (Field x))  `zeq` zint 7
+    where
+        r  = Word $ Var r' $ record_type $ M.fromList 
+                    [ (bar,bool)
+                    , (x,int) ]
+        r'  = [smt|r|]
+        x   = [smt|x|]
+        bar = [smt|bar|]
+
+case22 :: IO Validity
+case22 = discharge "case22" $ runSequent $ do
+    let t = record_type $ runMap' $ do
+                x ## bool
+                bar ## int
+        x   = [smt|x|]
+        bar = [smt|bar|]
+    declare "r" t
+    assumeQ [expr| r = [ 'x := \true, 'bar := 7 ] |]
+    checkQ  [expr| r.'bar = 8 |]
+
+result22 :: Validity
+result22 = Invalid

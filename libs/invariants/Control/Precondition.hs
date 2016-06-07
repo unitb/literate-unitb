@@ -78,11 +78,11 @@ byRel' tag rel symb x0 x1 r = providedMessage' ?loc tag
 type Pre = (?loc :: CallStack)
 
 
-assertFalse' :: Pre => a
-assertFalse' = provided False (error "false assertion (2)")
+assertFalse' :: Pre => String -> a
+assertFalse' msg = providedMessage' (?loc) "assertion" msg False (error "false assertion: ")
 
 undefined' :: Pre => a
-undefined' = assertFalse' 
+undefined' = provided False (error "undefined")
 
 assertFalseMessage :: Pre => String -> a
 assertFalseMessage msg = providedMessage' ?loc "False assert" msg False (error "false assertion (2)")
