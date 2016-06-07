@@ -39,6 +39,10 @@ result0 :: String
 result0 = unlines
     [ "\\noindent \\ref{m1:moveout} $[t]$ \\textbf{event}"
     , "\\begin{block}"
+    , "  \\item   \\textbf{refines}"
+    , "  \\begin{block}"
+    , "    \\item   \\ref{m1:moveout}"
+    , "  \\end{block}"
     , "  \\item   \\textbf{during}"
     , "  \\begin{block}"
     , "    \\item[ \\eqref{m1:moveoutc1} ]{$t \\in in \\land loc.t \\in plf$} %"
@@ -76,6 +80,10 @@ result1 :: String
 result1 = unlines
     [ "\\noindent \\ref{m1:moveout} $[t]$ \\textbf{event}"
     , "\\begin{block}"
+    , "  \\item   \\textbf{refines}"
+    , "  \\begin{block}"
+    , "    \\item   \\ref{m1:moveout}"
+    , "  \\end{block}"
     , "  \\item   \\textbf{during}"
     , "  \\begin{block}"
     , "    \\item[ \\eqref{m1:moveoutc1} ]{$t \\in in \\land loc.t \\in plf$} %"

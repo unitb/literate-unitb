@@ -17,10 +17,12 @@ import Control.Monad.State
 import Control.Monad.Trans.Reader (ReaderT(..),runReaderT)
 
 import Data.Default
-import Data.List as L ( intercalate,null
-                      , map,unlines,lines )
-import Data.List.NonEmpty as NE
+import Data.Either.Combinators
+import Data.List as L ( intercalate )
+import qualified Data.List as L
+import           Data.List.NonEmpty as NE
 import Data.Map.Class as M hiding (map)
+import Data.Maybe as MM
 import qualified Data.Map.Class as M
 
 import System.FilePath
@@ -255,6 +257,7 @@ event_summary' m lbl e = do
         index_sum lbl e
         comment_of m (DocEvent lbl)
         block $ do
+            item $ refines_sum e
             item $ csched_sum lbl e
             item $ fsched_sum lbl e
             item $ param_sum e
@@ -276,9 +279,11 @@ refines_clause sys m = do
 
 block :: M () -> M ()
 block cmd = do
-    tell ["\\begin{block}"]
-    cmd
-    tell ["\\end{block}"]
+    xs <- censor (const []) $ snd <$> listen cmd
+    unless (L.null xs) $ do
+        tell ["\\begin{block}"]
+        tell xs
+        tell ["\\end{block}"]
 
 variable_sum :: Machine -> M ()
 variable_sum m = section (keyword "variables") $ 
@@ -304,7 +309,9 @@ defs_sum m = do
 invariant_sum :: Machine -> M ()
 invariant_sum m = do
         let prop = m!.props
-        section kw_inv $ put_all_expr_with (makeDoc .= comment_of m . DocInv) "" (M.toAscList $ prop^.inv) 
+        section kw_inv $ put_all_expr_with 
+                (makeDoc .= comment_of m . DocInv) 
+                "" (M.toAscList $ prop^.inv) 
     where
         kw_inv = "\\textbf{invariants}"
         
@@ -427,6 +434,16 @@ index_sum lbl e = tell ["\\noindent \\ref{" ++ pretty lbl ++ "} " ++ ind ++ " \\
             | M.null $ e^.indices = ""
             | otherwise           = "$[" ++ inds ++ "]$"
         inds = intercalate "," (L.map (render . view name) $ M.ascElems $ e^.indices)
+
+refines_sum :: EventMerging' -> M ()
+refines_sum e = do
+        section kw $ block $ do
+            mapM_ (item.tell.pure.disp) 
+                  (MM.mapMaybe (rightToMaybe.fst) $ NE.toList $ e^.multiAbstract)
+    where
+        kw = "\\textbf{refines}"
+        disp :: EventId -> String
+        disp = [printf|\\ref{%s}|] . pretty
 
 csched_sum :: EventId -> EventMerging' -> M ()
 csched_sum lbl e = do
