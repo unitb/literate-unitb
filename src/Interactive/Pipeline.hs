@@ -117,7 +117,7 @@ parser (Shared { .. })  = return $ do
                 put t1
                 liftIO $ do
                     write_obs parser_state Parsing
-                    (t,()) <- timeItT $ parse 
+                    (t,()) <- timeItT parse 
                     write_obs parser_state (Idle t)
             ) t
     where
@@ -126,7 +126,7 @@ parser (Shared { .. })  = return $ do
         g lbl x = (lbl,x)
         h lbl (x,y) = ((lbl,x),y)
         parse = do
-                xs <- liftIO $ timeIt $ runEitherT $ do
+                xs <- liftIO $ runEitherT $ do
                     s  <- EitherT $ parse_system fname
                     ms <- hoistEither $ mapM f $ M.ascElems $ s!.machines
                     pos <- hoistEither $ mapM theory_po $ M.ascElems $ s!.theories
@@ -135,7 +135,7 @@ parser (Shared { .. })  = return $ do
                                 y <- toList ys
                                 return (x,y)
                     liftIO $ evaluate (ms, cs, s)
-                timeIt $ case xs of
+                case xs of
                     Right (ms,cs,s) -> do
                         let new_pos = unions (cs : map (M.mapKeys $ over _1 as_label) ms) :: Table Key Seq
                             f (s0,b0) (s1,b1)
