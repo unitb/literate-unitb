@@ -29,6 +29,7 @@
             <span .glyphicon .glyphicon-plus>
         <div #div-decl1 .decl>
           <.input-group>
+            <label .input-group-addon for="decl1">decl1
             <input #decl1 .form-control name="decl1" type="text" placeholder="Declaration..."
             autocomplete="off">
             <span .input-group-btn>

@@ -61,10 +61,14 @@ $(function() {
               btn.attr('disabled', false);    // re-enable the '+' button after fading in
             });                  
 
-      newElem.find('.form-control')           // get the input field of the new declaration
+      newElem.find('input')                   // get the input field of the new declaration
         .attr('id', 'decl' + newNum)          // assign new id to the input
         .attr('name', 'decl' + newNum)        // assign new name
         .val('');                             // clear the input text
+
+      newElem.find('label')                   // get the input field of the new declaration
+        .attr('for', 'decl' + newNum)         // assign new for
+        .text('decl' + newNum);               // update the label text
 
       // insert the new element after the last declaration input field
       $('#div-decl' + num).after(newElem);
