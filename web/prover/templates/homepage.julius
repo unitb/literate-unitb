@@ -129,10 +129,12 @@ $(function() {
   function flatten_obj(arr_of_objs) {
     var arr = [];
     $(arr_of_objs).each(function(i, field) {
-      sub_arr = [];
-      sub_arr.push(field.name);
-      sub_arr.push(field.value);
-      arr.push(sub_arr);
+      if (field.value != "") {
+        sub_arr = [];
+        sub_arr.push(field.name);
+        sub_arr.push(field.value);
+        arr.push(sub_arr);
+      }
     });
     return arr;
   }

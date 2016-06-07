@@ -29,7 +29,8 @@
             <span .glyphicon .glyphicon-plus>
         <div #div-decl1 .decl>
           <.input-group>
-            <input #decl1 .form-control name="decl1" type="text" placeholder="Declaration...">
+            <input #decl1 .form-control name="decl1" type="text" placeholder="Declaration..."
+            autocomplete="off">
             <span .input-group-btn>
               <button .del-decl .btn .btn-default type="button">
                 <small>

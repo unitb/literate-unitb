@@ -15,6 +15,7 @@ import Data.Maybe
 import Import
 
 import Model.ProofForm
+import Model.ProofResult
 
 pfStringToPfStringLi :: ProofForm String -> ProofForm StringLi
 pfStringToPfStringLi p@(ProofForm _ d g) =
@@ -22,20 +23,27 @@ pfStringToPfStringLi p@(ProofForm _ d g) =
       , goal = toSringLi "goal" g
     }
 
-pfStringLiToSequent :: ProofForm StringLi -> Sequent
+pfStringLiToSequent :: ProofForm StringLi -> Either [Error] Sequent
 pfStringLiToSequent (ProofForm t d g) = runSequent $ do
     let theories = getTheories t
     mapM_ include theories
     mapM_ declareE (map snd d)
-    goalE g
+    checkE g
 
-discharge :: Sequent -> IO (Either String String)
-discharge s = do
-    val <- Z3.discharge "goal" s
-    case val of
-        Z3.Valid -> return $ Right "Valid"
-        Z3.Invalid -> return $ Left "Invalid"
-        Z3.ValUnknown -> return $ Left "Unknown"
+discharge :: Either [Error] Sequent -> IO (ProofResult String)
+discharge e = do
+    case e of
+        Left err ->
+            return $ ProofResult $ show_err err
+        Right s -> do
+            val <- Z3.discharge "goal" s
+            case val of
+                Z3.Valid -> return $ ProofResult "Valid"
+                Z3.Invalid -> return $ ProofResult "Invalid"
+                Z3.ValUnknown -> return $ ProofResult "ValUnknown"
+
+prove :: ProofForm String -> IO (ProofResult String)
+prove = discharge . pfStringLiToSequent . pfStringToPfStringLi
 
 getTheories :: Vector String -> Vector Theory
 getTheories = map getTheory

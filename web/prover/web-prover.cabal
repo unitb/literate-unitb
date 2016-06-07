@@ -24,6 +24,7 @@ library
                      Handler.Home
                      Logic.Prover
                      Model.ProofForm
+                     Model.ProofResult
 
     if flag(dev) || flag(library-only)
         cpp-options:   -DDEVELOPMENT
@@ -100,6 +101,9 @@ test-suite test
     main-is:           Spec.hs
     other-modules:     Handler.CommonSpec
                        Handler.HomeSpec
+                       Logic.ProverSpec
+                       Model.ProofFormSpec
+                       Model.ProofResultSpec
                        TestImport
     hs-source-dirs:    test
     ghc-options:       -Wall

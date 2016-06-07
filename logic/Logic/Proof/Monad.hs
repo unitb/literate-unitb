@@ -94,13 +94,15 @@ checkQ qexpr = do
         setting <- SequentM $ use _1
         check $ Right $ getExpr $ qexpr setting
 
-goalE :: Pre
-        => StringLi -> SequentM Expr
-goalE str = do
+checkE :: StringLi -> SequentM Expr
+checkE str = do
         setting <- SequentM $ use _1
-        check $ Right $ getExpr
-            $ either (error . ("\n"++) . show_err) id
-            $ parse_expr setting str
+        case parse_expr setting str of
+            Left  es -> SequentM . lift . Left $ es
+            Right de -> do
+                let e = getExpr de
+                collectDeclaration e
+                return e
 
 declare :: Pre
         => String -> Type -> SequentM ExprP
@@ -117,11 +119,11 @@ declare' v = do
             _1.decls %= insert_symbol v
         return $ Right $ Word v
 
-declareE :: Pre
-        => StringLi -> SequentM ()
+declareE :: StringLi -> SequentM ()
 declareE str = do
     setting <- SequentM $ use _1
     let ctx = contextOf setting
-    mapM_ declare' $ fmap snd $ run $ get_variables'' ctx str (line_info str)
-    where
-        run = either (error.("\n"++).show_err) id
+    case get_variables'' ctx str (line_info str) of
+        Left  es -> SequentM . lift . Left $ es
+        Right vs -> do 
+            mapM_ declare' . fmap snd $ vs

@@ -8,4 +8,4 @@ import Model.ProofForm
 postGoalR :: Handler Value
 postGoalR = do
     pf <- requireJsonBody :: Handler (ProofForm String)
-    returnJson =<< liftIO (discharge . pfStringLiToSequent . pfStringToPfStringLi $ pf)
+    liftIO $ prove pf >>= returnJson

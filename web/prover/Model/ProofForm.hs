@@ -8,7 +8,7 @@ data ProofForm a = ProofForm {
     theories     :: Vector String,
     declarations :: Vector (String, a),
     goal         :: a
-}
+} deriving (Eq, Show)
 
 instance (FromJSON a) => FromJSON (ProofForm a) where
   parseJSON = withObject "proof" $ \o -> do
@@ -22,3 +22,9 @@ instance (ToJSON a) => ToJSON (ProofForm a) where
     "theories"     .= theories,
     "declarations" .= declarations,
     "goal"         .= goal ]
+
+mkProofForm :: Vector String -> Vector (String, a) -> a -> ProofForm a
+mkProofForm ts ds g = ProofForm { 
+    theories = ts,
+    declarations = ds,
+    goal = g }
