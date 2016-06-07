@@ -112,7 +112,9 @@ instance Ord a => PreOrd (Unordered a) where
                 (True,False) -> Comp LT
                 (False,False) -> Uncomp
         where
-            zs = xunionBy (compare `on` fst) ((,True) <$> sort xs) ((,False) <$> sort ys)
+            zs = xunionBy (compare `on` fst) 
+                        ((,True) <$> sort xs) 
+                        ((,False) <$> sort ys)
             (l,r) = partition snd zs
 
 instance (Ord k,Eq a) => PreOrd (M.Map k a) where

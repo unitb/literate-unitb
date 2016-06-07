@@ -3,17 +3,24 @@ module Control.Concurrent.Async.Priority
     ( SchedT, Sched, Priority (..), SchedSTM 
     , Async
     , async, cancel, waitSTM, wait
+    , mapConcurrently
+    , forConcurrently
     , withScheduler
     , insideSchedT
     , unfail' 
-    , atomically' )
+    , unfail
+    , atomically' 
+    , Concurrently
+    , concurrently )
 where
 
 import Control.Applicative
 import qualified Control.Concurrent.Async as A
 import Control.Concurrent.STM hiding (TQueue)
 import Control.Concurrent.Async.Queue 
+import Control.Concurrent
 import Control.DeepSeq
+import qualified Control.Exception as Exc
 import Control.Lens
 
 import Control.Monad.Catch
@@ -21,6 +28,8 @@ import Control.Monad.Reader
 import Control.Monad.Trans.Lens
 
 import Control.Precondition
+
+import Data.Semigroup
 
 import GHC.Generics
 
@@ -163,3 +172,62 @@ makeScheduler bound = do
                     ]
             sequence_ $ concat xs
         return (sch,Scheduler high low count can)
+
+newtype Concurrently s a = Concurrently { runConcurrently :: Sched s a }
+
+instance Functor (Concurrently s) where
+  fmap f (Concurrently a) = Concurrently $ f <$> a
+
+instance Applicative (Concurrently s) where
+  pure = Concurrently . return
+  Concurrently fs <*> Concurrently as =
+    Concurrently $ (\(f, a) -> f a) <$> concurrently fs as
+
+instance Semigroup a => Semigroup (Concurrently s a) where
+  (<>) = liftA2 (<>)
+
+instance (Monoid a) => Monoid (Concurrently s a) where
+  mempty = pure mempty
+  mappend = liftA2 mappend
+
+concurrently :: Sched s a
+             -> Sched s b
+             -> Sched s (a,b)
+concurrently left right = concurrently' left right (collect [])
+  where
+    collect [Left a, Right b] _ = return (a,b)
+    collect [Right b, Left a] _ = return (a,b)
+    collect xs m = do
+        e <- liftIO $ takeMVar m
+        case e of
+            Left ex -> throwSched ex
+            Right r -> collect (r:xs) m
+
+concurrently' :: Sched s a -> Sched s b
+             -> (MVar (Either SomeException (Either a b)) -> Sched s r)
+             -> Sched s r
+concurrently' left right collect = do
+    let run = runReaderT . runSchedT
+    done <- liftIO newEmptyMVar
+    SchedT $ ReaderT $ \s -> mask $ \restore -> do
+        lid <- forkIO $ restore (run left s >>= putMVar done . Right . Left)
+                             `catchAll` (putMVar done . Left)
+        rid <- forkIO $ restore (run right s >>= putMVar done . Right . Right)
+                             `catchAll` (putMVar done . Left)
+        let stop = killThread rid >> killThread lid
+                   -- kill right before left, to match the semantics of
+                   -- the version using withAsync. (#27)
+        r <- restore (run (collect done) s) `onException` stop
+        stop
+        return r
+
+mapConcurrently :: Traversable t => (a -> Sched s b) -> t a -> Sched s (t b)
+mapConcurrently f = runConcurrently . traverse (Concurrently . f)
+
+forConcurrently :: Traversable t => t a -> (a -> Sched s b)-> Sched s (t b)
+forConcurrently = flip mapConcurrently
+
+throwSched :: (Exception e,MonadIO m) 
+           => e 
+           -> SchedT s m a
+throwSched = SchedT . liftIO . Exc.throwIO

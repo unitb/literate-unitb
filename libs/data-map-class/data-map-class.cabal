@@ -48,7 +48,9 @@ cabal-version:       >=1.10
 
 library
   -- Modules exported by the library.
-  exposed-modules:     Data.Map.Class
+  exposed-modules:     
+      Data.Map.Class
+      Data.Map.These
   
   -- Modules included in this library but not exported.
   -- other-modules:       
@@ -57,7 +59,7 @@ library
   default-extensions:    KindSignatures, TypeFamilies, TupleSections, RankNTypes, FlexibleInstances
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, containers >=0.5 && <0.6, invariants, generic-instances, unordered-containers, cereal, semigroups, hashable, data-default
+  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, containers >=0.5 && <0.6, invariants, generic-instances, unordered-containers, cereal, semigroups, hashable, data-default, these
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

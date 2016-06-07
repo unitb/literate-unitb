@@ -1,11 +1,4 @@
 module Interactive.Observable 
-    ( Observable, new_obs
-    , modify_obs, modify_obs'
-    , modify_obs_fast, modify_obs_fast'
-    , write_obs, write_obs_fast
-    , read_obs, observe
-    , observe_with, reads_obs
-    , test )
 where
 
 import Control.Concurrent

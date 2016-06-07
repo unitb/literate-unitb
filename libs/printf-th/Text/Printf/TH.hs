@@ -25,6 +25,7 @@ typeOf :: String -> TypeQ
 typeOf [] = [t|String|]
 typeOf ('%':'s':xs) = [t| String -> $(typeOf xs) |]
 typeOf ('%':'d':xs) = [t| Int -> $(typeOf xs) |]
+typeOf ('%':'f':xs) = [t| Double -> $(typeOf xs) |]
 typeOf ('%':'%':xs) = typeOf xs
 typeOf ('%':c:_)      = error $ "invalid escape character: %" ++ [c]
 typeOf ('%':_)      = error $ "invalid escape character: %"
