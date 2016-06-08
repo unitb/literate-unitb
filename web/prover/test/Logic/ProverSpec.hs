@@ -23,10 +23,22 @@ spec = describe "prove" $ do
         (prove pf3) `shouldNotReturn` (justPRStr . decode $ prStr2)
 
     where
-        pf1    = mkProofForm (fromList []) (fromList []) ("2 = 2" :: String)
-        pfStr2 = "{\"theories\":[],\"declarations\":[],\"goal\":\"\\\\neg 2 = 2\"}"
-        pf3    = mkProofForm (fromList []) (fromList []) ("2 /= 2" :: String)
-        pr1    = mkProofResult ("Valid" :: String)
+        pf1 = ProofForm {
+            theories     = fromList [],
+            declarations = fromList [],
+            assumptions  = fromList [],
+            goal         = ("2 = 2" :: String)
+        }
+        pfStr2 = concat [
+            "{\"theories\":[],\"declarations\":[],",
+            "\"assumptions\":[],\"goal\":\"\\\\neg 2 = 2\"}" ]
+        pf3 = ProofForm {
+            theories     = fromList [],
+            declarations = fromList [],
+            assumptions  = fromList [],
+            goal         = ("2 /= 2" :: String)
+        }
+        pr1    = ProofResult { result = ("Valid" :: String) }
         prStr2 = "{\"result\":\"Invalid\"}"
         justPFStr = fromJust :: Maybe (ProofForm String) -> ProofForm String
         justPRStr = fromJust :: Maybe (ProofResult String) -> ProofResult String

@@ -14,10 +14,18 @@ getHomeR :: Handler Html
 getHomeR = do
     defaultLayout $ do
         let (goalFormId, goalTextareaId, goalListId) = goalIds
+        let (declPrefix, declContainerPrefix) = declarationIds
+        let (asmPrefix, asmContainerPrefix) = assumptionIds
         jsReqWarning <- newIdent
         setTitle "Literate Unit-B"
         $(widgetFile "homepage")
 
 
 goalIds :: (Text, Text, Text)
-goalIds = ("js-goalForm", "js-createGoalTextarea", "js-goalList")
+goalIds = ("js-goalForm", "js-goalTextarea", "js-goalList")
+
+declarationIds :: (Text, Text)
+declarationIds = ("decl", "div-decl")
+
+assumptionIds :: (Text, Text)
+assumptionIds = ("asm", "div-asm")

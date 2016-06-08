@@ -25,6 +25,11 @@ footer {
     margin-left: 3px;
 }
 
-.decl {
+.#{declPrefix}, .#{asmPrefix} {
     margin-top: 10px;
+}
+
+.ce-lbl {
+    background-color: #fff;
+    min-width: 60px;
 }

@@ -68,13 +68,15 @@ assumeQ qexpr = do
         setting <- SequentM $ use _1
         assume $ Right $ getExpr $ qexpr setting
 
-assumeE :: Pre
-        => StringLi -> SequentM ()
+assumeE :: StringLi -> SequentM ()
 assumeE str = do
         setting <- SequentM $ use _1
-        assume $ Right $ getExpr
-            $ either (error . ("\n"++) . show_err) id
-            $ parse_expr setting str
+        case parse_expr setting str of
+            Left  es -> SequentM . lift . Left $ es
+            Right de -> do
+                let e = getExpr de
+                collectDeclaration e
+                SequentM $ tell ([],[],[e],[])
 
 collectDeclaration :: Expr -> SequentM ()
 collectDeclaration e = SequentM $ do

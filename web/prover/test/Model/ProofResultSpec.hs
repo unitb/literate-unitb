@@ -16,5 +16,5 @@ spec = do
             decode prStr `shouldBe` (Just pr)
 
     where
-        pr    = mkProofResult ("Valid" :: String)
+        pr    = ProofResult { result = ("Valid" :: String) }
         prStr = "{\"result\":\"Valid\"}"

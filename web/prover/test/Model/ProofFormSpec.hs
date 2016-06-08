@@ -16,5 +16,12 @@ spec = do
             decode pfStr `shouldBe` (Just pf)
 
     where
-        pf    = mkProofForm (fromList []) (fromList []) ("2 = 2" :: String)
-        pfStr = "{\"theories\":[],\"declarations\":[],\"goal\":\"2 = 2\"}"
+        pf = ProofForm { 
+            theories     = fromList [],
+            declarations = fromList [],
+            assumptions  = fromList [],
+            goal         = ("2 = 2" :: String)
+        }
+        pfStr = concat [
+            "{\"theories\":[],\"declarations\":[],",
+            "\"assumptions\":[],\"goal\":\"2 = 2\"}" ]

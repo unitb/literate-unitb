@@ -18,16 +18,18 @@ import Model.ProofForm
 import Model.ProofResult
 
 pfStringToPfStringLi :: ProofForm String -> ProofForm StringLi
-pfStringToPfStringLi p@(ProofForm _ d g) =
+pfStringToPfStringLi p@(ProofForm _ d a g) =
     p { declarations = d & traverse %~ (\(lbl,decl) -> (lbl, toSringLi lbl decl))
+      , assumptions  = a & traverse._2 %~ (\(lbl,asm)  -> (lbl, toSringLi lbl asm))
       , goal = toSringLi "goal" g
     }
 
 pfStringLiToSequent :: ProofForm StringLi -> Either [Error] Sequent
-pfStringLiToSequent (ProofForm t d g) = runSequent $ do
+pfStringLiToSequent (ProofForm t d a g) = runSequent $ do
     let theories = getTheories t
-    mapM_ include theories
+    mapM_ include  theories
     mapM_ declareE (map snd d)
+    mapM_ assumeE  (map snd $ map snd a)
     checkE g
 
 discharge :: Either [Error] Sequent -> IO (ProofResult String)

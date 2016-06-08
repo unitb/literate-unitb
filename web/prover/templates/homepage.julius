@@ -1,79 +1,38 @@
 var js_notice = document.getElementById(#{toJSON jsReqWarning});
 document.getElementById("notices").removeChild(js_notice);
 
-$(function() {
-  $('.del-decl').click(function () {
-    $(this).parent().parent().parent().slideUp(function () {
-      // slide up the declaration container
-
-      if ($(this).parent().children('.decl').length > 1) {
-        // there's more than one declaration container, so
-        // we can just delete this one.
-
-        decl = $(this).prev().find('.form-control');
-        // if there's a declaration before (above) this one
-        if (decl.length > 0) {
-          $(decl).focus(); // focus it
-        }
-        else {
-          // otherwise, focus the next one
-          $(this).next().find('.form-control').focus();
-        }
-
-        $(this).remove();
-      }
-      else {
-        // there's only one declaration container left;
-        // just clear it and focus the goal textarea
-        $("##{rawJS goalTextareaId}").focus();
-        $(this).find('.form-control')
-          .val('')
-          .attr('disabled', true);
-      }
+// select the text in all contenteditable labels (.ce-lbl)
+// when each one is focused
+document.querySelector(".ce-lbl").onfocus = function(e) {
+    var el = this;
+    requestAnimationFrame(function() {
+        selectElementContents(el);
     });
+};
+
+function selectElementContents(el) {
+    var range = document.createRange();
+    range.selectNodeContents(el);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+$(function() {
+  $(".del-#{rawJS declPrefix}").click(function () {
+    delBtn(this, "#{rawJS declPrefix}");
   });
 
-  $('#add-decl').click(function () {
-    var btn = $(this);
-    var decls = btn.parent().children('.decl');
+  $(".del-#{rawJS asmPrefix}").click(function () {
+    delBtn(this, "#{rawJS asmPrefix}");
+  });
 
-    if (decls.length == 1 && !$(decls[0]).is(':visible')) {
-      var input = $(decls[0]).find('.form-control');
-      input.attr('disabled', false);               // enable the declaration input
+  $("#add-#{rawJS declPrefix}").click(function () {
+    addBtn(this, "#{rawJS declPrefix}", "#{rawJS declContainerPrefix}");
+  });
 
-      $(decls[0]).fadeIn('slow', function() {      // fade in the declaration container
-        btn.attr('disabled', false);               // re-enable the '+' button after fading in
-        input.focus();
-      });
-    }
-    else {
-      btn.attr('disabled', true);             // disable the '+' button while adding the new field
-      var num     = parseInt(
-                      $('.decl').last()
-                        .attr('id')
-                        .match(/\d+/)[0],
-                      10),                    // numeric id of the last declaration
-          newNum  = new Number(num + 1),      // numeric id of the new declaration input field
-          newElem = $('#div-decl' + num)      // get the declaration container
-            .clone(true, true)                // deep clone the last declaration
-            .attr('id', 'div-decl' + newNum)  // assign new id
-            .fadeIn('slow', function() {      // fade it in
-              btn.attr('disabled', false);    // re-enable the '+' button after fading in
-            });                  
-
-      newElem.find('input')                   // get the input field of the new declaration
-        .attr('id', 'decl' + newNum)          // assign new id to the input
-        .attr('name', 'decl' + newNum)        // assign new name
-        .val('');                             // clear the input text
-
-      newElem.find('label')                   // get the input field of the new declaration
-        .attr('for', 'decl' + newNum)         // assign new for
-        .text('decl' + newNum);               // update the label text
-
-      // insert the new element after the last declaration input field
-      $('#div-decl' + num).after(newElem);
-      $('#decl' + newNum).focus();
-    }
+  $("#add-#{rawJS asmPrefix}").click(function () {
+    addBtn(this, "#{rawJS asmPrefix}", "#{rawJS asmContainerPrefix}");
   });
 
   $("##{rawJS goalFormId}").submit(function(event) {
@@ -87,10 +46,15 @@ $(function() {
     }
 
     // create an array of strings of theory values
-    var theories = get_values($('#theories').serializeArray());
+    var theories = get_values($("#theories").serializeArray());
 
-    // create an array of strings of declarations
-    var decls = flatten_obj($('.decl input').serializeArray());
+    // create an array of declarations
+    var decls = flatten_declarations($(".#{rawJS declPrefix} input")
+      .serializeArray());
+
+    // create an array of assumptions
+    var asms = flatten_assumptions($(".#{rawJS asmPrefix} input")
+      .serializeArray());
 
     // Make an AJAX request to the server to submit a goal
     $.ajax({
@@ -100,6 +64,7 @@ $(function() {
       data: JSON.stringify({
         theories: theories,
         declarations: decls,
+        assumptions: asms,
         goal: goal,
       }),
       success: function (data) {
@@ -130,16 +95,120 @@ $(function() {
   // [{"name":"decl1","value":"hi"},{"name":"decl2","value":"there"}]
   // returns an array of arrays, like this
   // [["decl1", "hi"], ["decl2", "there"]]
-  function flatten_obj(arr_of_objs) {
-    var arr = [];
+  function flatten_declarations(arr_of_objs) {
+    var decls = [];
     $(arr_of_objs).each(function(i, field) {
       if (field.value != "") {
-        sub_arr = [];
-        sub_arr.push(field.name);
-        sub_arr.push(field.value);
-        arr.push(sub_arr);
+        var decl = [];
+        decl.push(field.name);
+        decl.push(field.value);
+        decls.push(decl);
       }
     });
-    return arr;
+    return decls;
+  }
+
+  // given an array of objects of the following form
+  // [{"name":"asm1","value":"hi"},{"name":"asm2","value":"there"}]
+  // returns an array of array of arrays, like this
+  // [["asm1", ["lbl1", "hi"]], ["asm2", ["label2", "there"]]]
+  // (it looks up the labels by reading the text of the <label> tags)
+  function flatten_assumptions(arr_of_objs) {
+    var asms = [];
+    $(arr_of_objs).each(function(i, field) {
+      if (field.value != "") {
+        var asm_outer = [], asm_inner = [];
+        asm_outer.push(field.name);
+        asm_inner.push($("#" + field.name).prev().text());
+        asm_inner.push(field.value);
+        asm_outer.push(asm_inner);
+        asms.push(asm_outer);
+      }
+    });
+    return asms;
+  }
+
+  // handles each delete '-' button
+  function delBtn(el, cls) {
+    var dotCls = "." + cls;
+    $(el).parent().parent().parent().slideUp(function () {
+      // slide up the container
+
+      if ($(this).parent().children(dotCls).length > 1) {
+        // there's more than one container, so we can just
+        // delete this one.
+
+        var inp = $(this).prev().find(".form-control");
+        // if there's a container before (above) this one
+        if (inp.length > 0) {
+          $(inp).focus(); // focus it
+        }
+        else {
+          // otherwise, focus the next one
+          $(this).next().find(".form-control").focus();
+        }
+
+        $(this).remove();
+      }
+      else {
+        // there's only one container left;
+        // just clear it and focus the goal textarea
+        $("##{rawJS goalTextareaId}").focus();
+        $(this).find(".form-control")
+          .val("")
+          .attr("disabled", true);
+      }
+    });
+  }
+
+  // handles each add '+' button
+  function addBtn(el, cls, containerId) {
+    var dotCls = "." + cls;
+    var hashCls = "#" + cls;
+    var hashContainerId = "#" + containerId;
+    var btn = $(el);
+    var containers = btn.parent().children(dotCls);
+
+    if (containers.length == 1 && !$(containers[0]).is(":visible")) {
+      var input = $(containers[0]).find(".form-control");
+      input.attr("disabled", false);          // enable the input
+
+      $(containers[0]).fadeIn("slow", function() { // fade in the container
+        btn.attr("disabled", false);          // re-enable the '+' button after fading in
+        input.focus();
+      });
+    }
+    else {
+      btn.attr("disabled", true);             // disable the '+' button while adding the new field
+      var num     = parseInt(                 // numeric id of the last container
+                      $(dotCls).last()
+                        .attr("id")
+                        .match(/\d+/)[0],
+                      10),
+          newNum  = new Number(num + 1),      // numeric id of the new input field
+          newElem = $(hashContainerId + num)  // get the container
+            .clone(true, true)                // deep clone the container
+            .attr("id", containerId + newNum) // assign new id
+            .fadeIn("slow", function() {      // fade it in
+              btn.attr("disabled", false);    // re-enable the '+' button after fading in
+            });
+
+      newElem.find("input")                   // get the input field of the new element
+        .attr("id", cls + newNum)             // assign new id to the input
+        .attr("name", cls + newNum)           // assign new name
+        .val("");                             // clear the input text
+
+      var lbl = newElem.find("label");        // get the label of the new element
+      lbl.text(cls + newNum);                 // update the label text
+
+      // only set the for attribute if contenteditable attribute is not present
+      if (! lbl[0].hasAttribute("contenteditable")) {
+          lbl.attr("for", cls + newNum);      // assign new for
+      }
+
+      // insert the new container after the last one
+      $(hashContainerId + num).after(newElem);
+      $(hashCls + newNum).focus();
+    }
   }
 });

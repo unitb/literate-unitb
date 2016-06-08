@@ -15,7 +15,8 @@
       <.form-group>
         <label for="theories">
           Theories
-        <select #theories name="theories" .form-control .selectpicker multiple data-live-search="true" autofocus>
+        <select #theories name="theories" .form-control .selectpicker autofocus
+        multiple data-live-search="true">
           <option value="arithmetic">Arithmetic
           <option value="set_theory">Sets
           <option value="function_theory">Functions
@@ -24,23 +25,40 @@
       <.form-group>
         <label>
           Declarations
-        <button #add-decl .btn .btn-sm .btn-default type="button">
+        <button #add-#{declPrefix} .btn .btn-sm .btn-default type="button">
           <small>
             <span .glyphicon .glyphicon-plus>
-        <div #div-decl1 .decl>
+        <div ##{declContainerPrefix}1 .#{declPrefix}>
           <.input-group>
-            <label .input-group-addon for="decl1">decl1
-            <input #decl1 .form-control name="decl1" type="text" placeholder="Declaration..."
-            autocomplete="off">
+            <label .input-group-addon for="#{declPrefix}1">#{declPrefix}1
+            <input ##{declPrefix}1 .form-control name="#{declPrefix}1" type="text"
+            placeholder="Declaration..." autocomplete="off">
             <span .input-group-btn>
-              <button .del-decl .btn .btn-default type="button">
+              <button .del-#{declPrefix} .btn .btn-default type="button">
                 <small>
                   <span .glyphicon .glyphicon-minus>
 
       <.form-group>
+        <label>
+          Assumptions
+        <button #add-#{asmPrefix} .btn .btn-sm .btn-default type="button">
+          <small>
+            <span .glyphicon .glyphicon-plus>
+        <div ##{asmContainerPrefix}1 .#{asmPrefix}>
+          <.input-group>
+            <label .input-group-addon .ce-lbl contenteditable>#{asmPrefix}1
+            <input ##{asmPrefix}1 .form-control name="#{asmPrefix}1" type="text"
+            placeholder="Assumption..." autocomplete="off">
+            <span .input-group-btn>
+              <button .del-#{asmPrefix} .btn .btn-default type="button">
+                <small>
+                  <span .glyphicon .glyphicon-minus>
+      
+      <.form-group>
         <label for="#{goalTextareaId}">
           Goal
-        <textarea ##{goalTextareaId} name="goal" .form-control placeholder="Goal..." rows="4" required>
+        <textarea ##{goalTextareaId} name="goal" .form-control placeholder="Goal..."
+        rows="4" required>
 
       <.form-group>
       <button .btn .btn-primary type="submit">
