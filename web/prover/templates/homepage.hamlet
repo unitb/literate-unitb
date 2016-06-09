@@ -17,10 +17,8 @@
           Theories
         <select #theories name="theories" .form-control .selectpicker autofocus
         multiple data-live-search="true">
-          <option value="arithmetic">Arithmetic
-          <option value="set_theory">Sets
-          <option value="function_theory">Functions
-          <!-- <option disabled>Reals -->
+          $forall name <- theoryNames
+            <option value=#{name}>#{capitalize name}
 
       <.form-group>
         <label>
