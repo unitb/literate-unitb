@@ -306,6 +306,7 @@ functional_notation = with_assoc empty_notation
                      [ [apply]
                      , [pair_op]
                      , [equal] ]]
+    , _commands    = [ Command [tex|\ifelse|] [smt|ite|] 3 ite_fun ]
     , _left_assoc  = [[apply],[pair_op]]
     , _right_assoc = []
     , _relations   = []

@@ -48,6 +48,7 @@ data MachineP1' ae ce thy = MachineP1
     { _p0 :: MachineP0
     , _pEventRef :: G.BiGraph SkipOrEvent ae ce
     , _pContext  :: thy
+    , _pVerTimeOut :: Float
     } deriving (Show,Typeable,Generic,Eq)
 
 instance IsMachine (MachineP1' ae ce thy) where

@@ -419,18 +419,21 @@ latex_content' = do
 texToken :: (Traversal' LatexToken a) -> Parser a
 texToken = token 
 
-token :: (Syntactic token,P.Stream xs Identity token,Show token,Token token)
+token :: ( Syntactic token,P.Stream xs Identity token
+         , Token token)
       => (Traversal' token a) -> P.Parsec xs () a
 token p = tokenAux (^? p)
 
 texTokenAux :: (LatexToken -> Maybe a) -> Parser a
 texTokenAux = tokenAux
 
-tokenAux :: (Syntactic token,P.Stream xs Identity token,Show token,Token token)
+tokenAux :: ( Syntactic token,P.Stream xs Identity token
+            , Token token)
          => (token -> Maybe a) -> P.Parsec xs () a
-tokenAux p = P.tokenPrim show (const (\t -> const $ liToPos $ end (t,line_info t)) . posToLi) p
+tokenAux p = P.tokenPrim lexeme (const (\t -> const $ liToPos $ end (t,line_info t)) . posToLi) p
 
-token' :: (Syntactic token,P.Stream xs Identity token,Show token,Token token)
+token' :: ( Syntactic token,P.Stream xs Identity token
+          , PrettyPrintable token,Token token)
        => (Traversal' token a) -> P.Parsec xs () token
 token' p = tokenAux (\x -> x <$ (x^?p))
 

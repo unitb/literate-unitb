@@ -140,6 +140,7 @@ case0 = do
                          <.> thy 
                          <.> sorts 
                          <.> allSorts 
+                         <.> (ms & traverse .~ M.empty)
                          <.> pdef 
                          <.> evts
 
@@ -182,8 +183,8 @@ result0 = M.fromList
             newEdge askip cskip
         p0 = MachineP0 ms . mId
         tp0 = TheoryP0 ()
-        m0 = MachineP1 (p0 "m0") evts0 (TheoryP1 tp0 thy0 sorts0 allSorts0 pdef0)
-        m1 = MachineP1 (p0 "m1") evts1 (TheoryP1 tp0 thy1 sorts1 allSorts1 pdef1)
+        m0 = MachineP1 (p0 "m0") evts0 (TheoryP1 tp0 thy0 sorts0 allSorts0 pdef0) 1
+        m1 = MachineP1 (p0 "m1") evts1 (TheoryP1 tp0 thy1 sorts1 allSorts1 pdef1) 1
         s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue

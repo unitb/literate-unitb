@@ -87,6 +87,9 @@ well_definedness (FunApp fun xs)
         | view name fun == [smt|apply|] = zall $ 
                                         (($typeCheck) $ x1' `zelem` zdom x0')
                                       : map well_definedness xs
+        | view name fun == [smt|ite|]   = zall [ well_definedness x0
+                                               , x0 `zimplies` well_definedness x1
+                                               , znot x0 `zimplies` well_definedness x2 ]
         | otherwise                = zall $ wdFun : map well_definedness xs
     where
         wdFun = case fun^.finite of
@@ -101,5 +104,6 @@ well_definedness (FunApp fun xs)
         x0' = Right x0
         x1  = xs ! 1
         x1' = Right x1
+        x2  = xs ! 2
         (as,bs) = partition ((ztrue ==) . well_definedness) xs
 well_definedness (Record e) = zall $ e^.partsOf (traverseRecExpr.to well_definedness)

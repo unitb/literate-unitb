@@ -43,7 +43,7 @@ path3 :: FilePath
 
 result3 :: String
 result3 = concat
-    [ "Left [Error \"unexpected: Close Curly (LI \\\"\\\" 29 13); expected: node; expected: end keyword (equation)\" (LI \"\" 29 13)]"
+    [ "Left [Error \"unexpected: }; expected: node; expected: end keyword (equation)\" (LI \"\" 29 13)]"
     ]
 
 path4 = "Tests/sorted_sequences.tex"

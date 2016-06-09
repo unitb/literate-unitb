@@ -3,7 +3,10 @@
     , ScopedTypeVariables
     , StandaloneDeriving
     #-} 
-module UnitB.Machine where
+module UnitB.Machine 
+    ( module UnitB.Machine 
+    , HasTimeout(..) )
+where
 
     -- Modules
 import Logic.Expr.Scope
@@ -84,7 +87,8 @@ data MachineBase expr =
         , _inh_props  :: PropertySet' expr
         , _props      :: PropertySet' expr
         , _derivation :: Table ProgId ProofTree         
-        , _comments   :: Table DocItem String }
+        , _comments   :: Table DocItem String 
+        , _machineBaseTimeout :: Float }
     deriving (Eq,Show,Typeable,Functor,Foldable,Traversable,Generic)
 
 instance ZoomEq expr => ZoomEq (MachineBase expr) where

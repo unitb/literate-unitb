@@ -71,7 +71,7 @@ combineLblExpr opts pre lbl expr = case opts^.style of
                                             <*> format_formula expr
                     Definition -> fmap ("  \\item[] " ++)
                                     $ format_formula 
-                                    $ [printf|%s\\3\\triangleq%s|] 
+                                    $ [printf|%s \\3\\triangleq %s|] 
                                             (opts^.pretty' $ lbl) 
                                             expr
 
@@ -141,6 +141,8 @@ machine_summary sys m = do
             item $ tell [keyword "machine" ++ " " ++ render (m!.name)]
             item $ refines_clause sys m
             item $ variable_sum m
+            unless (M.null $ m!.defs)
+                $ item $ input path $ defs_file m
             unless (M.null $ _inv $ m!.props) 
                 $ item $ input path $ inv_file m
             unless (M.null $ _inv_thm $ m!.props) 
@@ -191,6 +193,7 @@ properties_summary m = do
         make_file (saf_file m) $ safety_sum prop
         make_file (constraint_file m) $ constraint_sum m
         make_file fn $ block $ do
+            item $ input path $ defs_file m
             item $ input path $ inv_file m
             item $ input path $ inv_thm_file m
             item $ input path $ live_file m

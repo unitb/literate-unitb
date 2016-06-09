@@ -67,12 +67,12 @@ data Shared = Shared
         { working    :: Observable Int
         , system     :: Observable System
         , error_list :: Observable [Error]
-        , pr_obl     :: Observable (Table (Label,Label) (Seq,Maybe Bool))
+        , pr_obl     :: Observable (Table Key (Seq,Maybe Bool))
         , fname      :: FilePath
         , exit_code  :: MVar ()
         , parser_state :: Observable ParserState
-        , focus :: Observable (Maybe String)
-        , dump_cmd :: Observable (Maybe (Maybe Label))
+        , focus    :: Observable (Maybe String)
+        , dump_cmd :: Observable (Maybe DumpCmd)
         , redraw   :: Observable Bool
         }
 
@@ -175,7 +175,7 @@ prover (Shared { .. }) = do
         dec x = modify_obs working (return . (+ (-x)))            
         -- handler :: 
         handler lbl@(_,x) (ErrorCall msg) = do
-            write_obs dump_cmd $ Just $ Just x
+            write_obs dump_cmd $ Just $ Only x
             fail ([printf|During %s: %s|] (pretty lbl) msg)
         worker req = forever $ do
             -- (k,po) <- takeMVar req
@@ -320,9 +320,14 @@ keyboard sh@(Shared { .. }) = do
                         open_at i fn
                     (MLError _ []):_ -> return ()
                     [] -> return ()
-            else if xs' == "reset" then do
+            else if xs' == "resetall" then do
                 modify_obs pr_obl $ \m -> 
                     return $ M.map (\(x,_) -> (x,Nothing)) m
+            else if xs' == "retry" then do
+                let f (Just False) = Nothing
+                    f x = x
+                modify_obs pr_obl $ \m -> 
+                    return $ m & traverse._2 %~ f
             else if xs' == "unfocus" then do
                 write_obs focus Nothing
             else if take 1 ws == ["dump"]
@@ -331,12 +336,17 @@ keyboard sh@(Shared { .. }) = do
                 modify_obs dump_cmd $ \st -> do
                     if isNothing st then do
                         pos <- read_obs pr_obl
-                        return $ Just $ Just $ snd $ keys pos ! (read $ ws ! 1)
+                        return $ Just $ Only $ snd $ keys pos ! (read $ ws ! 1)
                     else return Nothing
+            else if xs == "dumpfail" then do
+                modify_obs dump_cmd $ \st -> do
+                    if isNothing st then
+                        return $ Just AllFailed
+                    else return st
             else if xs == "dumpall" then do
                 modify_obs dump_cmd $ \st -> do
                     if isNothing st then
-                        return $ Just Nothing
+                        return $ Just All
                     else return st
             else if take 1 ws == ["focus"] && length ws == 2 then do
                 write_obs focus $ Just (ws ! 1)

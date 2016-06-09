@@ -33,6 +33,7 @@
 \replacefine{abstract event-name}{progress-property-label}
 \safety{fresh-name}{expression}{expression}
 \safetyB{fresh-name}{abstract event-name}{expression}{expression}
+\setTimeout{factor}
 \splitevent{abstract event-name}{zero or more concrete event-name}
 \theorem{fresh-name}{expression}
 \transient{zero or more concrete event-name}{fresh-name}{expression}

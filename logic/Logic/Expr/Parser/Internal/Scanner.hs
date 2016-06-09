@@ -138,6 +138,8 @@ eat_space = do
                      read_list "}"
                      return ()
                 , read_list "\\end{array}" >> return ()
+                , read_list "\\left" >> return ()
+                , read_list "\\right" >> return ()
                 , read_list "\\\\" >> return ()
                 , read_list "~" >> return ()
                 , read_list "&" >> return ()

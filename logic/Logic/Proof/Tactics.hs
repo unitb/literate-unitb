@@ -6,6 +6,7 @@ module Logic.Proof.Tactics
     , get_goal, by_parts
     , is_fresh, get_hypotheses, assert, assume
     , by_cases, easy, new_fresh, free_goal
+    , easyWithTimeout
     , instantiate_hyp, with_line_info
     , runTactic, runTacticT
     , runTacticWithTheorems, runTacticTWithTheorems
@@ -295,7 +296,14 @@ easy :: Monad m
      => TacticT m Proof
 easy = do
         li <- get_line_info
-        return $ Easy li
+        return $ Easy Nothing li
+
+easyWithTimeout :: Monad m
+                => Double
+                -> TacticT m Proof
+easyWithTimeout d = do
+        li <- get_line_info
+        return $ Easy (Just d) li
 
 use_theorems :: Monad m
              => [(TheoremRef,LineInfo)]

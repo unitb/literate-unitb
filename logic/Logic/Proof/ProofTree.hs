@@ -39,7 +39,7 @@ type Proof = ProofBase Expr
 
 data ProofBase expr =  FreeGoal Name Name Type (ProofBase expr) LineInfo
             | ByCases   [(Label, expr, (ProofBase expr))] LineInfo
-            | Easy                             LineInfo
+            | Easy (Maybe Double) LineInfo
             | Assume (Table Label expr) expr (ProofBase expr) LineInfo
             | ByParts [(expr,(ProofBase expr))]           LineInfo
                 -- Too complex
@@ -89,14 +89,14 @@ instance Syntactic (ProofBase expr) where
     line_info (ByParts _ li)        = li
     line_info (Definition _ _ li)   = li
     line_info (Assertion _ _ _ li)  = li
-    line_info (Easy li)             = li
+    line_info (Easy _ li)           = li
     line_info (FreeGoal _ _ _ _ li) = li
     line_info (InstantiateHyp _ _ _ li) = li
     line_info (Keep _ _ _ _ li) = li
     line_info (ByCalc c) = line_info c
     after = line_info
     traverseLineInfo f (ByCalc c) = ByCalc <$> traverseLineInfo f c
-    traverseLineInfo f (Easy li)  = Easy <$> f li
+    traverseLineInfo f (Easy t li)  = Easy t <$> f li
     traverseLineInfo f (ByCases xs li)  = ByCases <$> (traverse._3.traverseLineInfo) f xs 
                                                   <*> f li
     traverseLineInfo f (ByParts xs li)  = ByParts <$> (traverse._2.traverseLineInfo) f xs 
@@ -165,8 +165,8 @@ instance (Eq expr,IsExpr expr) => ProofRule (ProofBase expr) where
                                                     (render v) (render u)) li]
             free_vars expr = return expr
 
-    proof_po (Easy _) lbl po = 
-            return [(composite_label [lbl, label "easy"],po)]
+    proof_po (Easy t _) lbl po = 
+            return [(composite_label [lbl, label "easy"],applyTimeout t po)]
 
     proof_po (Assume new_asm new_goal p _) lbl po = do
             pos <- proof_po p lbl $ po & named %~ (new_asm `M.union`) 

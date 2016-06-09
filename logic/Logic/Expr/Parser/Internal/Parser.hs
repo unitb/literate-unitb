@@ -464,8 +464,9 @@ expr = do
                 [ do    attempt open_brack
                         e <- expr
                         close_brack
+                        rUpd <- manyP (recordFields $ binding assignTok)
                         add_context "parsing (" $
-                            read_op xs us (E e) 
+                            read_op xs us =<< applyRecUpdate rUpd (E e)
                 , do    attempt open_curly
                         rs <- sep1P expr comma
                         close_curly

@@ -40,6 +40,10 @@ instance ZoomEq (Proxy a) where
 deriving instance ZoomEq a => ZoomEq (Identity a) 
 instance ZoomEq Char where
     (.==) = (===)
+instance ZoomEq Float where
+    (.==) = (===)
+instance ZoomEq Double where
+    (.==) = (===)
 instance ZoomEq Int where
     (.==) = (===)
 instance ZoomEq Word16 where

@@ -180,8 +180,11 @@ zquantifier q vs r t = do
         rt    = exprType q tuple (type_of t')
     return $ Binder q vs r' t' rt
 
+ite_fun :: IsName n => AbsFun n Type
+ite_fun = mk_fun [] [smt|ite|] [bool,gA,gA] gA
+
 zite :: IsName n => ThreeExprP n Type q
-zite       = typ_fun3 (mk_fun [] [smt|ite|] [bool,gA,gA] gA)
+zite       = typ_fun3 ite_fun
 
 zjust :: IsName n => OneExprP n Type q
 zjust      = typ_fun1 (mk_fun [] [smt|Just|] [gA] (maybe_type gA))
@@ -473,15 +476,25 @@ zrecord :: M.Map Name (ExprPG n t q) -> ExprPG n t q
 zrecord = fmap (Record . RecLit . M.mapKeys Field) . traverseValidation id
 
 
-zrec_update :: ExprPG n t q 
+zrec_update :: (TypeSystem t,IsName n,IsQuantifier q)
+            => ExprPG n t q 
             -> MapSyntax Name (ExprPG n t q) ()
             -> ExprPG n t q
 zrec_update e = zrec_update' e . runMap'
 
-zrec_update' :: ExprPG n t q 
+zrec_update' :: (TypeSystem t,IsName n,IsQuantifier q)
+             => ExprPG n t q 
              -> M.Map Name (ExprPG n t q)
              -> ExprPG n t q
-zrec_update' e m = Record <$> liftA2 RecUpdate e (fmap (M.mapKeysMonotonic Field)
+zrec_update' e m = do
+    let e' = f =<< e
+        f e = case type_of e^?_FromSort._1._RecordSort of
+                Just _ -> Right e
+                _ -> Left [[printf|expecting a record type, met %s in %s|] 
+                            (pretty $ type_of e)
+                            (pretty e)
+                            ]
+    Record <$> liftA2 RecUpdate e' (fmap (M.mapKeysMonotonic Field)
                                                   . traverseValidation id $ m)
 
 zfield :: (IsName n,TypeSystem t,IsQuantifier q) 

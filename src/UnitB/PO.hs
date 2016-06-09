@@ -177,6 +177,7 @@ raw_machine_pos' m' = eval_generator $
                         set_syntactic_props syn
                         nameless_hyps $ M.ascElems unnamed 
                         named_hyps $ named_f
+                        setTimeout $ m!.timeout
                         ) $ do
                     let moreTr = additional_transient m
                     forM_ (M.toList (p^.transient) ++ moreTr) $ \tr -> do

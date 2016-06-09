@@ -15,6 +15,7 @@ import Control.Lens
 import Control.Monad.State
 
 import Data.Char
+import Data.Either.Combinators
 import Data.Either.Validation
 import Data.List as L
 import qualified Data.List.NonEmpty as NE
@@ -23,6 +24,9 @@ import Data.Proxy.TH
 import Data.String 
 import Data.String.Utils hiding (join)
 import Prelude hiding ((.),id)
+
+import Text.Printf.TH
+import Text.Read
 
 import Utilities.Syntactic
 
@@ -54,6 +58,8 @@ newtype NewLabel = NewLabel { getNewLabel :: Label }
 
 newtype EventOrRef = EventOrRef { getEventOrRef :: Label }
 
+newtype Factor = Factor { getFactor :: Float }
+
 --type M = Either [Error]
 
 readString :: LatexDoc -> Either [Error] String
@@ -72,6 +78,14 @@ readName :: LineInfo -> String -> Either [Error] Name
 readName li str' = do
     let str = strip str'
     with_li li $ isName str
+
+read_ :: Read a
+      => LineInfo 
+      -> String 
+      -> Either [Error] a
+read_ li str' = do
+    let str = strip str'
+    with_li li $ mapLeft (pure.[printf|Invalid value: %s|]) $ readEither str
 
 comma_sep :: String -> [String]
 comma_sep [] = []
@@ -99,6 +113,11 @@ class LatexArg a where
     default read_one :: LatexArgFromString a => LatexDoc -> Either [Error] a
     read_one doc = read_one' (line_info doc) =<< readString doc
 
+
+instance LatexArg Factor where
+instance LatexArgFromString Factor where
+    kind' Proxy = "factor"
+    read_one' li = fmap Factor . read_ li
 
 instance LatexArg TheoryName where
 instance LatexArgFromString TheoryName where

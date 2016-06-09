@@ -74,6 +74,7 @@ make_machine (MId m) p4 = mch'
                     `union` (makeRule Add <$> (p4^.pNewPropSet.progress))) 
             inh_props .= p4^.pOldPropSet
             comments  .= p4^.pComments
+            timeout   .= p4^.pVerTimeOut
             event_table .= EventTable evts
                 -- adep: in a abstract machine, prog_a <- evt_a
                 -- live: in a concrete machine, prog_c <- prog_c

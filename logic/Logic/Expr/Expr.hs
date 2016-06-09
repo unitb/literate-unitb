@@ -431,6 +431,7 @@ z3Def :: Pre
 z3Def ts n = Def ts (z3Name n)
 
 lookupFields :: ( IsName n,TypeSystem t,TypeSystem a
+                , Pre
                 , TypeAnnotationPair t a,IsQuantifier q) 
              => GenExpr n t a q -> Table Field (GenExpr n t a q)
 lookupFields e = fromJust' $ type_of e^?fieldTypes.to fieldLookupMap

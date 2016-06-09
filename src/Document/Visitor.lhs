@@ -229,6 +229,22 @@ instance Readable Int where
             _ -> lift $ do
                 E.left [Error ([printf|invalid integer: '%s'|] arg) li]
 
+instance Readable Double where
+    read_args = do
+        ts <- ST.get
+        (arg,ts) <- lift $ get_1_lbl ts
+        ST.put ts
+        case reads arg of 
+            [(n,"")] -> return n
+            _ -> lift $ do
+                E.left [Error ([printf|invalid number: '%s'|] arg) $ line_info ts]
+    read_one = do
+        (arg,li) <- read_label
+        case reads arg of
+            [(n,"")] -> return n
+            _ -> lift $ do
+                E.left [Error ([printf|invalid number: '%s'|] arg) li]
+
 instance Readable (Maybe Label) where
     read_args = do
         ts <- ST.get

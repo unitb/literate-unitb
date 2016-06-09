@@ -269,7 +269,7 @@ result6 :: String
 result6 = unlines
     [ "\\textbf{definitions}"
     , "\\begin{block}"
-    , "  \\item[] {$Req\\3\\triangleq[ 'req : \\REQ ]$} %"
+    , "  \\item[] {$Req \\3\\triangleq [ 'req : \\REQ ]$} %"
     , "\\end{block}"
     ]
 

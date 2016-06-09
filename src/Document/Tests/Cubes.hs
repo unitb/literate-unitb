@@ -230,7 +230,7 @@ case9 = do
 
 proof_kind :: Proof -> String
 proof_kind (ByCalc _) = "calc"
-proof_kind (Easy _) = "easy"
+proof_kind (Easy _ _) = "easy"
 proof_kind (ByCases _ _) = "cases"
 proof_kind (ByParts _ _) = "parts"
 proof_kind (FreeGoal _ _ _ _ _) = "free goal"

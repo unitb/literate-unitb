@@ -88,6 +88,15 @@ makeLenses ''GenSequent
 makeClassy ''SyntacticProp
 mkCons ''SyntacticProp
 
+applyTimeout :: RealFrac d
+             => Maybe d
+             -> GenSequent n t q expr
+             -> GenSequent n t q expr
+applyTimeout x' = timeout %~ round . f . fromIntegral
+    where
+        x = fromMaybe 1 x'
+        f y = x * y
+
 instance (Ord name,Eq t,Eq q,Ord expr) => 
         PreOrd (GenSequent name t q expr) where
     partCompare x y = genericPreorder (f x) (f y)
@@ -129,7 +138,7 @@ predefined = map fromString''
              [ "=","union","and","or","=>","<=","<",">","^"
              , "subset","select","true","false"
              , "intersect","+","-","*","/","not"
-             , "Just", "Nothing", "pair"
+             , "Just", "Nothing", "pair", "ite"
              , "empty-set", "store" ]
 
 checkScopesAux :: Expr -> RWS Context [Expr] () ()

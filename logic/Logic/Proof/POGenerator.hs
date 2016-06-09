@@ -10,6 +10,7 @@ module Logic.Proof.POGenerator
     , Logic.Proof.POGenerator.definitions
     , Logic.Proof.POGenerator.functions 
     , set_syntactic_props
+    , setTimeout
     , existential, tracePOG )
 where
 
@@ -45,6 +46,7 @@ import Utilities.Trace
 data POParam = POP 
     { _pOParamContext :: Context
     , tag :: DList Label
+    , _pOParamTimeout :: Maybe Float
     , _pOParamNameless :: DList Expr
     , _pOParamNamed :: Table Label Expr
     , _pOParamSynProp :: SyntacticProp
@@ -119,7 +121,11 @@ emit_goal lbl g = POGen $ do
                    (D.toList $ param^.nameless)
                    (param^.named)
                    g
+               & applyTimeout (param^.timeout)
     tell $ D.singleton (composite_label $ D.apply tag lbl, po)
+
+setTimeout :: Float -> POCtx ()
+setTimeout = POCtx . assign timeout . Just
 
 set_syntactic_props :: SyntacticProp -> POCtx ()
 set_syntactic_props s = POCtx $ synProp .= s

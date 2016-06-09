@@ -273,6 +273,11 @@ function_theory = Theory { .. }
                                 $   (zapply f1 x .=. zapply f1 x2) 
                                 .=> (x .=. x2) )
             $axiom $     zinjective $ as_fun zempty_fun
+                -- injective, ovl and ran (with mk_set)
+            $axiom $         zinjective f1 /\ mznot (y `zelem` zran f1)
+                        .=>       zinjective (zmk_fun x y `zovl` f1)
+            $axiom $         zinjective f1 /\ mznot (y `zelem` zran f1)
+                        .=>       zinjective (f1 `zovl` zmk_fun x y)
             --     -- injective, domsubt and ran (with mk_set)
             -- $axiom $         zinjective f1 /\ (x `zelem` zdom f1)
             --             .=>       zran (zmk_set x `zdomsubt` f1)
@@ -356,8 +361,9 @@ function_notation = create $ do
                  , [domrest,domsubt] 
                  , [ equal ] ]
              , L.map (L.map Right)
-               [ [ total_fun,partial_fun ]
-               , [ membership ]] ]
+               [ [ apply ]
+               , [ total_fun,partial_fun ]
+               , [ membership, equal ]] ]
    left_assoc  .= [[overload]]
    right_assoc .= [[domrest,domsubt]]
    commands    .= 

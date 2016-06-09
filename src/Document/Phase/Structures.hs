@@ -56,8 +56,10 @@ run_phase1_types = proc p0 -> do
         , event_decl
         , event_merging  ] -< p0
     r  <- refines_mch   -< p0
+    verifSet <- verif_setting_mch   -< p0
     it <- import_theory -< p0
     refs <- triggerP <<< liftP' (make_all_tables refClash) -< r
+    verifSet' <- triggerP <<< liftP' (make_all_tables verifClash) -< verifSet
     let _ = refs :: MTable (Table () (MachineId,LineInfo))
     r_ord <- topological_order -< mapMaybe (M.lookup ()) refs
     let t = M.map fst <$> ts
@@ -96,26 +98,31 @@ run_phase1_types = proc p0 -> do
         p1 = make_phase1 <$> p0 <.> imp_th 
                          <.> (M.map (M.map fst) types) 
                          <.> all_types 
+                         <.> (verifSet' & traverse.traverse %~ fst)
                          <.> s <.> evts'
     returnA -< SystemP r_ord p1
   where
     evtClash = [printf|Multiple events with the name %s|] . pretty
     setClash = [printf|Multiple sets with the name %s|] . render
-    thyClash _ = "Theory imported multiple times"
-    refClash _ = "Multiple refinement clauses"
+    thyClash _   = "Theory imported multiple times"
+    refClash _   = "Multiple refinement clauses"
+    verifClash _ = "Multiple verification timeouts"
 
 make_phase1 :: MachineP0
             -> Table Name Theory
             -> Table Name Sort
             -> Table Name Sort
+            -> Table () Float
             -> [(Name, PostponedDef)]
             -> G.BiGraph SkipOrEvent () () -- Map Label (EventId, [EventId])
             -> MachineP1
-make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachineP1 { .. }
+make_phase1 _p0 _pImports _pTypes _pAllTypes  
+        timeout _pSetDecl evts = MachineP1 { .. }
     where
         _pEventRef = G.mapBothWithKey (const.EventP1) (const.EventP1) evts
-        _pContext   = TheoryP1 { .. }
-        _t0         = TheoryP0 ()
+        _pContext    = TheoryP1 { .. }
+        _t0          = TheoryP0 ()
+        _pVerTimeOut = M.findWithDefault 1 () timeout
 
 set_decl :: MPipeline MachineP0 
             ( [(Name,Sort,LineInfo)]
@@ -153,6 +160,11 @@ event_decl = machineCmd "\\newevent" $ \(Identity (Conc evt)) _m _ -> do
             when (evt == "skip") $ do
                 throwError [Error "invalid event name: 'skip' is a reserved name" li]
             return [(as_label evt,(evt,[]),li)]
+
+verif_setting_mch :: MPipeline MachineP0 [((), Float, LineInfo)]
+verif_setting_mch = machineCmd "\\setTimeout" $ \(Identity (Factor to)) _cmch (MachineP0 _ms _) -> do
+            li <- ask
+            return [((),to,li)]
 
 refines_mch :: MPipeline MachineP0 [((), MachineId, LineInfo)]
 refines_mch = machineCmd "\\refines" $ \(Identity amch) cmch (MachineP0 ms _) -> do
