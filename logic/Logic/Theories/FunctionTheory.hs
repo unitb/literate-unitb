@@ -274,10 +274,6 @@ function_theory = Theory { .. }
                                 .=> (x .=. x2) )
             $axiom $     zinjective $ as_fun zempty_fun
                 -- injective, ovl and ran (with mk_set)
-            $axiom $         zinjective f1 /\ mznot (y `zelem` zran f1)
-                        .=>       zinjective (zmk_fun x y `zovl` f1)
-            $axiom $         zinjective f1 /\ mznot (y `zelem` zran f1)
-                        .=>       zinjective (f1 `zovl` zmk_fun x y)
             --     -- injective, domsubt and ran (with mk_set)
             -- $axiom $         zinjective f1 /\ (x `zelem` zdom f1)
             --             .=>       zran (zmk_set x `zdomsubt` f1)

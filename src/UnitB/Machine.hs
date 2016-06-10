@@ -466,6 +466,7 @@ empty_machine' n = check $ flip execState (makeMachineBase n (empty_theory n)) $
             -- & events .~ _ $ G.fromList _ _
             events .= G.fromList' [(skip,def)] [(skip,def)] [(skip,skip)]
             theory .= (empty_theory n) { _extends = preludeTheories } 
+            timeout .= 1.0
             -- & name
     where
         skip = Left SkipEvent
