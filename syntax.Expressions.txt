@@ -1,0 +1,36 @@
+
+expr ::= 
+    term 
+    | '(' expr ')' 
+    | UnOp expr 
+    | expr BinOp expr 
+    | expr '.' Field
+    | expr '[' field_assign ']'
+
+field_assign ::=
+    ( Field ':=' expr (',' Field ':=' expr)* )?
+
+field_set ::=
+    ( Field ':' expr (',' Field ':' expr)* )?
+
+term ::= 
+    Command ('{' expr '}')*
+    | '[' field_assign ']'
+    | '[' field_set ']'
+    | Quantifier '{' ids '}' '{' expr? '}' '{' expr '}'
+    | '\cast' '{' expr '}' '{' type '}'
+    | Var
+    | Number
+
+type ::= ...
+
+ids ::= Ident ( ',' Ident )*
+
+tokens:
+    UnOp
+    BinOp
+    Field
+    Var
+    Ident
+    Number
+    Command

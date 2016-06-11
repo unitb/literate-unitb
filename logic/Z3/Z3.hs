@@ -48,8 +48,10 @@ import Control.Monad.Reader
 import Control.Precondition
 
 import Data.Char
+import qualified Data.DList as D
 import           Data.Either.Combinators
 import           Data.List as L hiding (union)
+import           Data.Monoid
 import qualified Data.Set as S
 import           Data.Typeable 
 
@@ -201,19 +203,19 @@ z3_code :: Sequent -> String
 z3_code = unlines . L.map pretty_print' . z3_commands
 
 z3_commands :: Sequent -> [Command]
-z3_commands po = 
-    (      [] 
-        ++ [SetOption "auto-config" "false"]
-        ++ [SetOption "smt.timeout" $ show tout]
+z3_commands po = D.toList
+    (      D.fromList [] 
+        <> D.fromList [SetOption "auto-config" "false"]
+        <> D.fromList [SetOption "smt.timeout" $ show tout]
         -- ++ [SetOption "smt.mbqi" "false"]
-        ++ map Decl (concatMap decl [maybe_sort,null_sort] )
-        ++ map Decl (decl d)
-        ++ zipWith (\x y -> Assert x $ Just $ "s" ++ show y) 
-                assume [0..]
-        ++ concatMap f (zip (M.toAscList hyps) [0..])
-        ++ [Assert (znot assert) $ Just "goal"]
-        ++ [CheckSat]
-        ++ [] )
+        <> D.fromList (map Decl (concatMap decl [maybe_sort,null_sort] ))
+        <> D.fromList (map Decl (decl d))
+        <> D.fromList (zipWith (\x y -> Assert x $ Just $ "s" ++ show y) 
+                assume [0..])
+        <> D.concat (map (D.fromList.f) (zip (M.toAscList hyps) [0..]))
+        <> D.fromList [Assert (znot assert) $ Just "goal"]
+        <> D.fromList [CheckSat]
+        <> D.fromList [] )
     where
         (Sequent tout _ d _ assume hyps assert) = firstOrderSequent po
         f ((lbl,xp),n) = [ Comment $ pretty lbl
@@ -296,9 +298,14 @@ discharge' :: Maybe Int      -- Timeout in seconds
 discharge' n lbl po
     | (po^.goal) == ztrue = return Valid
     | otherwise = withSemN total_caps (fromIntegral $ po^.resource) $ do
-        let code = z3_commands po
-        s <- verify lbl code (maybe default_timeout id n)
-        case s of
+        let code  = z3_commands $ po & timeout %~ (`div` 4)
+            code' = z3_commands po
+            t = fromMaybe default_timeout n
+        s  <- verify lbl code t
+        s' <- if s == Right SatUnknown 
+            then verify lbl code' t
+            else return s
+        case s' of
             Right Sat -> return Invalid
             Right Unsat -> return Valid
             Right SatUnknown -> do
