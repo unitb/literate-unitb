@@ -140,9 +140,11 @@ machine_summary sys m = do
         block $ do
             item $ tell [keyword "machine" ++ " " ++ render (m!.name)]
             item $ refines_clause sys m
-            item $ variable_sum m
-            unless (M.null $ m!.defs)
+            item $ set_sum m
+            item $ constant_sum m
+            unless (M.null $ m!.theory.fact)
                 $ item $ input path $ asm_file m
+            item $ variable_sum m
             unless (M.null $ m!.defs)
                 $ item $ input path $ defs_file m
             unless (M.null $ _inv $ m!.props) 
@@ -196,6 +198,7 @@ properties_summary m = do
         make_file (saf_file m) $ safety_sum prop
         make_file (constraint_file m) $ constraint_sum m
         make_file fn $ block $ do
+            item $ input path $ asm_file m
             item $ input path $ defs_file m
             item $ input path $ inv_file m
             item $ input path $ inv_thm_file m
@@ -294,6 +297,20 @@ block cmd = do
         tell xs
         tell ["\\end{block}"]
 
+set_sum :: Machine -> M ()
+set_sum m = section (keyword "sets") $ 
+    unless (M.null $ m!.theory.types) $
+    block $ do
+        forM_ (keys $ m!.theory.types) $ \v -> do
+            item $ tell [[printf|$%s$|] $ render v]
+
+constant_sum :: Machine -> M ()
+constant_sum m = section (keyword "constants") $ 
+    unless (M.null $ m!.theory.consts) $
+    block $ do
+        forM_ (keys $ m!.theory.consts) $ \v -> do
+            item $ tell [[printf|$%s$|] $ render v]
+
 variable_sum :: Machine -> M ()
 variable_sum m = section (keyword "variables") $ 
     unless (M.null (m!.variables) && M.null (m!.abs_vars)) $
@@ -310,7 +327,6 @@ asm_sum :: Machine -> M ()
 asm_sum m = do
         let props = m!.theory.fact
         section kw_inv $ put_all_expr 
-                -- (makeDoc .= comment_of m . DocInv) 
                 "" (M.toAscList $ props) 
     where
         kw_inv = "\\textbf{assumptions}"

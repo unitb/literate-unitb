@@ -263,6 +263,13 @@ get_system path = do
             <$> parse_system path
     else left $ [printf|file does not exist: %s|] path
 
+get_system' :: FilePath -> EitherT [Error] IO System
+get_system' path = do
+    exists <- liftIO $ doesFileExist path
+    let li = LI "get_system'" 1 1
+    if exists then do
+        EitherT $ parse_system path
+    else left $ [Error ([printf|file does not exist: %s|] path) li]
 
 lookup :: (Pre,Monad m,Ixed f,Show (Index f)) => Index f -> f -> EitherT [Error] m (IxValue f)
 lookup k m = maybe (left $ errorTrace [$__FILE__] ?loc (show k)) return $ m^?ix k

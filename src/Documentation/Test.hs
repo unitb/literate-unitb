@@ -31,7 +31,7 @@ test_case = test_cases
         , aCase "safety properties of m2" case2 result2
         , aCase "progress properties of m2" case3 result3
         , aCase "File structure" case4 result4
-        , aCase "Root machine" case5 result5
+        , stringCase "Root machine" case5 result5
         , aCase "definitions of m2" case6 result6
         , aCase "assumptions of m2" case7 result7
         ]
@@ -226,18 +226,30 @@ case4 = runEitherT $ do
     return $ M.map isJust $ view' files $ execMockFileSystem 
         $ produce_summaries "dir/file.ext" s
 
-case5 :: IO (Either String (Maybe String))
-case5 = runEitherT $ do
-    s <- get_system path0
+case5 :: IO String
+case5 = makeReport $ do
+    s <- get_system' path0
     let fs = execMockFileSystem $ produce_summaries "dir/file.ext" s
-    return $ (fs^.content')^?files.ix "dir/file/machine_m3.tex".traverse
+    return $ fromMaybe "documentation file not found" $ (fs^.content')^?files.ix "dir/file/machine_m3.tex".traverse
 
-result5 :: Either String (Maybe String)
-result5 = Right . Just . unlines $ 
+result5 :: String
+result5 = unlines 
     [ "%!TEX root=../file.ext"
     , "\\begin{block}"
     , "  \\item   \\textbf{machine} m3"
     , "  \\item   \\textbf{refines} m2"
+    , "  \\item   \\textbf{sets}"
+    , "  \\begin{block}"
+    , "    \\item   $\\Blk$"
+    , "    \\item   $\\Train$"
+    , "  \\end{block}"
+    , "  \\item   \\textbf{constants}"
+    , "  \\begin{block}"
+    , "    \\item   $ent$"
+    , "    \\item   $ext$"
+    , "    \\item   $plf$"
+    , "  \\end{block}"
+    , "  \\item   \\input{file/machine_m3_asm}"
     , "  \\item   \\textbf{variables}"
     , "  \\begin{block}"
     , "    \\item   $in$"
@@ -265,7 +277,8 @@ result5 = Right . Just . unlines $
     , "    \\item   \\input{file/m3_m3-ctr-plf}"
     , "  \\end{block}"
     , "  \\item   \\textbf{end} \\\\"
-    , "\\end{block}" ]
+    , "\\end{block}"
+    ]
 
 path6 :: FilePath
 path6 = [path|Tests/lock-free deque/main12.tex|]
