@@ -783,6 +783,7 @@ sim_po m (lbl, evt) =
                 POG.variables $ evt^.new.params 
                 prefix_label $ as_label lbl
                 prefix_label "SIM"
+                named_hyps (invariants m)
                 named_hyps (evt^.new.guards)
                 -- nameless_hyps $ _ $ evt^.abstract_evts
                 named_hyps (ba_predicate m evt) ) $
