@@ -142,6 +142,8 @@ machine_summary sys m = do
             item $ refines_clause sys m
             item $ variable_sum m
             unless (M.null $ m!.defs)
+                $ item $ input path $ asm_file m
+            unless (M.null $ m!.defs)
                 $ item $ input path $ defs_file m
             unless (M.null $ _inv $ m!.props) 
                 $ item $ input path $ inv_file m
@@ -185,6 +187,7 @@ properties_summary :: Machine -> Doc ()
 properties_summary m = do
         let prop = m!.props
         path <- ask
+        make_file (asm_file m) $ asm_sum m
         make_file (defs_file m) $ defs_sum m
         make_file (inv_file m) $ invariant_sum m
         make_file (inv_thm_file m) $ invariant_thm_sum prop
@@ -202,6 +205,9 @@ properties_summary m = do
             item $ input path $ constraint_file m
     where
         fn = prop_file_name m
+
+asm_file :: Machine -> String
+asm_file m  = "machine_" ++ (render $ m!.name) ++ "_asm" <.> "tex"
 
 defs_file :: Machine -> String
 defs_file m  = "machine_" ++ (render $ m!.name) ++ "_def" <.> "tex"
@@ -299,6 +305,15 @@ variable_sum m = section (keyword "variables") $
         forM_ (keys $ view' variables m) $ \v -> do
             item $ tell [[printf|$%s$|] $ render v]
             comment_of m (DocVar v)
+
+asm_sum :: Machine -> M ()
+asm_sum m = do
+        let props = m!.theory.fact
+        section kw_inv $ put_all_expr 
+                -- (makeDoc .= comment_of m . DocInv) 
+                "" (M.toAscList $ props) 
+    where
+        kw_inv = "\\textbf{assumptions}"
 
 defs_sum :: Machine -> M ()
 defs_sum m = do

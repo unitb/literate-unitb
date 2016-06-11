@@ -66,7 +66,7 @@ arithmetic = (empty_theory' "arithmetic") {
         , _funs = symbol_table 
             [ sum_fun gA 
             , card_fun ]
-        , _theorySyntacticThm = empty_monotonicity
+        , _theory'SyntacticThm = empty_monotonicity
             { _associative  = fromList [(fromString'' "+",mzint 0)] 
             , _monotonicity = fromList $ L.map (first $ z3Name *** z3Name)
               [ (("=>","<="), Side (Just zge' )

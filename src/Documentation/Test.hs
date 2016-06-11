@@ -33,6 +33,7 @@ test_case = test_cases
         , aCase "File structure" case4 result4
         , aCase "Root machine" case5 result5
         , aCase "definitions of m2" case6 result6
+        , aCase "assumptions of m2" case7 result7
         ]
 
 result0 :: String
@@ -180,6 +181,7 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/m3_m3-ctr-plf.tex" ## True
         "dir/file/machine_m0.tex" ## True
         "dir/file/machine_m0_co.tex"    ## True
+        "dir/file/machine_m0_asm.tex"   ## True
         "dir/file/machine_m0_def.tex"   ## True
         "dir/file/machine_m0_inv.tex"   ## True
         "dir/file/machine_m0_prog.tex"  ## True
@@ -189,6 +191,7 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/machine_m0_trans.tex" ## True
         "dir/file/machine_m1.tex" ## True
         "dir/file/machine_m1_co.tex"    ## True
+        "dir/file/machine_m1_asm.tex"   ## True
         "dir/file/machine_m1_def.tex"   ## True
         "dir/file/machine_m1_inv.tex"   ## True
         "dir/file/machine_m1_prog.tex"  ## True
@@ -198,6 +201,7 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/machine_m1_trans.tex" ## True
         "dir/file/machine_m2.tex" ## True
         "dir/file/machine_m2_co.tex"    ## True
+        "dir/file/machine_m2_asm.tex"   ## True
         "dir/file/machine_m2_def.tex"   ## True
         "dir/file/machine_m2_inv.tex"   ## True
         "dir/file/machine_m2_prog.tex"  ## True
@@ -207,6 +211,7 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/machine_m2_trans.tex" ## True
         "dir/file/machine_m3.tex" ## True
         "dir/file/machine_m3_co.tex"    ## True
+        "dir/file/machine_m3_asm.tex"   ## True
         "dir/file/machine_m3_def.tex"   ## True
         "dir/file/machine_m3_inv.tex"   ## True
         "dir/file/machine_m3_prog.tex"  ## True
@@ -278,3 +283,21 @@ case6 = makeReport $ do
     m <- parse_machine' path6 2
     return $ getListing $
         defs_sum m
+
+result7 :: String
+result7 = unlines
+    [ "\\textbf{assumptions}"
+    , "\\begin{block}"
+    , "  \\item[ \\eqref{asm0} ]{$\\neg ext \\in plf \\1\\land \\neg ext = ent$} %"
+    , "  \\item[ \\eqref{asm1} ]{$\\qforall{b}{}{ b \\in \\Blk \\2\\equiv b \\in plf \\1\\lor b = ent \\1\\lor b = ext }$} %"
+    , "  \\item[ \\eqref{asm2} ]{$\\qexists{b}{}{b \\in plf}$} %"
+    , "  \\item[ \\eqref{asm3} ]{$\\neg ent \\in plf$} %"
+    , "  \\item[ \\eqref{asm7} ]{$(\\{ ext \\} \\bunion plf = \\compl \\{ent\\}) \\land (\\{ ent \\} \\bunion plf = \\compl \\{ext\\}) \\land \\{ ext, ent \\} = \\compl plf$} %"
+    , "\\end{block}"
+    ]
+
+case7 :: IO String
+case7 = makeReport $ do
+    m <- parse_machine' path0 2
+    return $ getListing $
+        asm_sum m

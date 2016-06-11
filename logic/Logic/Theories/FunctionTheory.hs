@@ -103,16 +103,16 @@ function_theory :: Theory
 function_theory = Theory { .. }
     where        
         _extends =  symbol_table [set_theory]
-        _theoryName = fromString'' "functions"
+        _theory'Name = fromString'' "functions"
         _consts   = empty
-        _theoryDummies  = empty
+        _theory'Dummies  = empty
         _theorems = empty
-        _theorySyntacticThm = empty_monotonicity
+        _theory'SyntacticThm = empty_monotonicity
             { _associative = fromList [(fromString'' "zovl",zempty_fun)] }
 --        set_ths  = 
         fun_set t0 t1 = set_type (fun_type t0 t1)
         _types    = symbol_table [fun_sort]
-        _theoryDefs = 
+        _theory'Defs = 
             symbol_table
                 [ 
                   -- Def [t0,t1] "ovl" [f1_decl,f2_decl] (fun_type t0 t1) 
