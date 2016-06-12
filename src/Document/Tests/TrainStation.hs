@@ -116,19 +116,16 @@ train_def  = z3Def [] "sl$TRAIN" [] (set_type train_type) (universe train_type)
 loc_def    = z3Def [] "sl$LOC" [] (set_type loc_type) (universe loc_type)
 block_def  = z3Def [] "sl$BLK" [] (set_type blk_type) (universe blk_type)
 
-ent      :: ExprP
-ext      :: ExprP
-plf      :: ExprP
+_ent      :: ExprP
+_ext      :: ExprP
+_plf      :: ExprP
 ent_var   :: Var
 ext_var   :: Var
 plf_var   :: Var
 
-(ent,ent_var)   = (Expr.var "ent" $ blk_type)
-(ext,ext_var)   = (Expr.var "ext" $ blk_type)
-(plf,plf_var)   = (Expr.var "PLF" $ set_type blk_type)
-
-block :: ExprP
-(block, _) = Expr.var "sl$BLK" $ set_type blk_type
+(_ent,ent_var)   = (Expr.var "ent" $ blk_type)
+(_ext,ext_var)   = (Expr.var "ext" $ blk_type)
+(_plf,plf_var)   = (Expr.var "PLF" $ set_type blk_type)
 
 trainName :: Name
 trainName = fromString'' "train0"
@@ -142,7 +139,7 @@ machine0 = newMachine trainName $ do
                     , basic_theory
                     , arithmetic
                     ]
-            ,  _theoryDefs = symbol_table
+            ,  _theory'Defs = symbol_table
                     [  train_def
                     ,  loc_def
                     ,  block_def ]
@@ -151,7 +148,7 @@ machine0 = newMachine trainName $ do
                     , loc_sort
                     , blk_sort
                     ]
-            ,  _theoryDummies = symbol_table 
+            ,  _theory'Dummies = symbol_table 
                             $ (map (\t -> z3Var t $ train_type) 
                                 [ "t","t_0","t_1","t_2","t_3" ]
                                ++ map (\t -> z3Var t $ blk_type) 
@@ -177,23 +174,11 @@ machine0 = newMachine trainName $ do
       props .= props0
     where
         inLbls = map (label . ("in" ++) . show . (1 -)) [0..]
-        axm0 = ($typeCheck) (block .=. (zset_enum [ent,ext] `zunion` plf)) 
-        axm2 = ($typeCheck) (
-               mznot (ent .=. ext)
-            /\ mznot (ent `zelem` plf)
-            /\ mznot (ext `zelem` plf) )
-        axm3 = ($typeCheck) $
-            mzforall [p_decl] mztrue $ (
-                         mznot (p .=. ext)
-                    .=.  (p `zelem` (zmk_set ent `zunion` plf)))
-        axm4 = ($typeCheck) $
-            mzforall [p_decl] mztrue $ (
-                         mznot (p .=. ent)
-                    .=.  (p `zelem` (zmk_set ext `zunion` plf)))
-        axm5 = ($typeCheck) $
-            mzforall [p_decl] mztrue $ (
-                         (mzeq p ent \/ mzeq p ext)
-                    .=.  mznot (p `zelem` plf) )
+        axm0 = c [expr| \BLK = \{ent,ext\} \bunion PLF |]
+        axm2 = c [expr| \neg ent = ext \land \neg ent \in PLF \land \neg ext \in PLF |] 
+        axm3 = c [expr| \qforall{p}{}{ \neg p = ext \equiv p \in \{ent\} \bunion PLF } |]
+        axm4 = c [expr| \qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF } |]
+        axm5 = c [expr| \qforall{p}{}{ p = ent \lor p = ext \equiv \neg p \in PLF } |]
 
 vars :: Table Name Var
 vars = symbol_table [in_decl,loc_decl]
@@ -265,13 +250,10 @@ leave_evt = flip execState empty_event $ do
                     (c $ [expr| loc' = \{t\} \domsub loc |] . (is_step .~ True)))
             ] 
 
-p        :: ExprP
-p_decl   :: Var
 t_decl   :: Var
 in_decl  :: Var
 loc_decl :: Var
 
-(p, p_decl) = Expr.var "p" blk_type
 (_, t_decl) = Expr.var "t" train_type
 (_, _, in_decl) = prog_var "in" (set_type train_type)
 (_, _, loc_decl) = prog_var "loc" (fun_type train_type blk_type)

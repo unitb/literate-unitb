@@ -54,12 +54,12 @@ set_theory = Theory { .. }
         t0  = VARIABLE $ z3Name "t0"
         gT = GENERIC $ z3Name "t"
 
-        _theoryName = z3Name "sets"
+        _theory'Name = z3Name "sets"
         _extends = M.empty
         _consts  = M.empty
-        _theoryDummies = M.empty
+        _theory'Dummies = M.empty
         _types = M.empty
-        _theorySyntacticThm = def
+        _theory'SyntacticThm = def
             { _associative = fromList $ L.map (first z3Name)
                     [ ("intersect",zset_all)
                     , ("union",zempty_set) ]
@@ -78,7 +78,7 @@ set_theory = Theory { .. }
                      , Side (Just $ Rel subset_fun Direct) (Just $ Rel subset_fun Flipped))
                    ]
                  }
-        _theoryDefs = symbol_table
+        _theory'Defs = symbol_table
                 [ z3Def [gT] "empty-set" [] (set_type gT) 
                         $ zlift (set_type gT) zfalse
                 , z3Def [gT] "all" [] (set_type gT) 

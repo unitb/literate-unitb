@@ -227,7 +227,7 @@ test = test_cases "genericity"
         vB1 = reserved "b" 1
         vC1 = reserved "c" 1
         vC2 = reserved "c" 2
-        fun_sort = z3Sort "\\tfun" "fun" 2
+        fun_sort = z3Sort "\\pfun" "fun" 2
         gtype    = Gen fun_sort [z3GENERIC "c", set_type $ z3GENERIC "b"]
         
         stype0   = Gen fun_sort [int, set_type real]

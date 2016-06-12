@@ -74,7 +74,7 @@ type MachineAST' = Compose Checked MachineBase
 data MachineBase expr = 
     Mch 
         { _machineBaseName :: Name
-        , _theory     :: Theory
+        , _theory     :: Theory' expr
         , _variables  :: Table Name Var
         , _oldDefs    :: Table Name expr
         , _machineBaseDefs     :: Table Name expr
@@ -438,7 +438,7 @@ all_notation m = flip precede logical_notation
         $ L.foldl OP.combine empty_notation 
         $ L.map (view Th.notation) th
     where
-        th = (m!.theory) : ascElems (_extends $ m!.theory)
+        th = (getExpr <$> m!.theory) : ascElems (_extends $ m!.theory)
 
 instance (HasExpr expr) => Named (MachineAST' expr) where
     type NameOf (MachineAST' expr) = Name

@@ -1,5 +1,6 @@
 module Logic.Theory 
-    ( Theory(..)
+    ( Theory
+    , Theory'(..)
     , fact
     , make_theory
     , make_theory'
@@ -29,20 +30,16 @@ import Logic.Theory.Internals
 import Logic.Theory.Monad
 
     -- Libraries
-import Control.DeepSeq
 import Control.Lens hiding (Context,from,to,rewriteM)
 
 import           Data.Foldable as F
 import           Data.List as L
 import           Data.Map.Class as M 
-import           Data.Serialize hiding (label)
 
 import Utilities.Table
 
 all_theories :: Theory -> [Theory]
 all_theories th = th : M.ascElems (all_theories' th)
-    where
-        _ = set theorySyntacticThm
 
 all_theories' :: Theory -> Table Name Theory
 all_theories' th = M.unions $ view extends th : M.ascElems (M.map all_theories' $ view extends th)
@@ -73,7 +70,6 @@ basic_theory = make_theory' "basic" $ do
         nEqual = z3Name "="
         zimplies' = Rel implies_fun Direct
         zfollows' = Rel implies_fun Flipped
-        _ = theoryDummies Identity
 --        t  = VARIABLE "t"
         t0 = VARIABLE $ z3Name "t0"
         t1 = VARIABLE $ z3Name "t1"
@@ -119,18 +115,13 @@ theory_facts th =
         facts  = _fact th
         new_fact = facts
 
-instance HasSymbols Theory Var Name where
-    symbols t = symbol_table $ defsAsVars (theory_ctx t)^.constants
+instance HasExpr expr => HasSymbols (Theory' expr) Var Name where
+    symbols t = symbol_table $ defsAsVars (theory_ctx $ getExpr <$> t)^.constants
 
-
-instance NFData Theory where
-
-instance HasScope Theory where
+instance HasExpr expr => HasScope (Theory' expr) where
     scopeCorrect' t = mconcat
             [ withVars (symbols t)
                 $ foldMapWithKey scopeCorrect'' $ t^.fact
             , withVars (symbols $ t & defs .~ M.empty)
                 $ foldMapWithKey scopeCorrect'' $ t^.defs
             , foldMapWithKey scopeCorrect'' (t^.extends) ]
-
-instance Serialize Theory where

@@ -5,7 +5,6 @@ import Control.Lens
 
 import Control.Monad
 import Control.Monad.Trans.Either
-import Control.Monad.IO.Class
 
 import Data.List
 import Data.List.NonEmpty as NE (NonEmpty(..))
@@ -141,10 +140,10 @@ report (MLError msg ys) = [printf|%s\n%s|] msg
                     $ map (\(msg,li) -> [printf|%s:\n\t%s\n|] (showLiLong li) msg) 
                     $ sortOn snd ys)
 
-makeReport :: MonadIO m => EitherT [Error] m String -> m String
+makeReport :: Monad m => EitherT [Error] m String -> m String
 makeReport = liftM fst . makeReport' () . liftM (,())
 
-makeReport' :: MonadIO m => a -> EitherT [Error] m (String,a) -> m (String,a)
+makeReport' :: Monad m => a -> EitherT [Error] m (String,a) -> m (String,a)
 makeReport' def m = eitherT f return m
     where    
         f x = return ("Left " ++ show_err x,def)
