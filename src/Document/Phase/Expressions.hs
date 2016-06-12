@@ -237,7 +237,8 @@ instance Scope Initially where
 instance IsExprScope Initially where
     toNewEvtExprDefault _ _ = return []
     toMchExpr lbl i  = do
-        vs <- view pDelVars
+        vs  <- view pDelVars
+        mid <- view pMachineId
         return $ case (i^.inhStatus,i^.declSource) of
             (InhAdd x,_)
                 | L.null lis' -> [Right $ PInit lbl x]
@@ -245,7 +246,8 @@ instance IsExprScope Initially where
                 where
                     lis = L.map (first $ view name) $ M.ascElems $ vs `M.intersection` used_var' x
                     lis' = L.map (first ([printf|deleted variable %s|] . render)) lis
-                    msg  = [printf|initialization predicate '%s' refers to deleted variables|] $ pretty lbl
+                    msg  = [printf|In '%s', initialization predicate '%s' refers to deleted variables|] 
+                                    (pretty mid) (pretty lbl)
             (InhDelete (Just x),Local) -> [Right $ PDelInits lbl x]
             (InhDelete (Just _),Inherited) -> []
             (InhDelete Nothing,_) -> [Left $ Error msg li]
@@ -316,10 +318,12 @@ checkLocalExpr' :: ( HasInhStatus decl (InhStatus expr)
                -> EventId -> Label -> decl
                -> Reader MachineP2 [Either Error a]
 checkLocalExpr' expKind free eid lbl sch = do
-            vs <- view pDelVars 
+            vs  <- view pDelVars 
+            mid <- view $ pMachineId.to pretty
             return $ case sch^.inhStatus of
                 InhAdd expr -> 
-                    let msg = [printf|event '%s', %s '%s' refers to deleted variables|] (pretty eid) expKind (pretty lbl)
+                    let msg = [printf|In '%s', event '%s', %s '%s' refers to deleted variables|] 
+                                    mid (pretty eid) expKind (pretty lbl)
                         errs   = vs `M.intersection` free expr
                         schLI  = ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
                         varsLI = L.map (first $ [printf|deleted variable '%s'|] . render . view name) (M.ascElems errs)
