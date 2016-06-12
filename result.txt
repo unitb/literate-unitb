@@ -334,23 +334,24 @@ Running test...
 |  |  +- File structure
 |  |  +- Root machine
 |  |  +- definitions of m2
-|  +- [ Success: 7 / 7 ]
+|  |  +- assumptions of m2
+|  +- [ Success: 8 / 8 ]
 |  +- Reactive.Banana extensions
 |  |  +- QuickCheck : Reactive.Banana.Property
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 267 / 267 ]
++- [ Success: 268 / 268 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38195 total
-    1061 src/UnitB/PO.hs
+   38260 total
+    1062 src/UnitB/PO.hs
      926 src/Document/Phase/Expressions.hs
      798 src/Document/Visitor.lhs
      757 src/Document/Phase.hs
      748 logic/Logic/Expr/Expr.hs
-Run time: 1m 54s
+Run time: 1m 59s

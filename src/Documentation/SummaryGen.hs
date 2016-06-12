@@ -8,6 +8,7 @@ import UnitB.Expr   hiding ((</>))
 import UnitB.UnitB as UB
 
     -- Libraries
+import Control.Applicative
 import Control.Lens hiding ((<.>),indices)
 
 import Control.Monad
@@ -15,12 +16,12 @@ import Control.Monad.Reader.Class
 import Control.Monad.RWS
 import Control.Monad.State
 import Control.Monad.Trans.Reader (ReaderT(..),runReaderT)
+import Control.Precondition
 
 import Data.Default
-import Data.Either.Combinators
 import Data.List as L ( intercalate )
 import qualified Data.List as L
-import           Data.List.NonEmpty as NE
+import           Data.List.NonEmpty as NE hiding ((!!))
 import Data.Map.Class as M hiding (map)
 import Data.Maybe as MM
 import qualified Data.Map.Class as M
@@ -308,20 +309,54 @@ constant_sum :: Machine -> M ()
 constant_sum m = section (keyword "constants") $ 
     unless (M.null $ m!.theory.consts) $
     block $ do
-        forM_ (keys $ m!.theory.consts) $ \v -> do
-            item $ tell [[printf|$%s$|] $ render v]
+        forM_ (elems $ m!.theory.consts) $ \v -> do
+            item $ tell [[printf|$%s$|] $ varDecl v]
 
 variable_sum :: Machine -> M ()
 variable_sum m = section (keyword "variables") $ 
     unless (M.null (m!.variables) && M.null (m!.abs_vars)) $
     block $ do
         when show_removals $ 
-            forM_ (keys $ view' abs_vars m `M.difference` view' variables m) $ \v -> do
-                item $ tell [[printf|$%s$\\quad(removed)|] $ render v]
-                comment_of m (DocVar v)
-        forM_ (keys $ view' variables m) $ \v -> do
-            item $ tell [[printf|$%s$|] $ render v]
-            comment_of m (DocVar v)
+            forM_ (elems $ view' abs_vars m `M.difference` view' variables m) $ \v -> do
+                item $ tell [[printf|$%s$\\quad(removed)|] $ varDecl v]
+                comment_of m (DocVar $ v^.name)
+        forM_ (elems $ view' variables m) $ \v -> do
+            item $ tell [[printf|$%s$|] $ varDecl v]
+            comment_of m (DocVar $ v^.name)
+
+data Member = Elem | Subset
+
+varDecl :: Var -> String
+varDecl v = render (v^.name) ++ fromMaybe "" (isMember $ type_of v)
+
+withParenth :: Bool -> String -> String
+withParenth True  = [printf|(%s)|]
+withParenth False = id
+
+isMember :: Type -> Maybe String
+isMember t = join (preview (_FromSort.to f) t) <|> ((" \\in " ++) <$> typeToSet False t)
+    where
+        f (DefSort n _ _ _,ts) 
+            | n == [tex|\set|] = [printf| \\subseteq %s|] <$> typeToSet False (ts !! 0)
+        f _ = Nothing
+
+
+typeToSet :: Bool -> Type -> Maybe String
+typeToSet paren = join . preview (_FromSort.to f)
+    where
+        f (DefSort n _ _ _,ts) 
+            | n == [tex|\set|] = withParenth paren . [printf|\\pow.%s|] <$> typeToSet True (ts !! 0)
+            | n == [tex|\pfun|] = withParenth paren <$> 
+                                    liftM2 [printf|%s \\pfun %s|] 
+                                        (typeToSet True (ts !! 0))
+                                        (typeToSet True (ts !! 1))
+        f (Sort n _ _,_) 
+            | otherwise  = Just (render n)
+        f (IntSort,[]) = Just [printf|\\mathcal{Z}|]
+        f (RealSort,[]) = Just [printf|\\mathcal{R}|]
+        f (BoolSort,[]) = Just [printf|\\textbf{Bool}|]
+        f _ = Nothing
+
 
 asm_sum :: Machine -> M ()
 asm_sum m = do
