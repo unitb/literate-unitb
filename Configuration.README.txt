@@ -1,0 +1,16 @@
+Configuration Files:
+
+~/Literate Unit-B/build.setting
+Global setting for a user to select which build tool to use
+
+    Example:
+        [DEFAULT]
+        buildtool: Cabal
+
+
+./build.setting
+Setting local to the working directory to determine which build tool to use
+
+    Example:
+        [DEFAULT]
+        buildtool: Stack

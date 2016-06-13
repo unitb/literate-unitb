@@ -5,9 +5,13 @@ import Control.Concurrent
 import Control.Lens
 
 import Control.Monad.RWS
+import Control.Monad.Trans.Either
 import Control.Monad.Trans.Maybe
 
 import Data.Char
+import           Data.ConfigFile hiding (get)
+import qualified Data.ConfigFile as CF
+import Data.Either.Combinators
 import Data.List
 import Data.Maybe
 import Data.String.Lines
@@ -15,6 +19,7 @@ import Data.String.Lines
 import System.Directory
 import System.Exit
 import System.FilePath
+import System.IO.Unsafe
 import System.Process
 
 import Text.Printf.TH
@@ -28,14 +33,32 @@ data CompileFlags = CompileFlags
 type Build = RWST FilePath () (FilePath,[FilePath]) (MaybeT IO)
 
 data BuildTool = Cabal | Stack
+    deriving (Eq,Show,Read)
 
 inf :: FilePath
 inf  = "interface"
 bin :: FilePath
 bin  = "bin"
 
+gatherConfig :: [FilePath] -> IO (Either CPError ConfigParser)
+gatherConfig fs = do
+    fs' <- filterM doesFileExist fs
+    runEitherT $ foldM (fmap EitherT . readfile) emptyCP fs'
+
+option :: Get_C a 
+       => Either CPError ConfigParser
+       -> a -> String -> a
+option cp x name = fromRight x $ do
+        cp <- cp
+        CF.get cp "DEFAULT" name
+
 tool :: BuildTool
-tool = Cabal
+tool = unsafePerformIO $ do
+    home <- getHomeDirectory
+    cp <- gatherConfig 
+            [ home </> "Literate Unit-B/build.setting"
+            , "./build.setting" ]
+    return $ option cp Cabal "buildTool"
 
 build :: FilePath -> Build a -> IO (Maybe (a, FilePath, [FilePath]))
 build path cmd = fmap f <$> runMaybeT (runRWST cmd path ("ghc",[]))
