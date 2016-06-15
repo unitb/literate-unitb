@@ -3,7 +3,6 @@ module Logic.Test where
 
     -- Modules
 import Logic.Expr
-import Logic.Expr.Type (Field (..))
 import Logic.Expr.Const
 import Logic.Expr.Parser
 import Logic.Proof.Monad
@@ -244,8 +243,8 @@ case5   :: IO Expr
 result5 :: Expr
 case6   :: IO Expr
 result6 :: Expr
-case3 = return $ specialize (fromList [(a,gB)]) $ FunApp union [x3,x4]
-result3 = FunApp (mk_fun' [gB] "union" [set_type gB,set_type gB] $ set_type gB) [x3,x4] 
+case3 = return $ specialize (fromList [(a,gB)]) $ funApp union [x3,x4]
+result3 = funApp (mk_fun' [gB] "union" [set_type gB,set_type gB] $ set_type gB) [x3,x4] 
 case5 = return $ p
 result5 = q
 case6 = return $ pp
@@ -275,25 +274,25 @@ c :: InternalName
 c = fromString'' "c"
 
 pp :: Expr
-pp = FunApp member [FunApp union [x1,x2], specialize (fromList [(a,set_type gA)]) $ FunApp union [x3,x4]]
+pp = funApp member [funApp union [x1,x2], specialize (fromList [(a,set_type gA)]) $ funApp union [x3,x4]]
 
 qq :: Expr
-qq = FunApp member [FunApp union [x1,x2], FunApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA,set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
+qq = funApp member [funApp union [x1,x2], funApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA,set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
 p :: Expr
-p = FunApp member [FunApp union [x1,x2], specialize (fromList [(a,set_type $ gA)]) $ FunApp union [x3,x4]]
+p = funApp member [funApp union [x1,x2], specialize (fromList [(a,set_type $ gA)]) $ funApp union [x3,x4]]
 q :: Expr
-q = FunApp member [FunApp union [x1,x2], FunApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA, set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
+q = funApp member [funApp union [x1,x2], funApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA, set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
 
 case7   :: IO ExprP
 result7 :: ExprP
 (case7, result7) = 
         ( return (x `zelem` zempty_set)
-        , Right $ FunApp (mk_fun' [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
+        , Right $ funApp (mk_fun' [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
         )
     where
         train = Gen (z3Sort "\\train" "train" 0) []
         (x,_) = var "x" train
-        empty_set_of_train = FunApp (mk_fun' [train] "empty-set" [] $ set_type train) []
+        empty_set_of_train = funApp (mk_fun' [train] "empty-set" [] $ set_type train) []
 
 result8 :: String
 result8 = unlines

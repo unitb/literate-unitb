@@ -141,7 +141,7 @@ showExpr notation e = show_e e
             | length xs == 0 = error $ [printf|show_e: not a binary or unary operator '%s' %s|]
                                     (render $ f^.name)
                                     (L.intercalate ", " $ map pretty xs)
-            | otherwise      = show_e (FunApp f $ [head xs, FunApp f $ tail xs])
+            | otherwise      = show_e (funApp f $ [head xs, funApp f $ tail xs])
             where
                 x = xs ! 0
                 y = xs ! 1
@@ -343,8 +343,8 @@ fun_map = M.fromList
         ]
 
 zelem' :: RawExpr -> RawExpr -> RawExpr
-zelem' e0 e1 = FunApp (mk_fun' [int] "elem" [int,set_type int] bool) [e0,e1 :: RawExpr]
-        -- zeq' e0 e1 = FunApp (mk_fun [] "=" [int,int] bool) [e0,e1 :: Expr]
+zelem' e0 e1 = funApp (mk_fun' [int] "elem" [int,set_type int] bool) [e0,e1 :: RawExpr]
+        -- zeq' e0 e1 = funApp (mk_fun [] "=" [int,int] bool) [e0,e1 :: Expr]
 
 choose_expr :: Bool -> Type -> EGen RawExpr
 choose_expr b t = do

@@ -298,12 +298,13 @@ discharge' :: Maybe Int      -- Timeout in seconds
 discharge' n lbl po
     | (po^.goal) == ztrue = return Valid
     | otherwise = withSemN total_caps (fromIntegral $ po^.resource) $ do
-        let code  = z3_commands $ po & timeout %~ (`div` 4)
-            code' = z3_commands po
+        let code  = z3_commands po
+            code' = z3_commands po'
+            po' = po & timeout %~ (`div` 4)
             t = fromMaybe default_timeout n
-        s  <- verify lbl code t
+        s  <- verify lbl code' t
         s' <- if s == Right SatUnknown 
-            then verify lbl code' t
+            then verify lbl code t
             else return s
         case s' of
             Right Sat -> return Invalid

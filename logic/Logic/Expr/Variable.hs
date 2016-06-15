@@ -33,7 +33,7 @@ type Var' = AbsVar InternalName Type
 
 type FOVar = AbsVar InternalName FOType
 
-data AbsVar name t = Var name t
+data AbsVar name t = Var !name !t
     deriving (Eq,Ord,Generic,Typeable,Data,Functor,Foldable,Traversable,Show)
 
 translate' :: (n0 -> n1) -> AbsVar n0 t -> AbsVar n1 t

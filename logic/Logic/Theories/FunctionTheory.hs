@@ -49,7 +49,7 @@ zrep_select = typ_fun2 (mk_fun' [] "select" [fun_type gA gB, gA] $ maybe_type gB
 
 zovl    = typ_fun2 ovl_fun
 zmk_fun = typ_fun2 mk_fun_fun
-zempty_fun = Right $ FunApp emptyfun []
+zempty_fun = Right $ funApp emptyfun []
 
 ovl_fun, mk_fun_fun, emptyfun :: Fun
 ovl_fun = mk_fun' [gA,gB] "ovl" [ft,ft] ft

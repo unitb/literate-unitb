@@ -21,13 +21,13 @@ import GHC.Generics.Instances
 import Test.QuickCheck
 import Test.QuickCheck.ZoomEq
 
-data QuantifierType = QTConst Type | QTSort Sort | QTFromTerm Sort | QTTerm
+data QuantifierType = QTConst !Type | QTSort !Sort | QTFromTerm !Sort | QTTerm
     deriving (Eq,Ord,Generic,Typeable,Data,Show)
 
 data HOQuantifier = 
         Forall 
         | Exists 
-        | UDQuant Fun Type QuantifierType SetWD
+        | UDQuant !Fun !Type !QuantifierType !SetWD
     deriving (Eq,Ord,Generic,Typeable,Data,Show)
 
 data FOQuantifier = FOForall | FOExists 

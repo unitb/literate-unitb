@@ -7,7 +7,7 @@ module Logic.Expr.Parser.Internal.Parser where
 import Latex.Scanner 
 import Latex.Parser  hiding (Close,Open,BracketType(..),Command,Parser,Bracket,token)
 
-import Logic.Expr hiding (recordFields)
+import Logic.Expr hiding (recordFields,Field)
 import Logic.Expr.Parser.Internal.Monad 
 import Logic.Expr.Parser.Internal.Scanner
 import Logic.Expr.Parser.Internal.Setting hiding (with_vars)

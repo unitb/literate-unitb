@@ -374,7 +374,7 @@ apply_monotonicity po = fromMaybe po $
                             return $ apply_monotonicity $ 
                                 po' & goal .~ 
                                     (zforall vs' ztrue $ 
-                                        FunApp f [zforall vs0 r0 t0, zforall vs1 r1 t1])
+                                        funApp f [zforall vs0 r0 t0, zforall vs1 r1 t1])
                     (Binder Exists vs r0 t0 _, Binder Exists us r1 t1 _) 
                         | shared vs us && z3_name f `elem` [[smt|=|],[smt|=>|]] -> do
                             let vs0 = vs L.\\ us
@@ -383,7 +383,7 @@ apply_monotonicity po = fromMaybe po $
                             return $ apply_monotonicity $
                                 po' & goal .~ 
                                     (zforall vs' ztrue $ 
-                                        FunApp f [zexists vs0 r0 t0, zexists vs1 r1 t1])
+                                        funApp f [zexists vs0 r0 t0, zexists vs1 r1 t1])
                     (Binder q0 vs r0 t0 _, Binder q1 us r1 t1 _)
                         | q0 == q1 && vs == us 
                             && r0 == r1 && z3_name f == [smt|=|] -> 
@@ -399,7 +399,7 @@ apply_monotonicity po = fromMaybe po $
                         | z3_name f == [smt|=|] -> do
                             (_,x,y) <- difference g0 xs ys
                             return $ apply_monotonicity $
-                                po' & goal .~ FunApp f [x, y]
+                                po' & goal .~ funApp f [x, y]
                         | otherwise -> do
                                 -- and(0,1), or(0,1), 
                                 --      =>(1)       -> f.x => f.y -> x => y

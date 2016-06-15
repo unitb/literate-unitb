@@ -30,26 +30,27 @@ import           Test.QuickCheck.ZoomEq
 
 import           Text.Printf.TH
 
+import           Utilities.Functor
 import           Utilities.Table
 
 data GenericType = 
-        Gen Sort [GenericType] 
-        | GENERIC InternalName
-        | VARIABLE InternalName
+        Gen !Sort ![GenericType] 
+        | GENERIC !InternalName
+        | VARIABLE !InternalName
     deriving (Eq,Ord,Typeable,Generic,Data,Show)
 
-data FOType      = FOT Sort [FOType]
+data FOType      = FOT !Sort ![FOType]
     deriving (Eq, Ord, Typeable, Generic, Show)
 
 data Sort =
         BoolSort | IntSort | RealSort 
-        | RecordSort (Table Field ())
+        | RecordSort !(Table Field ())
         | DefSort 
-            Name            -- Latex name
-            InternalName    -- Type name
-            [Name]          -- Generic Parameter
-            GenericType     -- Type with variables
-        | Sort Name InternalName Int
+            !Name            -- Latex name
+            !InternalName    -- Type name
+            ![Name]          -- Generic Parameter
+            !GenericType     -- Type with variables
+        | Sort !Name !InternalName !Int
         | Datatype 
             [Name]      -- Parameters
             Name        -- type name
@@ -98,16 +99,16 @@ instance TypeAnnotationPair FOType FOType where
     strippedType = id
 
 instance TypeSystem GenericType where
-    make_type    = Gen
-    _FromSort    = _Gen
+    make_type s  = Gen s . evalList
+    _FromSort    = _Gen . mapping (iso id evalList)
 
 instance Typed FOType where
     type TypeOf FOType = FOType
     type_of = id
 
 instance TypeSystem FOType where
-    make_type = FOT
-    _FromSort = _FOT
+    make_type s = FOT s . evalList
+    _FromSort   = _FOT . mapping (iso id evalList)
 
 instance PrettyPrintable Sort where
     pretty (RecordSort m) = [printf|{ %s }|] $ intercalate ", " 

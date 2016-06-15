@@ -30,12 +30,12 @@ data SetWD  = FiniteWD | InfiniteWD
     deriving (Eq,Ord,Generic,Typeable,Data,Show)
 
 data AbsFun n t = Fun 
-        { _annotation :: [t]
-        , _funName :: n
-        , lifted :: Lifting
-        , _arguments :: [t] 
-        , _result :: t
-        , _finite :: SetWD }
+        { _annotation :: ![t]
+        , _funName :: !n
+        , lifted :: !Lifting
+        , _arguments :: ![t] 
+        , _result :: !t
+        , _finite :: !SetWD }
     deriving (Eq,Ord,Generic,Typeable,Data,Functor,Foldable,Traversable,Show)
 
 data Lifting = Unlifted | Lifted
@@ -103,10 +103,10 @@ mk_fun' :: (Pre,IsName n)
 mk_fun' ps = mk_fun ps . z3Name
 
 mk_fun :: [t] -> n -> [t] -> t -> AbsFun n t
-mk_fun  ps n ts t = Fun ps n Unlifted ts t InfiniteWD
+mk_fun  ps n ts t = Fun (evalList ps) n Unlifted (evalList ts) t InfiniteWD
 
 mk_lifted_fun :: IsName n => [t] -> n -> [t] -> t -> AbsFun n t
-mk_lifted_fun ps n ts t = Fun ps n Lifted ts t InfiniteWD
+mk_lifted_fun ps n ts t = Fun (evalList ps) n Lifted (evalList ts) t InfiniteWD
 
 mkConstant :: (Pre,IsName n) 
            => String -> t -> AbsFun n t

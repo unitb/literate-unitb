@@ -1,7 +1,3 @@
-Preprocessing library literate-unitb-0.1.0.0...
-In-place registering literate-unitb-0.1.0.0...
-Preprocessing executable 'test' for literate-unitb-0.1.0.0...
-Running test...
 +- Literate Unit-B Test Suite
 |  +- Unit-B Document
 |  |  +- basic syntax and scopes
@@ -34,7 +30,9 @@ Running test...
 |  |  |  +- test 25, parameter promotion and inheritance
 |  |  |  +- test 26, scoping problem in sequents
 |  |  |  +- test 28, large WD-condition
-|  |  +- [ Success: 28 / 28 ]
+|  |  |  +- test 29, weakening and splitting / disjunction
+|  |  |  +- test 30, weakening and splitting / safety
+|  |  +- [ Success: 30 / 30 ]
 |  |  +- small machine example
 |  |  |  +- test 0
 |  |  |  +- test 1 (separate machine blocks)
@@ -227,7 +225,7 @@ Running test...
 |  |  +- conformance of instances to type class axioms
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
-|  +- [ Success: 173 / 173 ]
+|  +- [ Success: 175 / 175 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -341,17 +339,17 @@ Running test...
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 268 / 268 ]
++- [ Success: 270 / 270 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38260 total
-    1062 src/UnitB/PO.hs
-     926 src/Document/Phase/Expressions.hs
+   38349 total
+    1071 src/UnitB/PO.hs
+     930 src/Document/Phase/Expressions.hs
      798 src/Document/Visitor.lhs
+     780 logic/Logic/Expr/Expr.hs
      757 src/Document/Phase.hs
-     748 logic/Logic/Expr/Expr.hs
-Run time: 1m 59s
+Run time: 2m 13s

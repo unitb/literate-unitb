@@ -127,7 +127,7 @@ findFreeVars ls e
                 modify (\m -> m 
                     { local_gen = ls
                     , renaming  = ren } )
-                return (Binder q us r' t' et)
+                return (binder q us r' t' et)
             Word v          -> 
                 Word <$> rename v
             _               ->
@@ -183,8 +183,8 @@ delambdify po = -- (Sequent ctx asm hyps goal) =
             goal' <- lambdas $ po^.goal
             let Context ss vs fs _ dd = po^.context
             ds' <- T.forM (po^.definitions) $ \(Def tp fn arg rt e) -> do
-                    Def tp (asInternal fn) 
-                           (L.map translate arg) rt
+                    makeDef tp (asInternal fn) 
+                               (L.map translate arg) rt
                         <$> lambdas e
             defs  <- lambda_def
             decl  <- lambda_decl
@@ -229,16 +229,16 @@ lambdas (Binder (UDQuant fn _ _ _) vs r t _) = do
 lambdas (Binder Forall vs r t et) = do
     r' <- lambdas r
     t' <- lambdas t
-    return $ Binder FOForall (L.map translate vs) r' t' et
+    return $ binder FOForall (L.map translate vs) r' t' et
 lambdas (Binder Exists vs r t et) = do
     r' <- lambdas r
     t' <- lambdas t
-    return $ Binder FOExists (L.map translate vs) r' t' et
+    return $ binder FOExists (L.map translate vs) r' t' et
 lambdas (Word v) = return (Word $ translate v)
 lambdas (Lit v t) = return (Lit v t)
 lambdas (FunApp fun args) = do
     args' <- mapM lambdas args
-    return $ FunApp (fun & namesOf %~ asInternal) args'
+    return $ funApp (fun & namesOf %~ asInternal) args'
 lambdas (Cast e t) = (`Cast` t) <$> lambdas e
 lambdas (Lift e t) = (`Lift` t) <$> lambdas e
 lambdas (Record e) = Record <$> traverseRecExpr lambdas e

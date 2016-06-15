@@ -108,7 +108,7 @@ assert_ctx m = empty_ctx
     where
         del  = m!.del_vars
         vars = m!.variables
-        mkDef n e = Def [] n [] (type_of e) e
+        mkDef n e = makeDef [] n [] (type_of e) e
         ds   = M.mapWithKey mkDef $ m!.defs
 
 step_ctx :: RawMachineAST -> Context
@@ -120,7 +120,7 @@ step_ctx m = merge_all_ctx
     where
         abs  = m!.abs_vars
         vars = m!.variables
-        mkDef n e = Def [] n [] (type_of e) e
+        mkDef n e = makeDef [] n [] (type_of e) e
         ds   = M.mapWithKey mkDef 
                 $ M.mapKeys addPrime 
                 $ primed (vars `M.union` abs) <$> m!.defs
@@ -132,7 +132,7 @@ abstract_step_ctx m = merge_all_ctx
                 & definitions .~ ds
         ,  assert_ctx m ]
     where
-        mkDef n e = Def [] n [] (type_of e) e
+        mkDef n e = makeDef [] n [] (type_of e) e
         ds   = M.mapWithKey mkDef 
                 $ M.mapKeys addPrime 
                 $ primed vars <$> m!.defs
@@ -591,8 +591,8 @@ ind_wit_fis_po m (lbl, evts) =
 removeSkip :: NonEmpty (SkipOrEvent, t) -> [(EventId, t)]
 removeSkip = rights.fmap (view distrLeft).NE.toList
 
-csched_ref_safety :: RawScheduleChange -> RawEventSplitting -> [(Label,RawSafetyProp)]
-csched_ref_safety sch ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_label *** safe)
+csched_ref_safety :: OldNewPair k -> RawEventSplitting -> [(Label,RawSafetyProp)]
+csched_ref_safety (old,new) ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_label *** safe)
         -- | When using witnesses with event indices:
         -- | as /\ cs.i
         -- | either 
@@ -605,8 +605,6 @@ csched_ref_safety sch ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_lab
         -- |     as ↦ i = f.x ∧ cs.i
         -- |     i = f.x ∧ cs.i  unless  ¬as
     where
-        new = (sch^.keep) `M.union` (sch^.add)
-        old = (sch^.keep) `M.union` (sch^.remove)
         ind cevt = M.ascElems $ M.union (cevt^.indices) (ev^.indices)
         safe :: ConcrEvent' RawExpr -> RawSafetyProp
         safe cevt = Unless (ind cevt)
@@ -627,7 +625,7 @@ replace_csched_po m (lbl,evt') = do
                 prefix_label nb ) $ do
             with (do
                     prefix_label "saf") $
-                forM_ (csched_ref_safety ref evt') 
+                forM_ (csched_ref_safety (oldNewPair ref) evt') 
                     $ prop_saf' m (Just lbl)
             with (do
                     _context $ assert_ctx m
@@ -669,10 +667,10 @@ replace_csched_po m (lbl,evt') = do
 
 weaken_csched_po :: RawMachineAST -> (EventId,RawEventSplitting) -> M ()
 weaken_csched_po m (lbl,evt) = do
-            let weaken_sch = do
+            let weaken_sch :: NonEmpty (Map Label RawExpr)
+                weaken_sch = do
                         e <- evt^.evt_pairs
                         return $ (e^.added.coarse_sched) `M.difference` M.unions (L.map (view add) $ e^.c_sched_ref)
-
                 old_c = evt^.old.coarse_sched
             with (do
                     prefix_label $ as_label lbl
@@ -687,7 +685,13 @@ weaken_csched_po m (lbl,evt) = do
                         -- | old version admits old_f as assumption
                         -- | why is it correct or needed?
                         -- | named_hyps old_f
-                    named_hyps old_c) $ do
+                    named_hyps old_c  ) $ do
+                unless (isOneToOne evt) $
+                    with (do
+                            prefix_label "saf") $ do
+                        let ref = unrefinedSched evt
+                        forM_ (F.concat $ csched_ref_safety <$> ref <*> pure evt) 
+                            $ prop_saf' m (Just lbl)
                 case weaken_sch of
                     m :| [] -> 
                         forM_ (M.toList m) $ \(lbl,sch) -> do

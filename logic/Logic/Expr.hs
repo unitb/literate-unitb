@@ -21,6 +21,6 @@ import Logic.Expr.Expr  hiding (fromEither)
 import Logic.Expr.Genericity hiding ( Generic, variables )
 import Logic.Expr.Label
 import Logic.Expr.PrettyPrint
-import Logic.Expr.Type hiding (Field)
+import Logic.Expr.Type
 import Logic.Expr.Variable
 import Logic.Names hiding (language)

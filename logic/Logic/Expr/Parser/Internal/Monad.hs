@@ -144,7 +144,7 @@ runParser' p = runParserWith $ Param
         vars' = M.map Word vars `M.union` M.mapMaybe f defs
         f (Def xs n args t _e) = do
                 guard (L.null args)
-                Just $ FunApp (mk_fun xs n [] t) []
+                Just $ funApp (mk_fun xs n [] t) []
         defs = ctx^.definitions
             
 runParser :: Context -> Notation 

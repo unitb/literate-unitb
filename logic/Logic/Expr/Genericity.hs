@@ -73,7 +73,7 @@ rewrite_types xs e = -- typesOf %~ suffix_generics tag
             t'          = ft t
         Cast e t -> Cast (rewrite_types xs e) (suffix_generics xs t)
         Lift e t -> Lift (rewrite_types xs e) (suffix_generics xs t)
-        FunApp f args -> FunApp f' new_args
+        FunApp f args -> funApp f' new_args
           where
             f'          = substitute_types ft f
             new_args    = map fe args
@@ -95,7 +95,7 @@ class TypeSystem t => TypeSystem2 t where
 instance TypeSystem2 FOType where
     check_args xp f@(Fun _ _ _ ts _ _) = do
             guard (map type_of xp == ts)
-            return $ FunApp f xp
+            return $! funApp f xp
     zcast t me = do
             e <- me
             let { err_msg = unlines
@@ -125,7 +125,7 @@ instance TypeSystem2 GenericType where
                 us    = L.map (ft "1") ts
                 u     = ft "1" t
                 args2 = map (fe "2") args
-                expr = FunApp (Fun gs2 name lf us u wd) $ args2 
+                expr = funApp (Fun gs2 name lf us u wd) $ args2 
             return expr
     zcast t me = do
             e <- me
@@ -258,13 +258,13 @@ strip_generics (Lift e t) = do
 strip_generics (FunApp f xs) = do
     f  <- fun_strip_generics f
     xs <- mapM strip_generics xs
-    return (FunApp f xs)
+    return (funApp f xs)
 strip_generics (Binder q vs r t et) = do
     vs <- mapM var_strip_generics vs
     r  <- strip_generics r
     t  <- strip_generics t
     et' <- type_strip_generics et
-    return (Binder q vs r t et')
+    return (binder q vs r t et')
 strip_generics (Record e) = Record <$> traverseRecExpr strip_generics e
 
 type_strip_generics :: Type -> Maybe FOType
@@ -286,7 +286,7 @@ def_strip_generics (Def ts n ps rt val) = do
     ps  <- mapM var_strip_generics ps
     rt  <- type_strip_generics rt
     val <- strip_generics val
-    return (Def ts (asInternal n) ps rt val)
+    return (makeDef ts (asInternal n) ps rt val)
 
 var_strip_generics :: IsName n => AbsVar n Type -> Maybe FOVar
 var_strip_generics (Var n t) = do
@@ -367,10 +367,10 @@ instance (TypeSystem t,HasGenerics t,IsName n,IsQuantifier q) => HasGenerics (Ab
 instance (IsQuantifier q, Generic Type t', TypeSystem t',IsName n) 
         => Generic (AbsDef n Type q) (AbsDef n t' q) where
     substitute_types' f (Def gs n ts t e) = 
-            Def (map f gs) n 
-                (map (substitute_types' f) ts) 
-                (f t) 
-                (substitute_types' f e)
+            makeDef (map f gs) n 
+                    (map (substitute_types' f) ts) 
+                    (f t) 
+                    (substitute_types' f e)
     instantiate' m x = substitute_types' (instantiate' m) x
     substitute_type_vars' m x = substitute_types' (substitute_type_vars' m) x
 

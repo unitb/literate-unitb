@@ -24,7 +24,7 @@ instance HasGenExpr DispExpr where
     zfalse  = DispExpr "\\false" zfalse
     zword v = DispExpr (pretty v) (Word v)
 
-data DispExpr = DispExpr String Expr
+data DispExpr = DispExpr !String !Expr
     deriving (Show,Generic,Typeable)
 
 instance Eq DispExpr where

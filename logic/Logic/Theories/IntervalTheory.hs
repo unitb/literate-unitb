@@ -62,17 +62,17 @@ vars :: [Var]
 vars = [x_var,y_var,z_var]
 
 between_fun :: Def
-between_fun    = Def [] [smt|between|] vars bool $ (x `zle` y) `zand` (y `zle` z)
+between_fun    = makeDef [] [smt|between|] vars bool $ (x `zle` y) `zand` (y `zle` z)
 between_l_fun :: Def
-between_l_fun  = Def [] [smt|betweenL|] vars bool $ (x `zless` y) `zand` (y `zle` z)
+between_l_fun  = makeDef [] [smt|betweenL|] vars bool $ (x `zless` y) `zand` (y `zle` z)
 between_r_fun :: Def
-between_r_fun  = Def [] [smt|betweenR|] vars bool $ (x `zle` y) `zand` (y `zless` z)
+between_r_fun  = makeDef [] [smt|betweenR|] vars bool $ (x `zle` y) `zand` (y `zless` z)
 between_lr_fun :: Def
-between_lr_fun = Def [] [smt|betweenLR|] vars bool $ (x `zless` y) `zand` (y `zless` z)
+between_lr_fun = makeDef [] [smt|betweenLR|] vars bool $ (x `zless` y) `zand` (y `zless` z)
 
 axiomOf :: Def -> Expr 
 axiomOf d@(Def _ _ vars _ e) = zforall vars ztrue 
-        $ FunApp (funOf d) (map Word vars) `zeq` e
+        $ funApp (funOf d) (map Word vars) `zeq` e
 
 between :: Command
 between = make Command "\\between" "between" 3 $ funOf between_fun

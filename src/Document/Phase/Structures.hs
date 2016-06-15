@@ -131,7 +131,7 @@ set_decl = machineCmd "\\newset" $ \(Identity (SetName tag)) _m _ -> do
             let name     = tag 
                 new_sort = Sort tag (asInternal name) 0
                 new_type = Gen new_sort []
-                new_def = Def [] name [] (set_type new_type)
+                new_def = makeDef [] name [] (set_type new_type)
                                     $ zlift (set_type new_type) ztrue
             li <- ask
             return ([(tag,new_sort,li)],[(tag,(new_def,Local,li))])

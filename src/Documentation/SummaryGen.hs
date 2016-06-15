@@ -352,8 +352,8 @@ typeToSet paren = join . preview (_FromSort.to f)
                                         (typeToSet True (ts !! 1))
         f (Sort n _ _,_) 
             | otherwise  = Just (render n)
-        f (IntSort,[]) = Just [printf|\\mathcal{Z}|]
-        f (RealSort,[]) = Just [printf|\\mathcal{R}|]
+        f (IntSort,[]) = Just [printf|\\mathbb{Z}|]
+        f (RealSort,[]) = Just [printf|\\mathbb{R}|]
         f (BoolSort,[]) = Just [printf|\\textbf{Bool}|]
         f _ = Nothing
 

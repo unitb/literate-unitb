@@ -45,11 +45,11 @@ type TwoExpr n t q = AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
 fun1 :: ( TypeSystem t )
      => AbsFun n t 
      -> AbsExpr n t q -> AbsExpr n t q
-fun1 f x           = FunApp f [x]
+fun1 f x           = funApp f [x]
 fun2 :: ( TypeSystem t  )
      => AbsFun n t -> AbsExpr n t q
      -> AbsExpr n t q -> AbsExpr n t q
-fun2 f x y         = FunApp f [x,y]
+fun2 f x y         = funApp f [x,y]
 
 no_errors2 :: ( TypeSystem t 
               , IsQuantifier q )
@@ -89,7 +89,7 @@ mzeq_symb    = typ_fun2 $ mk_fun [gA] [smt|eq|] [gA, gA] bool
 
 zeq :: (IsQuantifier q,IsName n)
     => AbsExpr n Type q -> AbsExpr n Type q -> AbsExpr n Type q
-zeq x y = provided (type_of x == type_of y) $ FunApp (zeq_fun $ type_of x) [x,y]
+zeq x y = provided (type_of x == type_of y) $ funApp (zeq_fun $ type_of x) [x,y]
 mzeq :: IsName n => TwoExprP n Type q
 mzeq         = typ_fun2 (zeq_fun gA)
 
@@ -151,11 +151,11 @@ zforall [] x y  = zimplies x y
 zforall vs x w@(Binder q us y z _) 
     | q == qForall = if x == ztrue
             then zforall (vs ++ us) y z
-            else Binder qForall vs x w bool
+            else binder qForall vs x w bool
 zforall vs x w   
     |    x `elem` [ztrue, zfalse]
       && w `elem` [ztrue, zfalse] = zimplies x w
-    | otherwise                   = Binder qForall vs x w bool
+    | otherwise                   = binder qForall vs x w bool
 
 zexists :: (TypeSystem2 t, IsQuantifier q,IsName n)
         => [AbsVar n t] 
@@ -178,7 +178,7 @@ zquantifier q vs r t = do
     t' <- zcast (termType q) t
     let tuple = ztuple_type (map var_type vs)
         rt    = exprType q tuple (type_of t')
-    return $ Binder q vs r' t' rt
+    return $ binder q vs r' t' rt
 
 ite_fun :: IsName n => AbsFun n Type
 ite_fun = mk_fun [] [smt|ite|] [bool,gA,gA] gA
@@ -190,7 +190,7 @@ zjust :: IsName n => OneExprP n Type q
 zjust      = typ_fun1 (mk_fun [] [smt|Just|] [gA] (maybe_type gA))
 
 znothing :: IsName n => ExprPG n Type q
-znothing   = Right $ Cast (FunApp (mk_fun [] [smt|Nothing|] [] $ maybe_type gA) []) (maybe_type gA)
+znothing   = Right $ Cast (funApp (mk_fun [] [smt|Nothing|] [] $ maybe_type gA) []) (maybe_type gA)
 
 mznot :: (TypeSystem2 t,IsName n) => OneExprP n t q
 mznot me       = do
@@ -427,7 +427,7 @@ disjuncts (FunApp f xs)
 disjuncts x = [x]
 
 applyAssoc :: (Int -> AbsFun n a) -> [GenExpr n t a q] -> GenExpr n t a q
-applyAssoc op xs = FunApp (op (length xs)) xs
+applyAssoc op xs = funApp (op (length xs)) xs
 
 flattenConnectors :: (IsName n,TypeSystem2 t,IsQuantifier q) 
                   => AbsExpr n t q -> AbsExpr n t q
@@ -465,10 +465,10 @@ zelemUnchecked :: (TypeSystem t,IsName n,IsQuantifier q)
                -> AbsExpr n t q 
                -> AbsExpr n t q
 zelemUnchecked x s = provided (set_type (type_of x) == type_of s) $
-        FunApp (elem_fun (type_of x)) [x,s]
+        funApp (elem_fun (type_of x)) [x,s]
 
 zident :: ExprP
-zident = Right $ FunApp ident_fun []
+zident = Right $ funApp ident_fun []
 
 zrecord' :: MapSyntax Name (ExprPG n t q) () -> ExprPG n t q
 zrecord' = zrecord . runMap'

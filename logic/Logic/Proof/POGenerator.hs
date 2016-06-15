@@ -44,12 +44,12 @@ import Utilities.Table
 import Utilities.Trace
 
 data POParam = POP 
-    { _pOParamContext :: Context
+    { _pOParamContext  :: Context
     , tag :: DList Label
-    , _pOParamTimeout :: Maybe Float
+    , _pOParamTimeout  :: Maybe Float
     , _pOParamNameless :: DList Expr
     , _pOParamNamed :: Table Label Expr
-    , _pOParamSynProp :: SyntacticProp
+    , _pOParamSynProp  :: SyntacticProp
     } deriving (Generic)
 
 makeFields ''POParam

@@ -164,11 +164,29 @@ makeFields ''EventMerging
 makeClassy ''Event'
 makeClassy ''AbstrEvent'
 makeClassy ''ConcrEvent'
+mkCons ''Event'
+
+type OldNewPair expr = (Table Label expr,Table Label expr)
+
+oldNewPair :: ScheduleChange' expr 
+           -> OldNewPair ()
+oldNewPair sch = (old,new)
+    where
+        new = (sch^.keep) `M.union` (sch^.add)
+        old = (sch^.keep) `M.union` (sch^.remove)
+
+unrefinedSched :: HasExpr expr
+               => EventSplitting expr
+               -> Maybe (OldNewPair expr)
+unrefinedSched e 
+        | M.null new = Nothing
+        | otherwise  = Just (e^.old.coarse_sched,new)
+    where
+        new = M.unions [ unref e' | e' <- NE.toList $ e^.evt_pairs ]
+        unref e' = (e'^.added.coarse_sched) `M.difference` M.unions (L.map (view add) $ e^.c_sched_ref)
 
 hyps_label :: ScheduleChange -> ProgId
 hyps_label = PId . fst . view sch_prog
-
-mkCons ''Event'
 
 instance ZoomEq expr => ZoomEq (ScheduleChange' expr) where
 
@@ -370,6 +388,12 @@ class ActionRefinement a expr | a -> expr where
 instance ActionRefinement (EventRef expr) expr where
     abstract_acts = old.actions
     concrete_acts = new.actions
+
+isOneToOne :: EventRefinement evt expr
+           => evt -> Bool
+isOneToOne x = neOne (x^.abstract_evts) && neOne (x^.concrete_evts)
+    where
+        neOne = L.null . NE.tail
 
 class HasExpr expr => EventRefinement a expr | a -> expr where
     abstract_evts :: Getter a (NonEmpty (SkipOrEvent,AbstrEvent' expr))

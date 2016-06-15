@@ -96,7 +96,7 @@ instance IsTestCase TestCase where
     makeCase _ (Suite cs n xs) = Node cs n <$> mapM (makeCase $ Just cs) xs
     makeCase cs (Case x y z) = return UT
                         { name = x
-                        , routine = (,logNothing) <$> y
+                        , routine = sequenceOf _1 (y,logNothing)
                         , outcome = z
                         , _mcallStack = cs
                         , _displayA = disp
@@ -129,14 +129,14 @@ instance IsTestCase TestCase where
     makeCase cs (QuickCheckProps n prop) = do
             args <- ask
             return UT
-                            { name = n
-                            , routine = (,logNothing) <$> prop (quickCheckWithResult' args)
-                            , outcome = True
-                            , _mcallStack = cs
-                            , _displayA = intercalate "\n" . fst
-                            , _displayE = const ""
-                            , _criterion = snd
-                            }
+                { name = n
+                , routine = (,logNothing) <$> prop (quickCheckWithResult' args)
+                , outcome = True
+                , _mcallStack = cs
+                , _displayA = intercalate "\n" . fst
+                , _displayE = const ""
+                , _criterion = snd
+                }
     makeCase cs (Other c) = makeCase cs c
     nameOf f (WithLineInfo x0 c) = WithLineInfo x0 <$> nameOf f c
     nameOf f (Suite x0 n x1) = (\n' -> Suite x0 n' x1) <$> f n

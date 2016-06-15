@@ -118,7 +118,7 @@ library
          -j8
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >= 4.8 && < 5, lens, array, containers, deepseq, data-default, cereal < 5, QuickCheck, mtl, template-haskell, hashable, dlist, semigroups, either, transformers, contravariant, directory >= 1.2.3.0, filepath, process, SafeSemaphore, data-ordlist, MissingH, pseudomacros, ConfigFile, literate-unitb-utils, literate-unitb-latex, invariants, generic-instances, printf-th, data-map-class, axiomatic-classes, partial-order, existential, string-lenses, data-packaged, monad-loops, classy-lens-hierarchy, unitb-testing, lens-extra, axiomatic-classes, pretty-printable, bipartite-graph
+  build-depends:       base >= 4.8 && < 5, lens >= 4.13, array, containers, deepseq, data-default, cereal < 5, QuickCheck, mtl, template-haskell, hashable, dlist, semigroups, either, transformers, contravariant, directory >= 1.2.3.0, filepath, process, SafeSemaphore, data-ordlist, MissingH, pseudomacros, ConfigFile, literate-unitb-utils, literate-unitb-latex, invariants, generic-instances, printf-th, data-map-class, axiomatic-classes, partial-order, existential, string-lenses, data-packaged, monad-loops, classy-lens-hierarchy, unitb-testing, lens-extra, axiomatic-classes, pretty-printable, bipartite-graph
   
   -- Directories containing source files.
   hs-source-dirs:      .
