@@ -277,7 +277,7 @@ make_table' f items = all_errors $ M.mapWithKey g conflicts
     where
         g k ws
                 | all (\xs -> length xs <= 1) ws 
-                            = Right $ L.foldl merge_scopes (head xs) (tail xs)
+                            = Right $ L.foldl' merge_scopes (head xs) (tail xs)
                 | otherwise = Left $ L.map (\xs -> MLError (f k) $ concatMap (NE.toList.error_item) xs) 
                                     $ L.filter (\xs -> length xs > 1) ws
             where

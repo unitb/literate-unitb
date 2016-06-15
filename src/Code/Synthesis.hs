@@ -174,7 +174,7 @@ certainly (Event _ _ _ lbl) = [lbl]
 certainly (NotEvent _ evts) = evts
 certainly (Wait _ _)        = []
 certainly (Sequence xs)     = concatMap certainly xs
-certainly (Conditional _ lb rb) = L.foldl isect (nubSort $ certainly rb) $ L.map nubSort (L.map (certainly . snd) lb)
+certainly (Conditional _ lb rb) = L.foldl' isect (nubSort $ certainly rb) $ L.map nubSort (L.map (certainly . snd) lb)
 certainly (Loop _ _ _ _)    = []
 
 safety :: RawMachineAST -> [EventId] -> [Expr] -> Program -> Either [String] (Table Label Sequent)

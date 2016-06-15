@@ -346,10 +346,10 @@ Data.Map.Base
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38349 total
-    1071 src/UnitB/PO.hs
+   38426 total
+    1096 src/UnitB/PO.hs
      930 src/Document/Phase/Expressions.hs
      798 src/Document/Visitor.lhs
-     780 logic/Logic/Expr/Expr.hs
+     779 logic/Logic/Expr/Expr.hs
      757 src/Document/Phase.hs
-Run time: 2m 13s
+Run time: 1m 46s

@@ -157,7 +157,7 @@ flatten_li (BracketNode (Bracket b li0 ct li1))
 
 fold_doc :: (a -> LatexNode -> a)
          -> a -> LatexNode -> a
-fold_doc f x doc  = foldl f x $ contents' $ contents doc
+fold_doc f x doc  = L.foldl' f x $ contents' $ contents doc
 
 fold_docM :: Monad m
           => (a -> LatexNode -> m a)

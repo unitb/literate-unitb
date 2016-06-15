@@ -522,7 +522,7 @@ inheritWith' :: M.IsKey Table k
              -> (conc -> abstr -> conc)
              -> Hierarchy k 
              -> Table k base -> Table k conc
-inheritWith' decl inh (++) (Hierarchy _xs es) m = m2 -- _ $ L.foldl f (M.map decl m) xs
+inheritWith' decl inh (++) (Hierarchy _xs es) m = m2 -- _ $ L.foldl' f (M.map decl m) xs
     where
         m1 = M.map decl m
         prec k = do
@@ -536,7 +536,7 @@ inheritWithAlt :: M.IsKey Table k
              -> (conc -> abstr -> conc)
              -> Hierarchy k 
              -> Table k base -> Table k conc
-inheritWithAlt decl inh (++) (Hierarchy xs es) m = L.foldl f (M.map decl m) xs
+inheritWithAlt decl inh (++) (Hierarchy xs es) m = L.foldl' f (M.map decl m) xs
     where
         f m v = case v `M.lookup` es of 
                  Just u -> M.adjustWithKey (app $ m ! u) v m

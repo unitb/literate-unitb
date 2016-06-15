@@ -140,7 +140,7 @@ times (Matrix m0 xs x) (Matrix m1 ys y) = Matrix m2 zs z
         z  = x `seqC` y
 
 uppest :: Composition a => [a] -> a
-uppest = foldl up zero 
+uppest = foldl' up zero 
 
 vertices :: Matrix a b -> [a]
 vertices (Matrix _ vs _) = vs
@@ -266,7 +266,7 @@ m_closure_with vs es = Matrix (M.map (M.mapKeys convert . fromList . (`zip` repe
         f m (CyclicSCC vs) = fromList (zip vs $ repeat $ h m vs) `M.union` m
         g m v  = unions $ (al P.! v) : L.map (m P.!) (al P.! v)
         h m vs = unions $ vs : L.map (g m) vs
-        result      = M.mapKeys convert $ foldl f al order
+        result      = M.mapKeys convert $ foldl' f al order
         convert x   = tr P.! x
 
 as_matrix :: Ord a => [(a, a)] -> Matrix a Bool

@@ -440,7 +440,7 @@ close_curly :: Parser [ExprToken]
 close_curly = read_listP [Close QuotedCurly]
 
 applyRecUpdate :: [Map Name Expr] -> Term -> Parser Term
-applyRecUpdate rUpd (E e) = fmap E . check_types $ foldl (zrec_update') (Right e) (fmap Right <$> rUpd)
+applyRecUpdate rUpd (E e) = fmap E . check_types $ foldl' (zrec_update') (Right e) (fmap Right <$> rUpd)
 applyRecUpdate xs e@(Cmd op)
         | L.null xs = return e
         | otherwise = fail $ "Cannot apply a record update to an operator: " ++ pretty op

@@ -443,7 +443,7 @@ apply_monotonicity po = fromMaybe po $
                     (flatten_assoc g0 xs) 
                     (flatten_assoc g0 ys)
                 let f = typ_fun2 $ g0 & arguments %~ take 2
-                    funApp (x:xs) = L.foldl f (Right x) $ L.map Right xs
+                    funApp (x:xs) = L.foldl' f (Right x) $ L.map Right xs
                     funApp [] = unit
                 return (c,$typeCheck$ funApp x,$typeCheck$ funApp y)
         shared :: Eq a => [a] -> [a] -> Bool

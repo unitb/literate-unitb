@@ -208,7 +208,7 @@ instance (Eq expr,IsExpr expr) => ProofRule (ProofBase expr) where
             newh <- case hyp of
                 Binder Forall vs r t _
                     | all (`elem` vs) (M.keys ps) -> do
-                        let new_vs = L.foldl (flip L.delete) vs (M.keys ps)
+                        let new_vs = L.foldl' (flip L.delete) vs (M.keys ps)
                             ps'    = M.mapKeys (view name) ps
                             re     = substitute ps' r
                             te     = substitute ps' t

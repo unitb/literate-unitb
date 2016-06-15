@@ -250,7 +250,7 @@ clear_vars vars proof = do
             -- new_asm = L.filter f asm
             -- new_hyp = M.filter f hyp
             f x     = not $ any (`S.member` used_var x) vars
-            new_vars = L.foldl (flip M.delete) old_vars (L.map (view name) vars)
+            new_vars = L.foldl' (flip M.delete) old_vars (L.map (view name) vars)
         li    <- get_line_info
         tac_local 
             (sequent %~ 
@@ -485,7 +485,7 @@ instantiate hyp ps = do
         case hyp of
             Binder Forall vs r t _
                 | all (`elem` vs) (L.map fst ps) -> do
-                    let new_vs = L.foldl (flip L.delete) vs (L.map fst ps)
+                    let new_vs = L.foldl' (flip L.delete) vs (L.map fst ps)
                         ps'    = M.mapKeys (view name) $ fromList ps
                         re     = substitute ps' r
                         te     = substitute ps' t
@@ -723,7 +723,7 @@ indirect_equality dir op zVar@(Var _ t) proof = do
 
 intersectionsWith :: Ord a => (b -> b -> b) -> [Map a b] -> Map a b
 intersectionsWith _ [] = error "intersection of an empty list of sets"
-intersectionsWith f (x:xs) = L.foldl (intersectionWith f) x xs
+intersectionsWith f (x:xs) = L.foldl' (intersectionWith f) x xs
 
 intersections :: Ord a => [Map a b] -> Map a b
 intersections = intersectionsWith const

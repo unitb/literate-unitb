@@ -29,7 +29,7 @@ combine' ln f x y = modify $ combine ln f x y
 
 combineAll :: (Foldable f, Functor f, Default a) 
            => Lens' b a -> (a -> a -> a) -> f b -> b -> b
-combineAll ln f xs = set ln $ F.foldl f def $ view ln <$> xs
+combineAll ln f xs = set ln $ F.foldl' f def $ view ln <$> xs
 
 combineAll' :: (Foldable f, Functor f, Default a) 
             => Lens' b a -> (a -> a -> a) -> f b -> State b ()

@@ -435,7 +435,7 @@ all_props = to $ \m -> (m^.props) <> (m^.inh_props)
 
 all_notation :: HasMachine machine expr => machine -> Notation
 all_notation m = flip precede logical_notation 
-        $ L.foldl OP.combine empty_notation 
+        $ L.foldl' OP.combine empty_notation 
         $ L.map (view Th.notation) th
     where
         th = (getExpr <$> m!.theory) : ascElems (_extends $ m!.theory)

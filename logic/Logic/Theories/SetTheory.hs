@@ -257,7 +257,7 @@ zpow_set_fun   = mk_fun' [gA] "pow" [set_type gA] $ set_type (set_type gA)
 
 zmk_set      = typ_fun1 (mk_fun' [gA] "mk-set" [gA] $ set_type gA)
 zpow_set     = typ_fun1 zpow_set_fun
-zset_enum (x:xs) = foldl zunion y ys 
+zset_enum (x:xs) = foldl' zunion y ys 
     where
         y  = zmk_set x
         ys = L.map zmk_set xs

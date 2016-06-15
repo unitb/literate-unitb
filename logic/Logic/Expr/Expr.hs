@@ -630,7 +630,7 @@ merge m0 m1 = M.unionWithKey f m0 m1
 
 merge_all :: (M.IsKey map k, Eq a, Show k, Show a,M.IsMap map)
           => [map k a] -> map k a
-merge_all ms = foldl (M.unionWithKey f) M.empty ms
+merge_all ms = foldl' (M.unionWithKey f) M.empty ms
     where
         f k x y
             | x == y    = x

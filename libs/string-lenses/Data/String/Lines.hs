@@ -109,7 +109,7 @@ prop_appendLines :: String -> String -> Property
 prop_appendLines xs ys = xs ++ ys === F.concat (lines' xs `appendLines` lines' ys)
 
 prop_concatIndent_to_foldl_prependIndent :: [String] -> Property
-prop_concatIndent_to_foldl_prependIndent xs = concatIndent xs === foldl prependIndent "" xs
+prop_concatIndent_to_foldl_prependIndent xs = concatIndent xs === L.foldl' prependIndent "" xs
 
 prop_concatIndent_to_foldr_prependIndent :: [String] -> Property
 prop_concatIndent_to_foldr_prependIndent xs = concatIndent xs' === foldr prependIndent "" xs'

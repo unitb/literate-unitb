@@ -68,7 +68,7 @@ extract_structure ct = do
     return (find_env sections xs)
 
 find_env :: [String] -> LatexDoc -> M.Map String [LatexNode]
-find_env kw xs = M.map reverse $ foldl f (M.fromList $ zip kw $ repeat []) $ contents' xs
+find_env kw xs = M.map reverse $ L.foldl' f (M.fromList $ zip kw $ repeat []) $ contents' xs
     where
         f m (t@(EnvNode (Env _ name _ _ _)))
             | name `elem` kw = M.insertWith (++) name [t] m
