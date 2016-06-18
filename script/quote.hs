@@ -26,7 +26,8 @@ main = do
             [fn] -> do 
                 lns <- (map escape . drop 1 . lines) 
                     `liftM` readFile fn
-                let lns' = drop 1 lns
+                let lns' = drop 1 $ dropWhile ("; END HEADER" /=) lns
+                            -- remove header
                 putStrLn $ "    [ \"" ++ (lns' ! 0) ++ "\""
                 forM_ (allBut 1 $ drop 1 lns') $ \ln -> do
                     putStrLn $ "    , \"" ++ ln ++ "\""

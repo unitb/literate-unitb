@@ -156,6 +156,7 @@ data ScheduleChange' expr = ScheduleChange
         }
     deriving (Show,Eq,Typeable,Functor,Foldable,Traversable,Generic)
 
+makePrisms ''Action'
 makeFields ''EventRef
 makeLenses ''EventRef
 makeLenses ''ScheduleChange'

@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns
     ,OverloadedStrings
+    ,ScopedTypeVariables
     ,ViewPatterns
     ,GADTs,TypeFamilies #-}
     -- Behavior hiding
@@ -17,6 +18,7 @@ module UnitB.PO
 where
 
     -- Modules
+import Logic.Expr.Prism
 import Logic.Expr.Scope
 import Logic.Proof
 import           Logic.Proof.POGenerator hiding ( variables, definitions )
@@ -330,11 +332,51 @@ init_witness_fis_po m =
 
 init_fis_po :: RawMachineAST -> M ()
 init_fis_po m = 
-    with 
-        (do _context (assert_ctx m) )
-        (emit_exist_goal [init_fis_lbl] 
-            (M.ascElems $ (view' variables m)  `M.union` (view' abs_vars m)) 
-            (M.ascElems $ m!.inits))
+        with 
+            (do _context (assert_ctx m) 
+                POG.variables det_vars
+                named_hyps $ snd <$> det_act)
+            (emit_exist_goal [init_fis_lbl] 
+                (M.ascElems $ nonDet_vars) 
+                (M.ascElems $ new_act))
+    where
+        -- pvar = L.map prime $ M.ascElems $ (m!.variables) `M.union` (m!.abs_vars)
+        (det_act,new_act) = splitDetInit vars $ m!.inits
+        vars = (m!.variables)  `M.union` (m!.abs_vars)
+        nonDet_vars = vars `M.difference` det_vars
+        det_vars = symbol_table $ fst <$> det_act
+
+_AssignExpr :: Prism' RawExpr (Var,RawExpr)
+_AssignExpr = prism' (uncurry zeq) (preview [fun| (= $v $e) |]) . swapped . aside _Word . swapped
+
+splitDetInit :: Map Name Var
+             -> Map Label RawExpr
+             -> ( Map Label (Var,RawExpr)
+                , Map Label RawExpr )
+splitDetInit vs acts = (det' & _Wrapped.traverse %~ distr, M.map zall $ M.unionWith (++) clash' nonDet')
+    where
+        acts' = conjuncts <$> acts
+        nonDet :: Map Label (NonEmpty RawExpr) 
+        nonDet' = M.map NE.toList nonDet
+        det :: Map Label (NonEmpty (Var,RawExpr))
+        (nonDet,det) = M.mapMaybe (nonEmpty.fst) &&& M.mapMaybe (nonEmpty.snd) $ M.map isDet acts'
+        distr :: (a,(b,c)) -> (b,(a,c))
+        distr (x,(y,z)) = (y,(x,z))
+        isDet :: [RawExpr] -> ([RawExpr],[(Var,RawExpr)])
+        isDet = partitionEithers . L.map (matching _AssignExpr)
+        clash' :: Map Label [RawExpr]
+        clash' = M.fromListWith (++) $ 
+                M.toList clash & \xs -> [ (l,[Word v `zeq` e]) | (v,es) <- xs, (l,e) <- es ]
+        det'  :: Map Var (Label,RawExpr)
+        clash :: Map Var [(Label,RawExpr)]
+        (clash,det') = mapEither onlyOne $ M.fromListWith (++) $ distrList $ M.toList det
+        distrList :: [(t1, NonEmpty (t, t2))] -> [(t, [(t1, t2)])]
+        distrList xs = [ (v,[(l,e)]) | (l,ne) <- xs, (v,e) <- NE.toList ne ]
+            -- det & _Wrapped %~ _ . L.map sequence
+            -- (_2 %~ pure) . sequence
+        onlyOne [(v,x)] 
+            | M.null (free_vars' vs x) = Right (v,x)
+        onlyOne x   = Left x
 
 type M = POGen
 
@@ -803,15 +845,37 @@ fis_po m (lbl, evt) =
                  POG.variables $ evt^.indices
                  POG.variables $ evt^.params 
                  POG.variables $ m!.del_vars
+                 POG.variables $ (m!.variables) `M.difference` nonDet_vars
                  primed_vars $ m!.del_vars
                  named_hyps $ invariants m
                  -- nameless_hyps $ _ $ evt^.abstract_evts
                  named_hyps $ ba_predicate' (m!.abs_vars) $ evt^.abs_actions
-                 named_hyps $ evt^.new.guards)
+                 named_hyps $ evt^.new.guards
+                 named_hyps $ review _AssignExpr <$> det_act)
             (emit_exist_goal [as_label lbl, fis_lbl] pvar 
-                $ M.ascElems $ ba_predicate' (m!.variables) $ evt^.new_actions)
+                $ M.ascElems $ ba_predicate' nonDet_vars $ new_act)
     where
-        pvar = L.map prime $ M.ascElems $ view' variables m `M.union` view' abs_vars m
+        pvar = L.map prime $ M.ascElems $ (m!.variables) `M.union` (m!.abs_vars)
+        (det_act,new_act) = splitNonDet $ evt^.new_actions 
+        nonDet_vars = frame new_act
+
+splitNonDet :: forall expr. Map Label (Action' expr) 
+            -> ( Map Label (Var,expr)
+               , Map Label (Action' expr) )
+splitNonDet acts = (det' & _Wrapped.traverse %~ distr, clash' `M.union` nonDet)
+    where
+        (nonDet,det) = mapEither isDet acts
+        distr :: (a,(b,c)) -> (b,(a,c))
+        distr (x,(y,z)) = (y,(x,z))
+        isDet = matching _Assign
+        clash' :: Map Label (Action' expr)
+        clash' = clash & _Wrapped %~ \xs -> [ (l,Assign v e) | (v,es) <- xs, (l,e) <- es ]
+        det'  :: Map Var (Label,expr)
+        clash :: Map Var [(Label,expr)]
+        (clash,det') = mapEither onlyOne $ M.fromListWith (++) $ distrList $ M.toList det
+        distrList xs = [ (v,[(l,e)]) | (l,(v,e)) <- xs ]
+        onlyOne [x] = Right x
+        onlyOne x   = Left x
 
 tr_wd_po :: RawMachineAST -> (Label, RawTransient) -> M ()
 tr_wd_po  m (lbl, Tr vs p _ (TrHint wit _)) = 

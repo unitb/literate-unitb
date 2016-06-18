@@ -125,55 +125,24 @@ train_m0 = do
 
 result_example0 :: String
 result_example0 = unlines 
-    [ "  o  m0/CO0/CO/WD"
-    , "  o  m0/INIT/FIS/x"
-    , "  o  m0/INIT/FIS/y"
-    , "  o  m0/INIT/INV/J0"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
-    , "  o  m0/INV/WD"
+    [ "  o  m0/INIT/INV/J0"
     , "  o  m0/SKIP/CO/CO0"
-    , "  o  m0/TR0/TR/WD"
     , "  o  m0/TR0/TR/evt/EN"
     , "  o  m0/TR0/TR/evt/NEG"
     , "  o  m0/evt/CO/CO0"
-    , "  o  m0/evt/FIS/x@prime"
-    , "  o  m0/evt/FIS/y@prime"
     , "  o  m0/evt/INV/J0"
-    , "  o  m0/evt/WD/ACT/S0"
-    , "  o  m0/evt/WD/ACT/S1"
-    , "  o  m0/evt/WD/C_SCH"
-    , "  o  m0/evt/WD/F_SCH"
-    , "  o  m0/evt/WD/GRD"
-    , "  o  m0/evt/WWD"
-    , "passed 21 / 21"
+    , "passed 6 / 6"
     ]
 
 result_train_m0 :: String
 result_train_m0 = unlines 
     [ "  o  train_m0/INIT/INV/J0"
-    , "  o  train_m0/INIT/WD"
-    , "  o  train_m0/INIT/WWD"
-    , "  o  train_m0/INV/WD"
-    , "  o  train_m0/TR0/TR/WD"
-    , "  o  train_m0/TR0/TR/WD/witness/t"
     , "  o  train_m0/TR0/TR/WFIS/t/t@prime"
     , "  o  train_m0/TR0/TR/leave/EN"
     , "  o  train_m0/TR0/TR/leave/NEG"
-    , "  o  train_m0/enter/FIS/st@prime"
     , "  o  train_m0/enter/INV/J0"
-    , "  o  train_m0/enter/WD/C_SCH"
-    , "  o  train_m0/enter/WD/F_SCH"
-    , "  o  train_m0/enter/WD/GRD"
-    , "  o  train_m0/enter/WWD"
-    , "  o  train_m0/leave/FIS/st@prime"
     , "  o  train_m0/leave/INV/J0"
-    , "  o  train_m0/leave/WD/ACT/A0"
-    , "  o  train_m0/leave/WD/C_SCH"
-    , "  o  train_m0/leave/WD/F_SCH"
-    , "  o  train_m0/leave/WD/GRD"
-    , "  o  train_m0/leave/WWD"
-    , "passed 22 / 22"
+    , "passed 6 / 6"
     ]
 
 result_example0_tr_en_po :: String

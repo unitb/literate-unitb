@@ -71,32 +71,17 @@ case1 = do
 
 result2 :: String
 result2 = unlines 
-    [ "  o  m0/INIT/FIS/x"
-    , "  o  m0/INIT/FIS/y"
-    , "  o  m0/INIT/INV/inv0"
+    [ "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
-    , "  o  m0/INV/WD"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
     , "  o  m0/inc/INV/inv1"
-    , "  o  m0/inc/WD/ACT/a0"
-    , "  o  m0/inc/WD/ACT/a1"
-    , "  o  m0/inc/WD/C_SCH"
-    , "  o  m0/inc/WD/F_SCH"
-    , "  o  m0/inc/WD/GRD"
-    , "  o  m0/inc/WWD"
     , " xxx m0/prog0/LIVE/add"
-    , "  o  m0/prog0/PROG/WD/lhs"
-    , "  o  m0/prog0/PROG/WD/rhs"
-    , "  o  m0/tr0/TR/WD"
     , " xxx m0/tr0/TR/inc/EN"
     , "  o  m0/tr0/TR/inc/NEG"
-    , "  o  m0/tr0/TR/leadsto/lhs"
     , "  o  m0/tr0/TR/leadsto/rhs"
-    , "passed 23 / 25"
+    , "passed 8 / 10"
     ]
 
 path2 :: FilePath
@@ -107,28 +92,15 @@ case2 =  verify path2 0
 
 result3 :: String
 result3 = unlines 
-    [ "  o  m0/INIT/FIS/x"
-    , "  o  m0/INIT/FIS/y"
-    , "  o  m0/INIT/INV/inv0"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
-    , "  o  m0/INV/WD"
+    [ "  o  m0/INIT/INV/inv0"
     , " xxx m0/SKIP/CO/co0"
-    , "  o  m0/co0/CO/WD"
     , "  o  m0/inc/CO/co0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
-    , "  o  m0/inc/WD/ACT/a0"
-    , "  o  m0/inc/WD/ACT/a1"
-    , "  o  m0/inc/WD/C_SCH"
-    , "  o  m0/inc/WD/F_SCH"
-    , "  o  m0/inc/WD/GRD"
-    , "  o  m0/inc/WWD"
-    , "  o  m0/tr0/TR/WD"
     , "  o  m0/tr0/TR/inc/EN"
     , "  o  m0/tr0/TR/inc/NEG"
-    , "passed 20 / 21"
+    , "passed 7 / 8"
     ]
 
 path3 :: FilePath
@@ -210,29 +182,16 @@ case5 = show_po path3 "m0/SKIP/CO/co0"
 
 result6 :: String
 result6 = unlines 
-    [ "  o  m0/INIT/FIS/x"
-    , "  o  m0/INIT/FIS/y"
-    , "  o  m0/INIT/INV/inv0"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
-    , "  o  m0/INV/WD"
+    [ "  o  m0/INIT/INV/inv0"
     , " xxx m0/SKIP/CO/co0"
-    , "  o  m0/co0/CO/WD"
     , "  o  m0/inc/CO/co0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
     , "  o  m0/inc/SCH/grd0"
-    , "  o  m0/inc/WD/ACT/a0"
-    , "  o  m0/inc/WD/ACT/a1"
-    , "  o  m0/inc/WD/C_SCH"
-    , "  o  m0/inc/WD/F_SCH"
-    , "  o  m0/inc/WD/GRD"
-    , "  o  m0/inc/WWD"
-    , "  o  m0/tr0/TR/WD"
     , "  o  m0/tr0/TR/inc/EN"
     , "  o  m0/tr0/TR/inc/NEG"
-    , "passed 21 / 22"
+    , "passed 8 / 9"
     ]
 
 path6 :: FilePath

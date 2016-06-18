@@ -297,19 +297,14 @@ result7 :: ExprP
 result8 :: String
 result8 = unlines
     [ "(and p q)"
-    , "(and p (= 87 87))"
-    , "(and (or (and p q)"
-    , "         (and p (= 87 87))"
-    , "         (and (= 7 7) q)"
-    , "         (and (= 7 7) (= 7 87)))"
-    , "     q)"
-    , "(and (or (and p q)"
-    , "         (and p (= 87 87))"
-    , "         (and (= 7 7) q)"
-    , "         (and (= 7 7) (= 7 87)))"
-    , "     (= 87 87))"
-    , "(and (= 7 7) q)"
-    , "(and (= 7 7) (= 7 87))"
+    , "p"
+    , "(and (or (and p q) p q (= 7 87)) q)"
+    , "(and p q)"
+    , "p"
+    , "q"
+    , "(= 7 87)"
+    , "q"
+    , "(= 7 87)"
     ]
 
 case8 :: IO String

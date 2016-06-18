@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables,ViewPatterns #-}
 module Logic.Expr.Const where
 
     -- Modules   
@@ -6,8 +6,8 @@ import Logic.Expr.Classes
 import Logic.Expr.Expr
 import Logic.Expr.Genericity
 import Logic.Expr.PrettyPrint
+import Logic.Expr.Prism
 import Logic.Expr.Type
-import Logic.Names
 
     -- Libraries
 import Control.Applicative 
@@ -385,7 +385,28 @@ zapply  = typ_fun2 apply_fun
 
 one_point_rule :: forall n t q. (IsQuantifier q, TypeSystem2 t,IsName n) 
                => AbsExpr n t q -> AbsExpr n t q
-one_point_rule (Binder q vs r t _) 
+one_point_rule = foo . one_point_rule'
+    where
+        foo e = case rewrite foo e of
+                    [fun| (= $lhs $rhs) |] 
+                        | lhs == rhs -> ztrue
+                        -- | lhs == ztrue -> lhs
+                        -- | lhs == ztrue -> lhs
+                    Binder q _ x y _
+                        | q == qExists && x == ztrue && y == ztrue     -> ztrue
+                        | q == qExists && (x == zfalse || y == zfalse) -> zfalse
+                        | q == qForall && (x == zfalse || y == ztrue)  -> ztrue
+                        | q == qForall && x == ztrue && y == zfalse    -> zfalse
+                    FunApp fun xs
+                        | (fun^.name) == [smt|and|] -> zall xs
+                        | (fun^.name) == [smt|or|]  -> zsome xs
+                        | (fun^.name) == [smt|not|] -> znot $ head xs
+                        | (fun^.name) == [smt|=>|]  -> zimplies (xs !! 0) (xs !! 1)
+                    e' -> e'
+
+one_point_rule' :: forall n t q. (IsQuantifier q, TypeSystem2 t,IsName n) 
+                => AbsExpr n t q -> AbsExpr n t q
+one_point_rule' (Binder q vs r t _) 
         | q == qExists = e
     where
         e  = zsome [ f $ zexists (filter (`S.member` fv) vs \\ M.keys inst) ztrue 
@@ -409,11 +430,11 @@ one_point_rule (Binder q vs r t _)
                         return (k, xs ! j)
         subst _ = M.empty
         f x
-            | length ts' == 1   = rewrite one_point_rule x
-            | otherwise         = one_point_rule x
-        ts = conjuncts r ++ conjuncts t
+            | length ts' == 1   = rewrite one_point_rule' x
+            | otherwise         = one_point_rule' x
+        ts  = conjuncts r ++ conjuncts t
         ts' = forM (map disjuncts ts) id
-one_point_rule e = rewrite one_point_rule e
+one_point_rule' e = rewrite one_point_rule' e
 
 conjuncts :: (IsName n,TypeSystem t) => AbsExpr n t q -> [AbsExpr n t q]
 conjuncts (FunApp f xs) 

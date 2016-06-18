@@ -122,7 +122,8 @@ emit_goal lbl g = POGen $ do
                    (param^.named)
                    g
                & applyTimeout (param^.timeout)
-    tell $ D.singleton (composite_label $ D.apply tag lbl, po)
+    unless (g == ztrue) $
+        tell $ D.singleton (composite_label $ D.apply tag lbl, po)
 
 setTimeout :: Float -> POCtx ()
 setTimeout = POCtx . assign timeout . Just

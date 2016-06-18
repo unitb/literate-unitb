@@ -195,10 +195,12 @@ new_failure cs name actual expected = do
         liftIO $ withFile ([printf|actual-%d.txt|] n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
             forM_ (callStackLineInfo cs) $ hPutStrLn h . ("; " ++)
+            hPutStrLn h "; END HEADER"
             hPutStrLn h actual
         liftIO $ withFile ([printf|expected-%d.txt|] n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
             forM_ (callStackLineInfo cs) $ hPutStrLn h . ("; " ++)
+            hPutStrLn h "; END HEADER"
             hPutStrLn h expected
     else return ()
 

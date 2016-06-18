@@ -116,16 +116,9 @@ case6    = (traverse.traverse %~ fmap getExpr.view' syntax) <$> parse path6
 
 result7 :: String
 result7 = unlines 
-    [ "  o  m0/INIT/FIS/a"
-    , "  o  m0/INIT/FIS/b"
-    , "  o  m0/INIT/FIS/c"
-    , "  o  m0/INIT/FIS/n"
-    , "  o  m0/INIT/INV/inv0"
+    [ "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/INV/inv2"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
-    , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
     , "  o  m0/evt/FIS/c@prime"
@@ -154,15 +147,7 @@ result7 = unlines
     , "  o  m0/evt/INV/inv2/step 2"
     , "  o  m0/evt/INV/inv2/step 3"
     , "  o  m0/evt/INV/inv2/step 4"
-    , "  o  m0/evt/WD/ACT/a0"
-    , "  o  m0/evt/WD/ACT/a1"
-    , "  o  m0/evt/WD/ACT/a2"
-    , "  o  m0/evt/WD/ACT/a3"
-    , "  o  m0/evt/WD/C_SCH"
-    , "  o  m0/evt/WD/F_SCH"
-    , "  o  m0/evt/WD/GRD"
-    , "  o  m0/evt/WWD"
-    , "passed 46 / 46"
+    , "passed 31 / 31"
     ]
 
 case7 :: IO (String, Table Label Sequent)
@@ -186,6 +171,7 @@ result8 = unlines
     , "(define-sort set (a) (Array a Bool))"
     , "(declare-const x Int)"
     , "(assert (not (exists ( (x Int) ) (and true (= x x)))))"
+    , "(assert (not true))"
     , "(check-sat-using (or-else (then qe smt)"
     , "                          (then simplify smt)"
     , "                          (then skip smt)"

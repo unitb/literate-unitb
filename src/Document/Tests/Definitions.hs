@@ -30,23 +30,10 @@ case1 = verify path0 0
 
 result1 :: String
 result1 = unlines
-    [ "  o  m0/INIT/FIS/x"
-    , "  o  m0/INIT/FIS/y"
-    , "  o  m0/INIT/INV/inv0"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
-    , "  o  m0/INV/WD"
-    , "  o  m0/act/FIS/x@prime"
-    , "  o  m0/act/FIS/y@prime"
+    [ "  o  m0/INIT/INV/inv0"
     , " xxx m0/act/INV/inv0"
-    , "  o  m0/act/WD/ACT/act0"
-    , "  o  m0/act/WD/C_SCH"
-    , "  o  m0/act/WD/F_SCH"
-    , "  o  m0/act/WD/GRD"
-    , "  o  m0/act/WWD"
-    , "passed 13 / 14"
+    , "passed 1 / 2"
     ]
-
 
 case2 :: IO String
 case2 = proof_obligation path0 "m0/act/INV/inv0" 0

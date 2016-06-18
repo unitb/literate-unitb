@@ -23,6 +23,7 @@ import Z3.Z3
 import Control.Arrow hiding (right,left)
 import Control.Concurrent
 import Control.Exception
+import Control.Exception.Lens
 import Control.Lens
 import Control.Precondition ((!))
 
@@ -111,7 +112,7 @@ verifyFilesWith opt files i = makeReport' empty $ do
         ms <- EitherT $ fst <$> many_file_obligations' files
         if i < size ms then do
             let (m,pos) = snd $ i `elemAt` ms
-            r <- lift $ try (str_verify_machine_with opt m)
+            r <- lift $ trying id (str_verify_machine_with opt m)
             case r of
                 Right (s,_,_) -> return (s, pos)
                 Left e -> return (show (e :: SomeException),pos)
@@ -246,10 +247,10 @@ verify_thy path name = makeReport' empty $ do
         if exists then do
             r <- EitherT $ snd <$> list_file_obligations' path
             let pos = snd $ r ! name
-            res <- lift $ try (verify_all pos)
+            res <- lift $ trying id (verify_all pos)
             case res of
                 Right res -> return (unlines $ L.map (\(k,r) -> success r ++ pretty k) $ toAscList res, pos)
-                Left e -> return (show (e :: SomeException),pos)
+                Left e -> return (show e,pos)
         else return ([printf|file does not exist: %s|] path,empty)
     where
         success True  = "  o  "
