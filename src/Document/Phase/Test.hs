@@ -378,7 +378,7 @@ case4 = return $ do
         event evt lbl con x = event' evt lbl [evt] con x
         mkEvent evt lbl es con x inh = do
             scope <- ask
-            lift $ lbl ## makeEvtCell (Right evt) (con (inh (NonEmptyListSet $ fromMaybe (evt :| []) $ nonEmpty es,x)) scope $ pure li)
+            lift $ lbl ## makeEvtCell (Right evt) (con (inh (nonEmptyListSet $ fromMaybe (evt :| []) $ nonEmpty es,x)) scope $ pure li)
         event' evt lbl es con x = mkEvent evt lbl es con x InhAdd
         del_event evt lbl es con = mkEvent evt lbl es con (assertFalse' "del_event") $ InhDelete . const Nothing
         li = LI "file.ext" 1 1 

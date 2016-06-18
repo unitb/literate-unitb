@@ -296,7 +296,8 @@ instance Scope EventExpr where
     make_inherited (EventExpr m) = Just $ EventExpr (M.map f m)
         where
             f x = set declSource Inherited x
-    error_item (EventExpr m) = sconcat $ NE.fromList $ map sequence $ ascElems $ mapWithKey msg m
+    error_item (EventExpr m) = setToNeList
+            $ sconcat $ NE.fromList $ map sequenceA $ ascElems $ mapWithKey msg m
         where
             msg (Right k) sc 
                 | inheritedFrom sc `elem` [[],[k]]
@@ -313,7 +314,7 @@ instance Scope EventExpr where
             f (Left InitEvent,x) = [singleton (Left InitEvent) x]
 
 checkLocalExpr' :: ( HasInhStatus decl (InhStatus expr)
-                  , HasLineInfo decl (NonEmpty LineInfo) )
+                  , HasLineInfo decl (NonEmptyListSet LineInfo) )
                => String -> (expr -> Table Name Var)
                -> EventId -> Label -> decl
                -> Reader MachineP2 [Either Error a]
@@ -328,10 +329,10 @@ checkLocalExpr' expKind free eid lbl sch = do
                         schLI  = ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
                         varsLI = L.map (first $ [printf|deleted variable '%s'|] . render . view name) (M.ascElems errs)
                     in if M.null errs then []
-                       else [Left $ MLError msg $ NE.toList schLI ++ varsLI]
+                       else [Left $ MLError msg $ setToList schLI ++ varsLI]
                 InhDelete Nothing -> 
                     let msg = [printf|event '%s', %s '%s' was deleted but does not exist|] (pretty eid) expKind (pretty lbl)
-                        li  = isOne $ ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
+                        li  = isOne . setToNeList $ ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
                     in [Left $ either (MLError msg) (Error msg.snd) li]
                 _ -> []
     where
@@ -339,7 +340,7 @@ checkLocalExpr' expKind free eid lbl sch = do
         isOne (x:|xs) = Left (x:xs)
 
 parseEvtExpr :: ( HasInhStatus decl (EventInhStatus Expr)
-                , HasLineInfo decl (NonEmpty LineInfo)
+                , HasLineInfo decl (NonEmptyListSet LineInfo)
                 , HasDeclSource decl DeclSource)
              => String 
              -> (Label -> Expr -> field)
@@ -348,9 +349,8 @@ parseEvtExpr :: ( HasInhStatus decl (EventInhStatus Expr)
              -> Reader MachineP2 [Either Error (EventId,[field])]
 parseEvtExpr expKind = parseEvtExpr' expKind used_var'
 
-
 parseEvtExpr' :: ( HasInhStatus decl (EventInhStatus expr)
-                 , HasLineInfo decl (NonEmpty LineInfo)
+                 , HasLineInfo decl (NonEmptyListSet LineInfo)
                  , HasDeclSource decl DeclSource)
               => String 
               -> (expr -> Table Name Var)
@@ -373,7 +373,7 @@ parseEvtExpr' expKind fvars field scope evt lbl decl =
                     Old -> return []
                     New -> checkLocalExpr' expKind (fvars.snd) evt lbl decl
         old = case scope of
-            Old -> \(evts,e) -> [Right (ev,[field lbl e]) | ev <- NE.toList $ unNonEmptyListSet evts]
+            Old -> \(evts,e) -> [Right (ev,[field lbl e]) | ev <- setToList evts]
             New -> const []
         new = case scope of
             Old -> const []
@@ -842,8 +842,6 @@ instance PrettyPrintable ProgressDecl where
 _EventExpr' :: Prism' ExprScope (Table InitOrEvent EvtExprScope)
 _EventExpr' = _ExprScope._Cell._EventExpr
 
-_CoarseSchedule' :: Traversal' EvtExprScope (EventInhStatus Expr, DeclSource, NonEmpty LineInfo)
-_CoarseSchedule' = _EvtExprScope._Cell._CoarseSchedule
 
 instance IsExprScope EventExpr where
     toNewEvtExprDefault _ (EventExpr m) = 

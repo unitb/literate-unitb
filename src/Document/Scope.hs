@@ -23,7 +23,10 @@ module Document.Scope
     , contents
     , WithDelete 
     , Redundant
-    , NonEmptyListSet(..)
+    , NonEmptyListSet
+    , nonEmptyListSet
+    , setToList, setToNeList
+    , setToList', setToNeList'
     , RefScope(..)
     )
 where
@@ -46,6 +49,7 @@ import Control.Monad.RWS (tell)
 import Control.Parallel.Strategies
 import Control.Precondition
 
+import Data.DList as D
 import Data.Either.Validation
 import Data.Graph.Array
 import Data.List as L
@@ -156,6 +160,9 @@ instance ErrorItem LineInfo where
 instance ErrorItem (NonEmpty LineInfo) where
     errorItemImpl kind xs = (kind,) <$> xs
 
+instance ErrorItem (NonEmptyListSet LineInfo) where
+    errorItemImpl kind xs = setToNeList' $ (kind,) <$> xs
+
 instance (HasDeclSource a DeclSource)
         => ClashImpl (DefaultClashImpl a) where
     keepFromImpl s x'@(DefaultClashImpl x) = guard (x ^. declSource == s) >> return x'
@@ -189,41 +196,56 @@ data DeclSource = Inherited | Local
 data InhStatus a = InhAdd a | InhDelete (Maybe a)
     deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
 
-newtype NonEmptyListSet a = NonEmptyListSet { unNonEmptyListSet :: NonEmpty a } 
-    deriving (Eq, Ord, Show, Functor, Applicative, ZoomEq)
+newtype NonEmptyListSet a = NonEmptyListSet 
+        { unNonEmptyListSet :: DList a } 
+    deriving (Generic,Functor,Applicative,Semigroup)
 
-neUnion :: Ord a => NonEmpty a -> NonEmpty a -> NonEmpty a
-neUnion xx@(x :| xs) yy@(y :| ys) = case compare x y of
-        LT -> x NE.<| maybe yy (`neUnion` yy) (nonEmpty xs)
-        GT -> y NE.<| maybe xx (neUnion xx) (nonEmpty ys)
-        EQ -> x :| Ord.union xs ys
+_listSet' :: Ord a => DList a -> NonEmptyListSet a
+_listSet' x = NonEmptyListSet x 
+
+listSet :: Ord a => [a] -> NonEmptyListSet a
+listSet x = NonEmptyListSet 
+        (D.fromList x) 
+        -- (Ord.nubSort x)
+
+nonEmptyListSet :: Ord a => NonEmpty a -> NonEmptyListSet a
+nonEmptyListSet x = listSet $ NE.toList x
+
+setToList :: Ord a => NonEmptyListSet a -> [a]
+setToList = Ord.nubSort . D.toList . unNonEmptyListSet
+
+setToList' :: Ord a => NonEmptyListSet a -> [a]
+setToList' = D.toList . unNonEmptyListSet
+
+setToNeList' :: Ord a => NonEmptyListSet a -> NonEmpty a
+setToNeList' = NE.fromList . setToList'
+
+setToNeList :: Ord a => NonEmptyListSet a -> NonEmpty a
+setToNeList = NE.fromList . setToList
+
+instance Ord a => Eq (NonEmptyListSet a) where
+    x == y = setToList x == setToList y
+instance Ord a => Ord (NonEmptyListSet a) where
+    compare x y = setToList x `compare` setToList y
+
+instance (Show a,Ord a) => Show (NonEmptyListSet a) where
+    show x = "listSet " ++ show (setToList x)
+
+instance (ZoomEq a,Ord a) => ZoomEq (NonEmptyListSet a) where
+    x .== y = setToList x .== setToList y
 
 newtype HeadOrd a = HeadOrd (NonEmpty a) deriving (Eq, Show)
 
 instance Ord a => Ord (HeadOrd a) where
     compare (HeadOrd x) (HeadOrd y) = compare (NE.head x) (NE.head y)
 
-neUnions :: Ord a => NonEmpty (NonEmpty a) -> NonEmpty a
-neUnions xs = f xs'
-    where
-        xs' = NE.sort $ NE.map HeadOrd xs
-        f (HeadOrd (x :| x':xs) :| ys) = nub $ x NE.<| f (NE.insert (HeadOrd $ x':|xs) ys)
-        f (HeadOrd (x :| []) :| ys) = nub $ maybe (x :| []) ((x NE.<|) . f) (nonEmpty ys)
-        nub (x :| x':xs)
-            | x == x' = x :| xs
-        nub xs = xs
-
-
-instance Ord a => Semigroup (NonEmptyListSet a) where
-    NonEmptyListSet xs <> NonEmptyListSet ys = NonEmptyListSet $ neUnion xs ys
-    sconcat = NonEmptyListSet . neUnions . fmap unNonEmptyListSet
 
 instance (Arbitrary a,Ord a) => Arbitrary (NonEmptyListSet a) where
-    arbitrary = NonEmptyListSet . NE.nub . NE.sort <$> arbitrary
+    arbitrary = nonEmptyListSet . NE.nub . NE.sort <$> arbitrary
 
-instance Wrapped (NonEmptyListSet a) where
+instance Ord a => Wrapped (NonEmptyListSet a) where
     type Unwrapped (NonEmptyListSet a) = NonEmpty a
-    _Wrapped' = iso unNonEmptyListSet NonEmptyListSet
+    _Wrapped' = iso setToNeList' nonEmptyListSet
 
 type EventInhStatus a = InhStatus (NonEmptyListSet EventId,a)
 
@@ -277,12 +299,13 @@ make_table' f items = all_errors $ M.mapWithKey g conflicts
     where
         g k ws
                 | all (\xs -> length xs <= 1) ws 
-                            = Right $ L.foldl' merge_scopes (head xs) (tail xs)
+                            = Right $ L.foldl' merge_scopes (L.head xs) (L.tail xs)
                 | otherwise = Left $ L.map (\xs -> MLError (f k) $ concatMap (NE.toList.error_item) xs) 
                                     $ L.filter (\xs -> length xs > 1) ws
             where
-                xs = concat ws             
-        items' = fromListWith (++) $ L.map (\(x,y) -> (x,[y])) items
+                xs = L.concat ws             
+        items' :: Map a [b]
+        items' = M.map D.toList . fromListWith (<>) $ L.map (\(x,y) -> (x,pure y)) items
         conflicts :: Table a [[b]]
         conflicts = M.map (flip u_scc clash) items' 
 
@@ -344,31 +367,35 @@ instance ( HasInhStatus a (InhStatus expr)
         where
             z = case (x^.inhStatus, y^.inhStatus) of
                     (InhDelete Nothing, InhAdd e) -> Just $ x & inhStatus .~ InhDelete (Just e)
+                                                              & declSource %~ (declUnion $ y^.declSource)
                     (InhAdd e, InhDelete Nothing) -> Just $ y & inhStatus .~ InhDelete (Just e)
+                                                              & declSource %~ (declUnion $ x^.declSource)
                     _ -> Nothing
+            declUnion Inherited Inherited = Inherited
+            declUnion _ _                 = Local
 
 instance ( Eq expr, ClashImpl a, Show a
-         , HasLineInfo a (NonEmpty LineInfo)
+         , HasLineInfo a (NonEmptyListSet LineInfo)
          , HasInhStatus a (EventInhStatus expr)
          , HasDeclSource a DeclSource)
         => ClashImpl (Redundant expr a) where
     makeInheritedImpl = fmap Redundant . makeInheritedImpl . getRedundant
     keepFromImpl s = fmap Redundant . keepFromImpl s . getRedundant
-    mergeScopesImpl (Redundant x) (Redundant y) = Redundant <$> (mergeScopesImpl x y <|> g x y)
+    mergeScopesImpl (Redundant x) (Redundant y) = Redundant <$> ((reSort <$> mergeScopesImpl x y) <|> g x y)
         where
+            reSort = lineInfo .~ (x^.lineInfo <> y^.lineInfo)
             g :: a -> a -> Maybe a
             g x y = guard' x y >> Just (x & inhStatus %~ (flip f $ y^.inhStatus) 
                                           & declSource %~ (declUnion $ y^.declSource)
-                                          & lineInfo %~ NE.sort.(<> (y^.lineInfo)))
+                                          & lineInfo %~ (<> (y^.lineInfo)))
             guard' :: a -> a -> Maybe ()
-            -- guard' x y = guard =<< ((==) <$> (snd <$> contents x) <*> (snd <$> contents y))
             guard' x y = guard $ (fromMaybe True $ liftA2 (==) (snd <$> contents x) (snd <$> contents y))
             f :: EventInhStatus expr -> EventInhStatus expr -> EventInhStatus expr
             f (InhAdd x) (InhAdd y) = InhAdd $ x & _1 %~ (<> y^._1)
             f (InhAdd x) (InhDelete y) = InhDelete $ y & traverse._1 %~ (x^._1 <>)
             f (InhDelete x) (InhAdd y) = InhDelete $ x & traverse._1 %~ (<> y^._1)
             f (InhDelete x) (InhDelete y) = InhDelete $ second getFirst <$> (second First <$> x) <> (second First <$> y)
-            declUnion Local Local = Local
-            declUnion _ _         = Inherited
+            declUnion Inherited Inherited = Inherited
+            declUnion _ _                 = Local
 
 instance NFData DeclSource
