@@ -47,6 +47,7 @@ import GHC.Generics (Generic)
 
 import System.Console.ANSI
 import System.Directory
+import System.Process
 
 import Text.Printf.TH
 
@@ -302,6 +303,16 @@ dump (Shared { .. }) = do
                 write_obs dump_cmd Nothing
             Nothing -> return ()
 
+pdfLatex :: Shared -> IO (IO ())
+pdfLatex (Shared { .. }) = do
+        v <- newEmptyMVar
+        observe system v
+        observe error_list v
+        return $ forever $ do
+            threadDelay 5000000
+            takeMVar v
+            readProcess "pdflatex" [fname] ""
+
 summary :: Shared -> IO (IO ())
 summary (Shared { .. }) = do
         v <- newEmptyMVar
@@ -385,6 +396,7 @@ run_pipeline fname (Params {..}) = do
             , parser sh
             , dump sh
             , display sh 
+            , pdfLatex sh
             ] ++ 
             (guard (not no_verif) >> [prover sh])
         keyboard sh
