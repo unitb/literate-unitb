@@ -58,6 +58,9 @@
 |  |  |  +- puzzle, visit negation, PO
 |  |  |  +- puzzle, m2
 |  |  |  +- puzzle, m3
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:36:11
+./Logic/UnitTest.hs:42:35
 |  |  |  +- puzzle m3, wd of sums
 |  |  |  +- puzzle m3, proofs with sums
 |  |  |  +- puzzle, m4
@@ -78,7 +81,7 @@
 |  |  |  +- test 27, old guards / new guards
 |  |  |  +- test 28, illegal type application
 |  |  |  +- test 29, theorem well-definedness
-|  |  +- [ Success: 28 / 28 ]
+|  |  +- [ Success: 27 / 28 ]
 |  |  +- Unless / except clause
 |  |  |  +- test 0, unless/except without indices
 |  |  |  +- test 1, unless/except with indices and free variables
@@ -215,8 +218,11 @@
 |  |  |  +- test1: verify m1
 |  |  |  +- test2: verify m2
 |  |  |  +- test3: verify m3
+|  |  |  *** FAILED ***
+src/Document/Tests/TerminationDetection.hs:13:7
+./Logic/UnitTest.hs:42:35
 |  |  |  +- test4: quantified union
-|  |  +- [ Success: 5 / 5 ]
+|  |  +- [ Success: 4 / 5 ]
 |  |  +- Parser
 |  |  |  +- test0: verify m0
 |  |  |  +- test1: verify m1
@@ -228,7 +234,7 @@
 |  |  +- conformance of instances to type class axioms
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
-|  +- [ Success: 178 / 178 ]
+|  +- [ Success: 176 / 178 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -342,17 +348,17 @@
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 273 / 273 ]
++- [ Success: 271 / 273 ]
 Data.Map.Base
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-   38458 total
+   38504 total
     1130 src/UnitB/PO.hs
      928 src/Document/Phase/Expressions.hs
      798 src/Document/Visitor.lhs
      779 logic/Logic/Expr/Expr.hs
      757 src/Document/Phase.hs
-Run time: 1m 41s
+Run time: 1m 54s

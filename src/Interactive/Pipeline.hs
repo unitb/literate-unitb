@@ -187,16 +187,23 @@ prover (Shared { .. }) = do
             modify_obs pr_obl $ return . insert k (po,Just $ r == Valid)
 
 proof_report :: Maybe String
-             -> Table (Label,Label) (Seq,Maybe Bool) 
+             -> Table Key (Seq,Maybe Bool) 
              -> [Error] -> Bool 
              -> [String]
-proof_report pattern outs es b = 
+proof_report = proof_report' False
+
+proof_report' :: Bool
+              -> Maybe String
+              -> Table Key (Seq,Maybe Bool) 
+              -> [Error] -> Bool 
+              -> [String]
+proof_report' showSuccess pattern outs es isWorking = 
                      header ++
                      ys ++ 
                      ( if null es then []
                        else "> errors" : map report es ) ++
                      footer ++
-                     [ if b
+                     [ if isWorking
                        then "> working ..."
                        else " "
                      ]
@@ -214,7 +221,10 @@ proof_report pattern outs es b =
         xs = filter (failure . snd) (zip [0..] $ M.toAscList outs)
         ys = map f $ filter (match . snd) xs
         match xs  = maybe True (\f -> f `L.isInfixOf` map toLower (show $ snd $ fst xs)) pattern
-        failure x = maybe False not $ snd $ snd x
+        failure :: (a,(b,Maybe Bool)) -> Bool
+        failure x
+            | showSuccess = True
+            | otherwise   = maybe False not $ snd $ snd x
         f (n,((m,lbl),(_,_))) = [printf| x %s - %s  (%d)|] (pretty m) (pretty lbl) n
 
 run_all :: [IO (IO ())] -> IO [ThreadId]
@@ -276,7 +286,7 @@ serialize (Shared { .. }) = do
         -- dump_pos fname pos
         writeFile 
             (fname ++ ".report") 
-            (unlines $ proof_report Nothing out es False)
+            (unlines $ proof_report' True Nothing out es False)
 
 dump :: Shared -> IO (IO b)
 dump (Shared { .. }) = do

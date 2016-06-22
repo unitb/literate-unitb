@@ -141,7 +141,7 @@ z3_pattern vs e = runReader (head e) False
         head e'@(FunApp f [_,y])
             | view name f == fromString'' "=>" = do
                 xs <- head y
-                if null xs 
+                if null xs -- The heads found so far don't contain proper patterns 
                     then lhs vs e'
                     else return xs
         head e = lhs vs e
@@ -309,7 +309,7 @@ discharge' n lbl po
             t = fromMaybe default_timeout n
         case code of
             Just code -> do
-                s  <- verify lbl code' t
+                s  <- verify lbl code' 10
                 s' <- if s == Right SatUnknown 
                     then verify lbl code t
                     else return s

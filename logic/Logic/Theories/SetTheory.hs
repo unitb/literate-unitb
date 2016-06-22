@@ -120,9 +120,10 @@ set_theory = Theory { .. }
                      .=> (mzfinite $ s1 `zsetdiff` s2)
             $axiom $     mzfinite s1 /\ mzfinite s2
                      .=> (mzfinite $ s1 `zunion` s2)
+            $axiom $     mzfinite s2 /\ mznot (mzfinite s1)
+                     .=> mznot (mzfinite $ s1 `zsetdiff` s2)
             $axiom $ mzfinite $ zmk_set x
             $axiom $ mzfinite $ zcast (set_type t) zempty_set
-            $axiom $ zsubset s1 s2 .=> (mzfinite s2 .=> mzfinite s1)
             $axiom $ zset r1 zident .=. r1
                 -- quantifier union
             $axiom $ zunion_qu (zcast (set_type t0) zempty_set) terms .=. zempty_set

@@ -42,7 +42,7 @@ type M = RWS Bool [String] ()
     --      AST -> LaTeX conversions
     --      should we strike out expressions?
 
-data ExprStyle = Tagged | Definition
+data ExprStyle = Tagged | Untagged | Definition
 
 data ExprDispOpt label expr = ExprDispOpt
         { _makeDoc :: label -> M ()                 -- Command to produce documentating comments
@@ -67,6 +67,9 @@ makeRef p pre lbl
 combineLblExpr :: ExprDispOpt label expr
                -> EventId -> label -> String -> M String
 combineLblExpr opts pre lbl expr = case opts^.style of 
+                    Untagged   -> [printf|  \\item[ ]%s|] 
+                                            -- <$> makeRef opts pre lbl
+                                            <$> format_formula expr
                     Tagged     -> [printf|  \\item[ %s ]%s|] 
                                             <$> makeRef opts pre lbl
                                             <*> format_formula expr
@@ -95,7 +98,7 @@ defOptions :: PrettyPrintable label
 defOptions f = ExprDispOpt
             { _makeDoc = const $ return () 
             , _makeString = f 
-            , _style = Tagged
+            , _style = Untagged
             , _pretty' = pretty
             , _isDefaultSpecial = Nothing
             }
@@ -361,7 +364,8 @@ typeToSet paren = join . preview (_FromSort.to f)
 asm_sum :: Machine -> M ()
 asm_sum m = do
         let props = m!.theory.fact
-        section kw_inv $ put_all_expr 
+        section kw_inv $ put_all_expr_with 
+                (style .= Tagged) 
                 "" (M.toAscList $ props) 
     where
         kw_inv = "\\textbf{assumptions}"
@@ -379,7 +383,8 @@ invariant_sum :: Machine -> M ()
 invariant_sum m = do
         let prop = m!.props
         section kw_inv $ put_all_expr_with 
-                (makeDoc .= comment_of m . DocInv) 
+                (do makeDoc .= comment_of m . DocInv
+                    style .= Tagged) 
                 "" (M.toAscList $ prop^.inv) 
     where
         kw_inv = "\\textbf{invariants}"
@@ -393,7 +398,9 @@ invariant_thm_sum prop =
 liveness_sum :: Machine -> M ()
 liveness_sum m = do
         let prop = m!.props
-        section kw $ put_all_expr' toString "" (M.toAscList $ prop^.progress) 
+        section kw $ put_all_expr_with' toString 
+                (style .= Tagged)
+                "" (M.toAscList $ prop^.progress) 
     where
         kw = "\\textbf{progress}"
         toString (LeadsTo _ p q) = 
@@ -403,7 +410,9 @@ liveness_sum m = do
 
 safety_sum :: PropertySet -> M ()
 safety_sum prop = do
-        section kw $ put_all_expr' toString "" (M.toAscList $ prop^.safety)
+        section kw $ put_all_expr_with' toString 
+                (style .= Tagged)
+                "" (M.toAscList $ prop^.safety)
     where
         kw = "\\textbf{safety}"
         toString (Unless _ p q) = 
@@ -415,7 +424,9 @@ safety_sum prop = do
 transient_sum :: Machine -> M ()
 transient_sum m = do
         let prop = m!.props
-        section kw $ put_all_expr' toString "" (M.toAscList $ prop^.transient) 
+        section kw $ put_all_expr_with' toString 
+                (style .= Tagged)
+                "" (M.toAscList $ prop^.transient) 
     where
         kw = "\\textbf{transient}"
         toString (Tr _ p evts hint) = 
@@ -440,7 +451,9 @@ transient_sum m = do
 constraint_sum :: Machine -> M ()
 constraint_sum m = do
         let prop = m!.props
-        section kw $ put_all_expr' toString "" (M.toAscList $ prop^.constraint)
+        section kw $ put_all_expr_with' toString 
+                (style .= Tagged)
+                "" (M.toAscList $ prop^.constraint)
     where
         kw = "\\textbf{safety}"
         toString (Co _ p) = prettyPrint p
@@ -543,8 +556,8 @@ param_sum :: EventMerging' -> M ()
 param_sum e
     | M.null $ e^.params  = return ()
     | otherwise           = do
-        tell ["\\textbf{any} " 
-            ++ intercalate "," (L.map (render . view name) $ M.ascElems $ e^.params)]
+        tell [[printf|\\textbf{any} $%s$|] $ 
+                intercalate "," (L.map (render . view name) $ M.ascElems $ e^.params)]
 
 guard_sum :: EventId -> EventMerging' -> M ()
 guard_sum lbl e = section kw $ do

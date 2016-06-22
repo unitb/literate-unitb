@@ -87,7 +87,7 @@ aCase :: (Pre,Eq a,Show a,Typeable a,NFData a)
       -> TestCase
 aCase n test res = WithLineInfo (?loc) $ Case n test res
 
-class IsTestCase c where
+class Typeable c => IsTestCase c where
     makeCase :: Maybe CallStack -> c -> ReaderT Args IO UnitTest
     nameOf :: Lens' c String
 

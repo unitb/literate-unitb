@@ -10,6 +10,7 @@ import Data.List
 import Document.Document
 import qualified UnitB.Test as UB
 import qualified Latex.Test as LT
+import Logic.UnitTest ()
 import qualified Z3.Test as ZT
 import qualified Document.Test as DOC
 import qualified Utilities.Test as UT
@@ -56,6 +57,7 @@ main = timeIt $ do
     when (prefix "po-") $
         shelly $ rm_f "po-*.z3"
     -- b <- run_quickCheck_suite_with Main.test_case $ argMaxSuccess .= 1000
+    -- b <- run_poTestSuite Main.test_case
     b <- run_test_cases Main.test_case
     putStrLn tableType
     if b 
