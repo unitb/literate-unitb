@@ -3,7 +3,8 @@ module Model.ProofResultSpec (spec) where
 import TestImport
 import Model.ProofResult
 
-import Data.Aeson
+import Data.JSON
+import qualified Z3.Z3 as Z3
 
 spec :: Spec
 spec = do
@@ -16,5 +17,5 @@ spec = do
             decode prStr `shouldBe` (Just pr)
 
     where
-        pr    = ProofResult { result = ("Valid" :: String) }
-        prStr = "{\"result\":\"Valid\"}"
+        pr    = ProofResult { result = Right Z3.Valid }
+        prStr = "{\"result\":{\"Right\":\"Valid\"}}"

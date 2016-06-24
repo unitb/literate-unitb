@@ -19,6 +19,7 @@ library
                      Import.NoFoundation
                      Settings
                      Settings.StaticFiles
+                     Data.JSON
                      Handler.Common
                      Handler.Goal
                      Handler.Home
@@ -134,3 +135,5 @@ test-suite test
                  , classy-prelude
                  , classy-prelude-yesod
                  , aeson
+                 , literate-unitb-logic
+                 , literate-unitb-utils

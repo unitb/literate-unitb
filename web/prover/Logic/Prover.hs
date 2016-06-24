@@ -32,19 +32,16 @@ pfStringLiToSequent (ProofForm t d a g) = runSequent $ do
     mapM_ assumeE  (map snd $ map snd a)
     checkE g
 
-discharge :: Either [Error] Sequent -> IO (ProofResult String)
+discharge :: Either [Error] Sequent -> IO ProofResult
 discharge e = do
     case e of
         Left err ->
-            return $ ProofResult $ show_err err
+            return $ ProofResult $ Left err
         Right s -> do
             val <- Z3.discharge "goal" s
-            case val of
-                Z3.Valid -> return $ ProofResult "Valid"
-                Z3.Invalid -> return $ ProofResult "Invalid"
-                Z3.ValUnknown -> return $ ProofResult "ValUnknown"
+            return $ ProofResult $ Right val
 
-prove :: ProofForm String -> IO (ProofResult String)
+prove :: ProofForm String -> IO ProofResult
 prove = discharge . pfStringLiToSequent . pfStringToPfStringLi
 
 getTheories :: Vector String -> Vector Theory

@@ -5,6 +5,9 @@ module Model.ProofResult where
 
 import ClassyPrelude.Yesod
 
-data ProofResult a = ProofResult {
-    result :: a
-} deriving (Generic, ToJSON, FromJSON, Eq, Show)
+import Utilities.Syntactic
+import qualified Z3.Z3 as Z3
+
+data ProofResult = ProofResult {
+    result :: Either [Error] Z3.Validity
+} deriving (Generic, Eq, Show)

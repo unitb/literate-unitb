@@ -5,7 +5,8 @@ import Logic.Prover
 import Model.ProofForm
 import Model.ProofResult
 
-import Data.Aeson
+import Data.JSON
+import qualified Z3.Z3 as Z3
 import Data.Maybe
 
 spec :: Spec
@@ -16,11 +17,11 @@ spec = describe "prove" $ do
     it "\\neg 2 = 2 should be Invalid" $ do
          shouldReturn
             (prove . justPFStr . decode $ pfStr2)
-            (justPRStr . decode $ prStrInvalid)
+            (justPR . decode $ prStrInvalid)
 
     it "2 /= 2 should cause an error (not Valid or Invalid)" $ do
         (prove pf3) `shouldNotReturn` prValid
-        (prove pf3) `shouldNotReturn` (justPRStr . decode $ prStrInvalid)
+        (prove pf3) `shouldNotReturn` (justPR . decode $ prStrInvalid)
 
     it "x : \\Int, x = 3, x < 3 should be Invalid" $ do
         (prove pf4) `shouldReturn` prInvalid
@@ -47,8 +48,8 @@ spec = describe "prove" $ do
             assumptions  = fromList [("asm1", ("xIs3", "x = 3"))],
             goal         = ("x < 3" :: String)
         }
-        prValid      = ProofResult { result = ("Valid" :: String) }
-        prStrInvalid = "{\"result\":\"Invalid\"}"
-        prInvalid    = ProofResult { result = ("Invalid" :: String) }
+        prValid      = ProofResult { result = Right Z3.Valid }
+        prStrInvalid = "{\"result\":{\"Right\":\"Invalid\"}}"
+        prInvalid    = ProofResult { result = Right Z3.Invalid }
         justPFStr = fromJust :: Maybe (ProofForm String) -> ProofForm String
-        justPRStr = fromJust :: Maybe (ProofResult String) -> ProofResult String
+        justPR    = fromJust :: Maybe ProofResult -> ProofResult
