@@ -18,22 +18,22 @@ import Logic.Names (render)
 getHomeR :: Handler Html
 getHomeR = do
     defaultLayout $ do
-        let (goalFormId, goalTextareaId, goalListId) = goalIds
-        let (declPrefix, declContainerPrefix) = declarationIds
-        let (asmPrefix, asmContainerPrefix) = assumptionIds
-        jsReqWarning <- newIdent
+        let (goalFormId, goalTextareaId) = goalIds
+            (declPrefix, declContainerPrefix) = declarationIds
+            (asmPrefix, asmContainerPrefix) = assumptionIds
+            resultBar = resultBarId
         setTitle "Literate Unit-B"
         $(widgetFile "homepage")
 
 
-goalIds :: (Text, Text, Text)
-goalIds = ("js-goalForm", "js-goalTextarea", "js-goalList")
-
-declarationIds :: (Text, Text)
+goalIds, declarationIds, assumptionIds :: (Text, Text)
+goalIds = ("js-goalForm", "js-goalTextarea")
 declarationIds = ("decl", "div-decl")
+assumptionIds  = ("asm", "div-asm")
 
-assumptionIds :: (Text, Text)
-assumptionIds = ("asm", "div-asm")
+resultBarId :: Text
+resultBarId = "resultBar"
+
 
 theoryNames :: [String]
 theoryNames = render <$> M.keys Theories.supportedTheories

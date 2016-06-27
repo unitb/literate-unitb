@@ -1,21 +1,18 @@
-var js_notice = document.getElementById(#{toJSON jsReqWarning});
-document.getElementById("notices").removeChild(js_notice);
-
 // select the text in all contenteditable labels (.ce-lbl)
 // when each one is focused
 document.querySelector(".ce-lbl").onfocus = function(e) {
-    var el = this;
-    requestAnimationFrame(function() {
-        selectElementContents(el);
-    });
+  var el = this;
+  requestAnimationFrame(function() {
+      selectElementContents(el);
+  });
 };
 
 function selectElementContents(el) {
-    var range = document.createRange();
-    range.selectNodeContents(el);
-    var sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+  var range = document.createRange();
+  range.selectNodeContents(el);
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
 }
 
 $(function() {
@@ -68,9 +65,26 @@ $(function() {
         goal: goal,
       }),
       success: function (data) {
-        var newNode = $("<li></li>");
-        newNode.text(JSON.stringify(data));
-        $("##{rawJS goalListId}").append(newNode);
+        var bar  = $("##{rawJS resultBar}"),
+            icon = $(bar).children(".glyphicon"),
+            sr   = $(bar).children(".sr-only");
+
+        $(bar).fadeOut("fast", function() {
+          bar.removeClass();
+          bar.addClass("alert " + data["colorClass"]);
+          icon.removeClass();
+          icon.addClass("icon-margin glyphicon " + data["iconClass"]);
+
+          if (data.hasOwnProperty("result")) {
+              $(bar).contents().last().replaceWith(data["result"]);
+              sr.text("Result:");
+          }
+          else {
+              $(bar).contents().last().replaceWith(data["error"]);
+              sr.text("Error:");
+          }
+          $(bar).fadeIn("fast");
+        });
       },
       error: function (data) {
         console.log("Error creating goal: " + data);
@@ -211,4 +225,6 @@ $(function() {
       $(hashCls + newNum).focus();
     }
   }
+
+    $("##{rawJS resultBar}").fadeIn();
 });

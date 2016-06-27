@@ -4,9 +4,10 @@
 
 <.page-header><h2>Prover
 
-<section.list-group #notices>
-  <span .list-group-item .list-group-item-warning ##{jsReqWarning}>
-    You need javascript enabled to be able to use the web prover.
+<noscript>
+  <section.list-group>
+    <span .list-group-item .list-group-item-warning>
+      You need javascript enabled to be able to use the web prover.
 
 <section.page-header.row>
   <.col-lg-4>
@@ -60,9 +61,12 @@
 
       <.form-group>
       <button .btn .btn-primary type="submit">
+        <small>
+          <span .glyphicon .glyphicon-refresh .icon-margin>
         Prove
-        <small .btn-icon>
-          <span .glyphicon .glyphicon-refresh>
 
-  <.col-lg-7 .col-lg-offset-1>
-    <ul ##{goalListId}>
+  <.col-lg-6 .col-lg-offset-1>
+    <div ##{resultBar} .alert .alert-info role="alert" style="display: none">
+      <span .glyphicon .glyphicon-info-sign .icon-margin aria-hidden="true">
+      <span .sr-only>Ready
+      Ready

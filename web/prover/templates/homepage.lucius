@@ -14,15 +14,8 @@ footer {
     margin-top: 15px;
 }
 
-##{goalListId} {
-    border-left: 1px solid #eee;
-}
-##{goalListId} li {
-    line-height: 2em;
-    font-size: 16px
-}
-.btn-icon {
-    margin-left: 3px;
+.icon-margin {
+    margin-right: 3px;
 }
 
 .#{declPrefix}, .#{asmPrefix} {

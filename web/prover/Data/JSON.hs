@@ -1,9 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.JSON
-    ( module Data.JSON
-    , module Data.Aeson
-    )
+    (module Data.Aeson)
 where
 
 import ClassyPrelude.Yesod
@@ -25,7 +23,15 @@ instance FromJSON LineInfo
 instance ToJSON LineInfo
 
 instance FromJSON ProofResult
-instance ToJSON ProofResult
+instance ToJSON ProofResult where
+  toJSON ProofResult{..} = object [
+    either
+      (\errs -> "error" .= show_err errs)
+      (\val -> "result" .= show val)
+      result,
+    "colorClass" .= colorClassFromResult result,
+    "iconClass"  .= iconClassFromResult result
+    ]
 
 instance (FromJSON a) => FromJSON (ProofForm a) where
   parseJSON = withObject "proof" $ \o -> do
