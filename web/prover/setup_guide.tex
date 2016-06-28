@@ -1,0 +1,98 @@
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{titling}
+\usepackage[dvipsnames]{xcolor}
+
+\definecolor{code-fg}{HTML}{C7254E}
+\definecolor{code-bg}{HTML}{F9F2F4}
+\definecolor{url-fg}{HTML}{099099}
+\colorlet{link-fg}{violet!85!black}
+
+
+\lstset{
+  basicstyle=\ttfamily\color{code-fg}
+}
+
+\lstdefinestyle{inline}{
+  columns=fullflexible,
+  breaklines=false,
+}
+
+\newcommand{\code}[1]
+{\colorbox{code-bg}{\lstinline[style=inline]!#1!}}
+
+\hypersetup{colorlinks=true, % Don't draw a box around links, instead color every
+                             % piece of text, which is a link
+  urlcolor=url-fg, % Color them red
+  linkcolor=link-fg, % Color them red
+  hypertexnames=false, % Use a default object counter to count links (chapters,
+                       % sections, etc. appear as 1,2,3 instead of 1, 1.1, etc.)
+  pdfhighlight=/N % When clicking a link and holding the mouse button, don't use
+                  % any graphical effects - i.e. the alternative would be to behave
+                  % like a "button" which is pressed within the PDF
+}
+
+\title{Starting the Web Prover}
+\author{
+  Amin Bandali
+  \\
+  \href{mailto:amin9@cse.yorku.ca}
+  {\normalsize\texttt{amin9@my.yorku.ca}}
+}
+\date{\today}
+
+\begin{document}
+
+\setlength{\droptitle}{-2cm}
+
+\maketitle
+
+\section{Setup}
+
+To start the web prover, the project needs to be set up first. Please follow the
+instructions in \verb#README.md# to do that. Also, note that the web prover
+uses the logic module of Literate Unit-B, which in turn uses the Z3
+prover\footnote{\url{https://github.com/Z3Prover/z3}}. Make
+sure Z3 is installed and its binary is in the \code{\$PATH} environment variable.
+
+\section{Starting}
+
+One of the possible options to set the web server up so that it keeps running
+when the terminal is closed is to use GNU Screen. To do so, assuming that the
+project is set up on the \verb#unitb# account, follow these steps:
+
+\begin{enumerate}
+\item \verb#ssh# into \code{red.cse.yorku.ca},
+
+\item become the \verb#unitb# user by issuing \code{bu unitb},
+
+\item run \code{screen -r || screen}, which re-attaches to an existing session
+  if it exists, and creates a new one otherwise,
+
+\item \code{cd src/haskell/literate-unitb/web/prover}, which changes directory
+  into where the project resides (as of writing this guide),
+
+\item start the web server by running \code{stack exec yesod devel}.
+\end{enumerate}
+
+Upon successful start of the server, the output should end similar to this:
+
+\begin{verbatim}
+...
+Starting development server...
+Starting devel application
+Devel application launched: http://localhost:3000
+\end{verbatim}
+
+You can now navigate to \url{http://red.cse.yorku.ca:3000} in your browser to
+access the web prover.\newline
+
+At this stage you can close the terminal window if you wish, as you would close
+any other window, and the web server should remain running.\newline
+
+To stop the web server, follow steps 1-3 above, to re-attach to the screen
+session, then type \textbf{quit} and press enter twice, and close the terminal.
+
+\end{document}
