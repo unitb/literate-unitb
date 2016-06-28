@@ -1,18 +1,20 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
 
 module Model.ProofResult where
 
 import ClassyPrelude.Yesod
+import Control.Lens
 
 import Utilities.Syntactic
 import qualified Z3.Z3 as Z3
 
 type Result = Either [Error] Z3.Validity
 
-data ProofResult = ProofResult {
-  result :: Result
+newtype ProofResult = ProofResult {
+  _result :: Result
 } deriving (Generic, Eq, Show)
+
+makeLenses ''ProofResult
 
 colorClassFromResult :: Result -> Text
 colorClassFromResult (Left _) = "alert-danger"

@@ -5,6 +5,7 @@ module Data.JSON
 where
 
 import ClassyPrelude.Yesod
+import Control.Lens ((^.))
 import Data.Aeson
 
 import Model.ProofForm
@@ -24,13 +25,13 @@ instance ToJSON LineInfo
 
 instance FromJSON ProofResult
 instance ToJSON ProofResult where
-  toJSON ProofResult{..} = object [
+  toJSON pr@ProofResult{..} = object [
     either
       (\errs -> "error" .= show_err errs)
       (\val -> "result" .= show val)
-      result,
-    "colorClass" .= colorClassFromResult result,
-    "iconClass"  .= iconClassFromResult result
+      (pr ^. result),
+    "colorClass" .= colorClassFromResult (pr ^. result),
+    "iconClass"  .= iconClassFromResult (pr ^. result)
     ]
 
 instance (FromJSON a) => FromJSON (ProofForm a) where
