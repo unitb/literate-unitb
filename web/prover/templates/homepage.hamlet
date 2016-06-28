@@ -70,3 +70,37 @@
       <span .glyphicon .glyphicon-info-sign .icon-margin aria-hidden="true">
       <span .sr-only>Ready
       Ready
+
+<section.page-header.row>
+  <.col-lg-10>
+    <div class="panel panel-info">
+      <div class="panel-heading">Examples of syntax
+      <div class="panel-body">
+        <p>
+          Below are some examples of the syntax you can use
+          with the Literate Unit-B web prover.
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Syntax
+            <th>Rendered Version
+        <tbody>
+          <tr>
+            <td><code>x \subseteq \dom.f
+            <td><img src=@{StaticR img_ex1_png}>
+          <tr>
+            <td><code>\ran.f = \qset{x}{x \in \dom.f}{f.x}
+            <td><img src=@{StaticR img_ex2_png}>
+          <tr>
+            <td><code>x = \qsum{i}{ \between{p}{i}{q} }{ f.i }
+            <td><img src=@{StaticR img_ex3_png}>
+          <tr>
+            <td><code>\qforall{x}{ p.x }{ (f \1| x \fun 7).x = 7 }
+            <td><img src=@{StaticR img_ex4_png}>
+          <tr>
+            <td><code>3 \cdot x^3 + 17 \2\le x \cdot y
+            <td><img src=@{StaticR img_ex5_png}>
+          <tr>
+            <td><code>\dom.(x \fun y) = \{ x \} \3\land \ran.(x \fun y) = \{ y \}
+            <td><img src=@{StaticR img_ex6_png}>
+
