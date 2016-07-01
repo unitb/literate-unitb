@@ -64,6 +64,8 @@
         <small>
           <span .glyphicon .glyphicon-refresh .icon-margin>
         Prove
+      <button .btn .btn-normal type="reset">
+        Clear
 
   <.col-lg-6 .col-lg-offset-1>
     <div ##{resultBar} .alert .alert-info role="alert" style="display: none">

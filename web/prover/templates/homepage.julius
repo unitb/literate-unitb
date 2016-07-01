@@ -32,6 +32,17 @@ $(function() {
     addBtn(this, "#{rawJS asmPrefix}", "#{rawJS asmContainerPrefix}");
   });
 
+  // re-render the select element (e.g. theories dropdown) of the form
+  // and also set the bar to "Ready" after clicking the reset button
+  $(':reset').on('click', function(evt) {
+    evt.preventDefault();
+    $form = $(evt.target).closest('form');
+    $form[0].reset();
+    $form.find('select').selectpicker('render');
+    update_bar("alert-info", "glyphicon-info-sign", "Ready", "Ready");
+    $form.find('.selectpicker').selectpicker().parent().find("button").focus();
+  });
+
   $("##{rawJS goalFormId}").submit(function(event) {
     event.preventDefault();
 
@@ -65,26 +76,12 @@ $(function() {
         goal: goal,
       }),
       success: function (data) {
-        var bar  = $("##{rawJS resultBar}"),
-            icon = $(bar).children(".glyphicon"),
-            sr   = $(bar).children(".sr-only");
-
-        $(bar).fadeOut("fast", function() {
-          bar.removeClass();
-          bar.addClass("alert " + data["colorClass"]);
-          icon.removeClass();
-          icon.addClass("icon-margin glyphicon " + data["iconClass"]);
-
-          if (data.hasOwnProperty("result")) {
-              $(bar).contents().last().replaceWith(data["result"]);
-              sr.text("Result:");
-          }
-          else {
-              $(bar).contents().last().replaceWith(data["error"]);
-              sr.text("Error:");
-          }
-          $(bar).fadeIn("fast");
-        });
+        if (data.hasOwnProperty("result")) {
+          update_bar(data["colorClass"], data["iconClass"], data["result"], "Result:");
+        }
+        else {
+          update_bar(data["colorClass"], data["iconClass"], data["error"], "Error:");
+        }
       },
       error: function (data) {
         console.log("Error creating goal: " + data);
@@ -92,6 +89,25 @@ $(function() {
     });
 
   });
+
+  // helper function used for updating the output bar
+  // takes a color class, icon class (glyphicons), a text, and a screen-reader text
+  function update_bar(color_class, icon_class, text, sr_text) {
+    var bar  = $("##{rawJS resultBar}"),
+        icon = $(bar).children(".glyphicon"),
+        sr   = $(bar).children(".sr-only");
+
+    $(bar).fadeOut("fast", function() {
+      bar.removeClass();
+      bar.addClass("alert " + color_class);
+      icon.removeClass();
+      icon.addClass("icon-margin glyphicon " + icon_class);
+      $(bar).contents().last().replaceWith(text);
+      sr.text(sr_text);
+
+      $(bar).fadeIn("fast");
+    });
+  }
 
   // given an array of objects of the following form
   // [{"name":"decl1","value":"hi"},{"name":"decl2","value":"there"}]

@@ -26,3 +26,9 @@ footer {
     background-color: #fff;
     min-width: 60px;
 }
+
+@media (max-width: 1199px) {
+  .col-lg-6 {
+    margin-top:20px;
+  }
+}
