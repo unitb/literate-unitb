@@ -20,12 +20,12 @@ colorClassFromResult :: Result -> Text
 colorClassFromResult (Left _) = "alert-danger"
 colorClassFromResult (Right v) = case v of
   Z3.Valid      -> "alert-success"
-  Z3.Invalid    -> "alert-warning"
+  Z3.Invalid    -> "alert-danger"
   Z3.ValUnknown -> "alert-warning"
 
 
 iconClassFromResult :: Result -> Text
-iconClassFromResult (Left _) = "glyphicon-exclamation-sign"
+iconClassFromResult (Left _) = "glyphicon-info-sign"
 iconClassFromResult (Right v) = case v of
   Z3.Valid      -> "glyphicon-ok-sign"
   Z3.Invalid    -> "glyphicon-remove-sign"
