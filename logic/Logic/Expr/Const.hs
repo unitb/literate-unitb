@@ -43,13 +43,19 @@ type OneExpr n t q = AbsExpr n t q -> AbsExpr n t q
 type TwoExpr n t q = AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
 
 fun1 :: ( TypeSystem t )
-     => AbsFun n t 
-     -> AbsExpr n t q -> AbsExpr n t q
+     => AbsFun n a
+     -> GenExpr n t a q -> GenExpr n t a q
 fun1 f x           = FunApp f [x]
+
 fun2 :: ( TypeSystem t  )
      => AbsFun n t -> AbsExpr n t q
      -> AbsExpr n t q -> AbsExpr n t q
 fun2 f x y         = FunApp f [x,y]
+
+fun2' :: ( TypeSystem t  )
+     => AbsFun n a -> GenExpr n t a q
+     -> GenExpr n t a q -> GenExpr n t a q
+fun2' f x y         = FunApp f [x,y]
 
 no_errors2 :: ( TypeSystem t 
               , IsQuantifier q )
@@ -455,6 +461,9 @@ elem_fun t = mk_fun' [t] "elem" [t,set_type t] bool
 zelem        = typ_fun2 (elem_fun gA)
 zelem         :: (IsQuantifier q,IsName n) 
               => ExprPG n Type q -> ExprPG n Type q -> ExprPG n Type q
+
+zelem'       = fun2' (elem_fun gA)
+zelem'        :: UntypedExpr -> UntypedExpr -> UntypedExpr
 
 
 zelemUnchecked :: (TypeSystem t,IsName n,IsQuantifier q)

@@ -291,13 +291,13 @@ instance Arbitrary Sort where
     shrink = genericShrink
 
 gA :: GenericType
-gA = GENERIC $ [smt|a|]
+gA = GENERIC [smt|a|]
 
 gB :: GenericType
-gB = GENERIC $ [smt|b|]
+gB = GENERIC [smt|b|]
 
 gC :: GenericType
-gC = GENERIC $ [smt|c|]
+gC = GENERIC [smt|c|]
 
 z3Sort :: Pre 
        => String -> String -> Int -> Sort

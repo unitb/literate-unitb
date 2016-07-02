@@ -27,7 +27,7 @@ import Utilities.Table
 data Param = Param 
     { context   :: Context
     , notation  :: Notation
-    , variables :: Table Name Expr
+    , variables :: Table Name UntypedExpr
     }
 
 data Parser a = Parser { fromParser :: MaybeT (R.ReaderT Param (Scanner ExprToken)) a }
@@ -139,8 +139,17 @@ runParser' p = runParserWith $ Param
         (p^.language) 
         vars'
     where
+        -- | f <$> y
+        -- | x <$ y = const x <$> y
+        -- | f <$> Just x  = Just (f x)
+        -- | f <$> Nothing = Nothing
+        -- | const x _ = x
+        -- |   x <$ Just y
+        -- | = const x <$> Just y
+        -- | = Just (const x y)
+        -- | = Just x
         ctx = contextOf p
-        vars  = ctx^.constants
+        vars  = (() <$) <$> ctx^.constants
         vars' = M.map Word vars `M.union` M.mapMaybe f defs
         f (Def xs n args t _e) = do
                 guard (L.null args)
@@ -148,7 +157,7 @@ runParser' p = runParserWith $ Param
         defs = ctx^.definitions
             
 runParser :: Context -> Notation 
-          -> Table Name Expr
+          -> Table Name UntypedExpr
           -> Parser a 
           -> Scanner ExprToken a
 runParser x y w m = runParserWith (Param x y w) m

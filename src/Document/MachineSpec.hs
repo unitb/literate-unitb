@@ -12,7 +12,7 @@ import Logic.Theories.Arithmetic
 import Logic.Theories.FunctionTheory
 import Logic.Theories.SetTheory
 
-import UnitB.Expr
+import UnitB.Expr hiding (zelem')
 import UnitB.UnitB
 
 
@@ -53,9 +53,9 @@ f_prop_type_error :: Tex -> Bool
 f_prop_type_error (Tex tex) = either (all is_type_error) (const False) (all_machines tex) 
 
 prop_expr_parser :: ExprNotation -> Property
-prop_expr_parser (ExprNotation ctx n e) = e' === parse_expression parser (withLI $ showExpr n $ asExpr e)
+prop_expr_parser (ExprNotation ctx n e) = e' === parse (withLI $ showExpr n $ getExpr e)
     where
-        parser = setting_from_context n ctx
+        parse  = fmap getExpr . parse_expr (setting_from_context n ctx)
         e' = Right e
         li = LI "" 0 0
         withLI xs = StringLi (map (\x -> (x,li)) xs) li

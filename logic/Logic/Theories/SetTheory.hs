@@ -179,6 +179,7 @@ set_theory = Theory { .. }
 
 zset_select   :: ExprP -> ExprP -> ExprP
 zempty_set    :: ExprP
+zempty_set'   :: UntypedExpr
 zset_all      :: ExprP
 zsubset       :: (IsName n,IsQuantifier q)
               => ExprPG n Type q 
@@ -193,9 +194,12 @@ zintersect    :: ExprP -> ExprP -> ExprP
 zcompl        :: ExprP -> ExprP
 
 zunion        :: ExprP -> ExprP -> ExprP
+zunion'       :: UntypedExpr -> UntypedExpr -> UntypedExpr
 zmk_set       :: ExprP -> ExprP
+zmk_set'      :: UntypedExpr -> UntypedExpr
 zpow_set      :: ExprP -> ExprP
 zset_enum     :: [ExprP] -> ExprP
+zset_enum'    :: [UntypedExpr] -> UntypedExpr
 
 comprehension :: HOQuantifier
 comprehension = UDQuant comprehension_fun gA (QTFromTerm set_sort) InfiniteWD
@@ -236,12 +240,14 @@ zset = typ_fun2 comprehension_fun
 zset_select = typ_fun2 (mk_fun' [] "select" [set_type gA, gA] bool)
 
 zempty_set   = Right $ FunApp zempty_set_fun []
+zempty_set'  = FunApp zempty_set_fun []
 zset_all     = Right $ FunApp zset_all_fun []
 zsubset      = typ_fun2 subset_fun
 zsetdiff     = typ_fun2 zsetdiff_fun
 zstsubset    = typ_fun2 st_subset_fun
 zintersect   = typ_fun2 zintersect_fun
 zunion       = typ_fun2 zunion_fun
+zunion'      = fun2' zunion_fun
 zcompl       = typ_fun1 zcompl_fun
 
 zunion_fun, zintersect_fun, zcompl_fun, zempty_set_fun, zset_all_fun, zpow_set_fun :: Fun
@@ -255,12 +261,19 @@ zset_all_fun   = mk_fun' [gA] "all" [] $ set_type gA
 zpow_set_fun   = mk_fun' [gA] "pow" [set_type gA] $ set_type (set_type gA)
 
 zmk_set      = typ_fun1 (mk_fun' [gA] "mk-set" [gA] $ set_type gA)
+zmk_set'     = fun1 (mk_fun' [gA] "mk-set" [gA] $ set_type gA)
 zpow_set     = typ_fun1 zpow_set_fun
 zset_enum (x:xs) = foldl zunion y ys 
     where
         y  = zmk_set x
         ys = L.map zmk_set xs
 zset_enum [] = zempty_set
+
+zset_enum' (x:xs) = foldl zunion' y ys
+    where
+        y  = zmk_set' x
+        ys = L.map zmk_set' xs
+zset_enum' [] = zempty_set'
 
 st_subset_fun :: IsName n => AbsFun n Type
 st_subset_fun = mk_fun' [gA] "st-subset" [set_type gA,set_type gA] bool

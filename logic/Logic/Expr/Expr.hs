@@ -613,6 +613,16 @@ substitute m e = f e
         f e = rewrite f e
         subst vs = m M.\\ symbol_table vs
 
+substitute' :: (TypeSystem t, TypeSystem a, IsQuantifier q, IsName n, TypeAnnotationPair t a)
+           => Table n (GenExpr n t a q)
+           -> (GenExpr n t a q) -> (GenExpr n t a q)
+substitute' m e = f e
+    where
+        f e@(Word v) = maybe e id $ M.lookup (v^.name) m
+        f e@(Binder _ vs _ _ _) = rewrite (substitute' $ subst vs) e
+        f e = rewrite f e
+        subst vs = m M.\\ symbol_table vs
+
 used_var :: ( TypeSystem a,TypeSystem t
             , TypeAnnotationPair t a
             , IsQuantifier q, IsName n) 
