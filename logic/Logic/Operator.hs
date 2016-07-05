@@ -21,6 +21,7 @@ module Logic.Operator
     , implies, follows, equiv
     , combine, precede
     , mk_expr, mk_unary
+    , mk_expr', mk_unary'
         -- Lenses
     , new_ops 
     , prec 
@@ -77,8 +78,15 @@ mk_expr :: BinOperator -> Expr -> Expr -> Either [String] Expr
 mk_expr (BinOperator _ _ Flipped f) x y = flip (typ_fun2 f) (Right x) (Right y)
 mk_expr (BinOperator _ _ Direct f) x y  = typ_fun2 f (Right x) (Right y)
 
+mk_expr' :: BinOperator -> UntypedExpr -> UntypedExpr -> UntypedExpr
+mk_expr' (BinOperator _ _ Flipped f) x y = flip (fun2' f) x y
+mk_expr' (BinOperator _ _ Direct f) x y  = fun2' f x y
+
 mk_unary :: UnaryOperator -> Expr -> Either [String] Expr
 mk_unary (UnaryOperator _ _ f) x = typ_fun1 f $ Right x
+
+mk_unary' :: UnaryOperator -> UntypedExpr -> UntypedExpr
+mk_unary' (UnaryOperator _ _ f) x = fun1 f x
 
 data Assoc = LeftAssoc | RightAssoc | NoAssoc
     deriving (Show,Eq,Typeable,Generic)

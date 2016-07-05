@@ -224,6 +224,10 @@ apply_fun_op (Command _ _ _ fop) x = do
         e <- check_types $ typ_fun1 fop (Right x)
         return $ E e
 
+apply_fun_op' :: Command -> UntypedExpr -> Parser Term
+apply_fun_op' (Command _ _ _ fop) x = do
+        return $ UE $ fun1 fop x
+
 suggestion :: Name -> Table Name String -> [String]
 suggestion xs m = map (\(x,y) -> render x ++ " (" ++ y ++ ")") $ toAscList ws
   where
@@ -285,7 +289,7 @@ term = do
         , do    quant <- from quants 
                 ns <- brackets Curly
                     $ sep1P word_or_command comma
-                ctx <- get_context
+                _ctx <- get_context
                 let vs :: [UntypedVar]
                     vs = Var <$> ns <*> pure ()
                 with_vars (zip ns vs) $ do
@@ -296,10 +300,10 @@ term = do
                             read_listP [Close Curly]
                             return r)
                     t <- brackets Curly expr
-                    let vars = used_var r `S.union` used_var t
+                    let _vars = used_var r `S.union` used_var t
                         ts :: [(Name, UntypedVar)]
                         ts = zip ns vs
-                        f = (`S.filter` vars) . (. view name) . (==)
+                        _f = (`S.filter` _vars) . (. view name) . (==)
                     let ts' :: Table Name UntypedExpr
                         ts' = M.map Word $ fromList ts
                         r' :: UntypedExpr
@@ -345,17 +349,18 @@ recordSetOrLit = do
             [ attempt close_square >> return (Record $ RecLit M.empty)
             , do li  <- liftP get_line_info
                  n   <- nameLit
-                 sep <- choose_la [True <$ attempt assignTok, False <$ attempt colonTok]
+                 _sep <- choose_la [True <$ attempt assignTok, False <$ attempt colonTok]
                  ue  <- expr
-                 if sep 
-                    then rec_lit =<< ((n,(ue,li)):) <$> parseTail lit
-                    else rec_set =<< ((n,(ue,li)):) <$> parseTail set
+                 rec_lit =<< ((n,(ue,li)):) <$> parseTail lit
+                --if sep 
+                --    then rec_lit =<< ((n,(ue,li)):) <$> parseTail lit
+                --    else rec_set =<< ((n,(ue,li)):) <$> parseTail set
             ]
     where
-        set = binding colonTok
+        _set = binding colonTok
         lit = binding assignTok
         rec_lit m = (Record . RecLit) <$> validateFields m
-        rec_set m = zrecord_set . M.map Right <$> validateFields m
+        _rec_set m = zrecord_set . M.map Right <$> validateFields m
         parseTail field = choose_la 
             [ attempt close_square >> return []
             , do getToken _Comma ","
@@ -417,6 +422,7 @@ close_curly = read_listP [Close QuotedCurly]
 
 applyRecUpdate :: [Map Name UntypedExpr] -> Term -> Parser Term
 applyRecUpdate rUpd (UE ue) = return $ UE $ foldl (fmap Record . RecUpdate) ue rUpd
+applyRecUpdate _ (E _) = undefined'
 applyRecUpdate xs e@(Cmd op)
         | L.null xs = return e
         | otherwise = fail $ "Cannot apply a record update to an operator: " ++ pretty op
@@ -429,6 +435,7 @@ expr = do
         r <- read_term []
         case r of
             UE ue -> return ue
+            E _ -> undefined'
             Cmd op -> fail $ [printf|unapplied functional operator: %s|] (pretty op)
             Field n -> fail $ [printf|record field out of context: %s|] (pretty n)
     where
@@ -522,6 +529,9 @@ apply_unary op e = do
             E e -> do
                 x2 <- check_types $ mk_unary op e
                 return $ E x2
+            UE ue -> do
+                x2 <- return $ mk_unary' op ue
+                return $ UE x2
             Cmd oper -> fail $ err_msg (pretty oper) (pretty op)
             Field n  -> fail $ err_msg_2 (pretty n) (pretty op)
     where
@@ -533,6 +543,7 @@ apply_op op x0 x1 = do
         case x1 of
             E e1 -> do
                 case x0 of
+                    UE _ -> undefined'
                     E e0 -> do
                         e2 <- check_types $ mk_expr op e0 e1
                         return $ E e2
@@ -541,11 +552,23 @@ apply_op op x0 x1 = do
                             apply_fun_op oper e1
                         else fail $ err_msg (pretty oper) (pretty op)
                     Field n -> fail $ err_msg_2 (pretty n) (pretty op)
+            UE ue1 -> do
+                case x0 of
+                    UE ue0 -> do
+                        ue2 <- return $ mk_expr' op ue0 ue1
+                        return $ UE ue2
+                    E _ -> undefined'
+                    Cmd oper ->
+                        if op == apply then
+                            apply_fun_op' oper ue1
+                        else fail $ err_msg (pretty oper) (pretty op)
+                    Field n -> fail $ err_msg_2 (pretty n) (pretty op)
             Cmd e1  -> 
                 fail $ err_msg (pretty e1) (pretty op)
             Field n 
                 | op == apply -> case x0 of
                     E e0 -> E <$> check_types (zfield (Right e0) n)
+                    UE ue0 -> UE <$> return (Record $ FieldLookup ue0 n)
                     Field n -> fail $ err_msg_2 (pretty n) (pretty op)
                     Cmd cmd -> fail $ err_msg (pretty cmd) (pretty op)
                 | otherwise   -> fail $ err_msg_2 (pretty n) (pretty op)
@@ -594,7 +617,7 @@ parse_expr set xs = do
         x  <- parse_expression set xs
         e  <- type_check x
         typed_x  <- case set^.expected_type of
-            Just t -> mapLeft
+            Just _ -> mapLeft
                 (\xs -> map (`Error` li) xs) $ Right e
             Nothing -> return e
         let x = normalize_generics typed_x
