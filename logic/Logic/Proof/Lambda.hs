@@ -239,7 +239,7 @@ lambdas (Lit v t) = return (Lit v t)
 lambdas (FunApp fun args) = do
     args' <- mapM lambdas args
     return $ FunApp (fun & namesOf %~ asInternal) args'
-lambdas (Cast e t) = (`Cast` t) <$> lambdas e
+lambdas (Cast b e t) = (\e' -> Cast b e' t) <$> lambdas e
 lambdas (Lift e t) = (`Lift` t) <$> lambdas e
 lambdas (Record e) = Record <$> traverseRecExpr lambdas e
 

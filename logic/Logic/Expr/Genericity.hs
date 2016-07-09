@@ -71,7 +71,7 @@ rewrite_types xs e = -- typesOf %~ suffix_generics tag
         Lit v t         -> Lit v t'
           where
             t'          = ft t
-        Cast e t -> Cast (rewrite_types xs e) (suffix_generics xs t)
+        Cast b e t -> Cast b (rewrite_types xs e) (suffix_generics xs t)
         Lift e t -> Lift (rewrite_types xs e) (suffix_generics xs t)
         FunApp f args -> FunApp f' new_args
           where
@@ -247,10 +247,10 @@ strip_generics (Word v)    = do
 strip_generics (Lit m t) = do
     t  <- type_strip_generics t
     return (Lit m t)
-strip_generics (Cast e t) = do
+strip_generics (Cast b e t) = do
     e <- strip_generics e
     t <- type_strip_generics t
-    return (Cast e t)
+    return (Cast b e t)
 strip_generics (Lift e t) = do
     e <- strip_generics e
     t <- type_strip_generics t
@@ -385,7 +385,7 @@ instance (TypeSystem t', Generic Type t',IsName n) => Generic (AbsVar n Type) (A
 instance (TypeSystem t,HasGenerics t,IsName n,IsQuantifier q) => HasGenerics (AbsExpr n t q) where
     types_of (Word v)      = types_of v
     types_of (Lit _ t)   = types_of t
-    types_of (Cast e t)     = S.union (types_of t) (types_of e)
+    types_of (Cast _ e t)     = S.union (types_of t) (types_of e)
     types_of (Lift e t)     = S.union (types_of t) (types_of e)
     types_of (FunApp f xp)    = S.unions $ types_of f : map types_of xp
     types_of (Binder _ vs r xp t) = S.unions $ types_of t : types_of r : types_of xp : map types_of vs
@@ -404,7 +404,7 @@ ambiguities e@(Word (Var _ t))
 ambiguities e@(Lit _ t)    
         | S.null $ generics t = []
         | otherwise           = [e]
-ambiguities e@(Cast e' t)
+ambiguities e@(Cast _ e' t)
         | not $ S.null $ generics t = [e]
         | otherwise                 = ambiguities e'
 ambiguities e@(Lift e' t)

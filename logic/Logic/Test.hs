@@ -33,6 +33,7 @@ import Test.QuickCheck.Report
 import Test.UnitTest hiding (name)
 
 import Utilities.MapSyntax
+import Utilities.Syntactic
 
 left :: Type -> Type
 left  = suffix_generics "1"
@@ -218,6 +219,7 @@ test = test_cases "genericity"
         , aCase "QuasiQuotes with proof monads and assumptions" case20 result20
         , aCase "Records lookup syntax" case21 result21
         , aCase "Proofs with record lookup" case22 result22
+        , aCase "Testing the parser (\\qforall{x,y}{}{x = y})" case23 result23
         ]
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
@@ -397,7 +399,7 @@ case11 = return $ z3_code $ runSequent $ do
         v1 <- declare "v1" t
         v2 <- declare "v2" t
         assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
-        assume $ v2 `zelem` zrecord_set' (x ## zmk_set 7 >> b ## zcast (set_type bool) zset_all)
+        assume $ v2 `zelem` mk_zrecord_set (x ## zmk_set 7 >> b ## zcast (set_type bool) zset_all)
         check $ v1 .=. v2
 
 result11 :: String
@@ -684,7 +686,7 @@ case12 = discharge ("case12") $ runSequent $ do
         v1 <- declare "v1" t
         v2 <- declare "v2" t
         assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
-        assume $ v2 `zelem` zrecord_set' (x ## zmk_set 7 >> b ## zmk_set mztrue)
+        assume $ v2 `zelem` mk_zrecord_set (x ## zmk_set 7 >> b ## zmk_set mztrue)
         check $ v1 .=. v2
 
 result12 :: Validity
@@ -788,7 +790,7 @@ result17 = fromRight' $ rec `zelem` set
         zint_set = Right $ Word $ Var intV $ set_type int
         intV = [tex|\Int|]
         rec = zrec_update r (foo ## 7 >> bar ## zset_enum [1,2])
-        set = zrecord_set' (do foo ## zint_set; x ## zint_set; bar ## zpow_set zint_set)
+        set = mk_zrecord_set (do foo ## zint_set; x ## zint_set; bar ## zpow_set zint_set)
         r' = [smt|r|]
         r  = Right $ Word $ Var r' $ record_type $ M.fromList 
                     [ (bar,bool)
@@ -859,3 +861,15 @@ case22 = discharge "case22" $ runSequent $ do
 
 result22 :: Validity
 result22 = Invalid
+
+case23 :: IO UntypedExpr
+case23 = return $ either show_error id $ untypedExpression
+    where
+        expr = "\\qforall{x,y}{}{x = y}"
+        stringLi = asStringLi (mkLI expr) expr
+        setting = theory_setting basic_theory
+        untypedExpression = parse_expression setting stringLi
+        show_error = \x -> error ("couldn't parse expression:\n" ++ show_err x)
+
+result23 :: UntypedExpr
+result23 = zfalse

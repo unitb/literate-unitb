@@ -142,6 +142,9 @@ ctx = ctxWith []
 instance (Lift n,Lift t) => Lift (AbsVar n t) where
     lift = genericLift
 
+instance Lift CastType where
+    lift = genericLift
+
 instance (Lift t,Lift a,Lift q,Lift n) => Lift (GenExpr n t a q) where
     lift = genericLift
 

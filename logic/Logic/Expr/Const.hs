@@ -110,8 +110,10 @@ zfollows     = fun2 $ mk_fun [] [smt|follows|] [bool,bool] bool
 and_fun :: (IsName n,TypeSystem t) => Int -> AbsFun n t
 and_fun n = mk_fun [] [smt|and|] (replicate n bool) bool
 
-zall :: (TypeSystem2 t, IsQuantifier q, Foldable list,IsName n) 
-     => list (AbsExpr n t q) -> AbsExpr n t q
+zall :: ( TypeSystem t, TypeSystem a
+        , TypeAnnotationPair t a
+        , IsQuantifier q, Foldable list,IsName n)
+     => list (GenExpr n t a q) -> GenExpr n t a q
 zall xs'      = 
         case xs of
             []  -> ztrue
@@ -193,7 +195,7 @@ zjust :: IsName n => OneExprP n Type q
 zjust      = typ_fun1 (mk_fun [] [smt|Just|] [gA] (maybe_type gA))
 
 znothing :: IsName n => ExprPG n Type q
-znothing   = Right $ Cast (FunApp (mk_fun [] [smt|Nothing|] [] $ maybe_type gA) []) (maybe_type gA)
+znothing   = Right $ Cast CodeGen (FunApp (mk_fun [] [smt|Nothing|] [] $ maybe_type gA) []) (maybe_type gA)
 
 mznot :: (TypeSystem2 t,IsName n) => OneExprP n t q
 mznot me       = do
@@ -306,10 +308,10 @@ zpow         = fun2 $ mk_fun [] [smt|^|] [int,int] int
 zselect :: IsName n => TwoExprP n Type q
 zselect      = typ_fun2 (mk_fun [] [smt|select|] [array gA gB, gA] gB)
 
-zint :: (TypeSystem2 t, Integral int) => int -> AbsExpr n t q
+zint :: (TypeSystem t, Integral int) => int -> GenExpr n t a q
 zint n       = Lit (IntVal $ fromIntegral n) int
 
-zreal :: TypeSystem2 t => Double -> AbsExpr n t q
+zreal :: TypeSystem t => Double -> AbsExpr n t q
 zreal n      = Lit (RealVal n) real
 
 mzless :: (TypeSystem2 t,IsName n) => TwoExprP n t q
@@ -458,12 +460,12 @@ elem_fun :: (IsName n,TypeSystem t)
          => t -> AbsFun n t
 elem_fun t = mk_fun' [t] "elem" [t,set_type t] bool
 
-zelem        = typ_fun2 (elem_fun gA)
 zelem         :: (IsQuantifier q,IsName n) 
               => ExprPG n Type q -> ExprPG n Type q -> ExprPG n Type q
+zelem        = typ_fun2 (elem_fun gA)
 
-zelem'       = fun2' (elem_fun gA)
 zelem'        :: UntypedExpr -> UntypedExpr -> UntypedExpr
+zelem'       = fun2' (elem_fun gA)
 
 
 zelemUnchecked :: (TypeSystem t,IsName n,IsQuantifier q)

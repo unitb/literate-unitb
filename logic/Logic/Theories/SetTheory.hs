@@ -210,9 +210,12 @@ comprehension_fun = mk_fun' [gA,gB] "set" [set_type gA, array gA gB] $ set_type 
 zcomprehension :: [Var] -> ExprP -> ExprP -> ExprP
 zcomprehension = zquantifier comprehension
 
-zrecord_set' :: MapSyntax Name ExprP ()
+zcomprehension' :: [UntypedVar] -> UntypedExpr -> UntypedExpr -> UntypedExpr
+zcomprehension' vs r t = Binder comprehension vs r t ()
+
+mk_zrecord_set :: MapSyntax Name ExprP ()
              -> ExprP
-zrecord_set' = zrecord_set . runMap'
+mk_zrecord_set = zrecord_set . runMap'
 
 zrecord_set :: Map Name ExprP
             -> ExprP
@@ -224,6 +227,13 @@ zrecord_set m = do
         (r,r_decl) <- var "r" . recordTypeOfFields <$> traverseValidation getElements m
         let range = mzall $ mapWithKey (\field e -> zfield r field `zelem` e) m
         zcomprehension [r_decl] range r
+
+zrecord_set' :: Map Name UntypedExpr -> UntypedExpr
+zrecord_set' m = zcomprehension' [r_decl] range r
+    where
+        r_decl = Var [smt|r|] ()
+        r = Word r_decl
+        range = zall $ mapWithKey (\field e -> Record (FieldLookup r field) `zelem'` e) m
 
 qunion :: HOQuantifier
 qunion = UDQuant qunion_fun (set_type gA) QTTerm InfiniteWD
