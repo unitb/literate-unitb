@@ -7,6 +7,7 @@ import Logic.Expr.Const
 import Logic.Expr.Parser
 import Logic.Proof.Monad
 import Logic.QuasiQuote hiding (var)
+import Logic.Theories
 import Logic.Theory
 import Logic.Theories.SetTheory
 
@@ -220,6 +221,7 @@ test = test_cases "genericity"
         , aCase "Records lookup syntax" case21 result21
         , aCase "Proofs with record lookup" case22 result22
         , aCase "Testing the parser (\\qforall{x,y}{}{x = y})" case23 result23
+        , aCase "Testing the parser (\\neg (-2) = 2)" case23 result23
         ]
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
@@ -873,3 +875,15 @@ case23 = return $ either show_error id $ untypedExpression
 
 result23 :: UntypedExpr
 result23 = zfalse
+
+case24 :: IO UntypedExpr
+case24 = return $ either show_error id $ untypedExpression
+    where
+        expr = "\\neg (-2) = 2"
+        stringLi = asStringLi (mkLI expr) expr
+        setting = theory_setting' preludeTheories
+        untypedExpression = parse_expression setting stringLi
+        show_error = \x -> error ("couldn't parse expression:\n" ++ show_err x)
+
+result24 :: UntypedExpr
+result24 = ztrue

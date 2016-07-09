@@ -95,7 +95,18 @@ data Flipping = Flipped | Direct
     deriving (Eq,Ord,Show,Generic,Typeable,Bounded,Enum)
 
 data Notation = Notation
-    { _new_ops :: [Operator]
+    { -- _new_ops a list of all the operators defined by this Notation object
+      _new_ops :: [Operator]
+      -- _prec specifies a partial order using three levels of nested lists
+      -- (can be seen as a set of independent constraints)
+      -- Example:
+      -- if _prec == [ xs , ys ], xs specifies one way in which operators have
+      -- precedence and ys specifies a different way.
+      -- And when looking at xs, it may be the case that xs == [ [*,/] , [+,-] ]
+      -- which means that * binds tighter than both + and -, and so does /
+      -- However, no precedence is implied between * and / and between + and -
+      -- In a way, they are on the same level of precedence and using them together
+      -- is ambiguous; unless they are mutually left / right associative.
     , _prec :: [[[Operator]]] 
     , _left_assoc :: [[BinOperator]]
     , _right_assoc :: [[BinOperator]]

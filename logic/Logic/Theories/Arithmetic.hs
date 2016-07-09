@@ -21,23 +21,25 @@ import Data.List as L
 import Data.Map.Class
 
     -- arithmetic
-power   :: BinOperator
-mult    :: BinOperator
-plus    :: BinOperator
-minus   :: BinOperator
-less    :: BinOperator
-greater :: BinOperator
-leq     :: BinOperator
-geq     :: BinOperator
+power            :: BinOperator
+mult             :: BinOperator
+plus             :: BinOperator
+minus            :: BinOperator
+less             :: BinOperator
+greater          :: BinOperator
+leq              :: BinOperator
+geq              :: BinOperator
+prefix_minus     :: UnaryOperator
 
-power   = make BinOperator "^" "^"         Direct  pow_fun
-mult    = make BinOperator "*" "\\cdot"    Direct  times_fun
-plus    = make BinOperator "+" "+"         Direct  plus_fun
-minus   = make BinOperator "-" "-"         Direct  minus_fun
-less    = make BinOperator "<" "<"         Direct  less_fun
-greater = make BinOperator ">" ">"         Flipped less_fun
-leq     = make BinOperator "<=" "\\le"     Direct  le_fun
-geq     = make BinOperator ">=" "\\ge"     Flipped le_fun
+power            = make BinOperator "^" "^"         Direct  pow_fun
+mult             = make BinOperator "*" "\\cdot"    Direct  times_fun
+plus             = make BinOperator "+" "+"         Direct  plus_fun
+minus            = make BinOperator "-" "-"         Direct  minus_fun
+less             = make BinOperator "<" "<"         Direct  less_fun
+greater          = make BinOperator ">" ">"         Flipped less_fun
+leq              = make BinOperator "<=" "\\le"     Direct  le_fun
+geq              = make BinOperator ">=" "\\ge"     Flipped le_fun
+prefix_minus     = make UnaryOperator "-" "-"       prefix_minus_fun
 
 zsum :: [Var] -> ExprP -> ExprP -> ExprP
 zsum = zquantifier qsum
@@ -145,13 +147,16 @@ qsum = UDQuant (sum_fun gA) int (QTConst int) FiniteWD
 
 arith :: Notation
 arith = create $ do
-   new_ops     .= L.map Right [power,mult,plus,leq,geq
+   new_ops     .= Left prefix_minus
+                : L.map Right [power,mult,plus,leq,geq
                                 ,less,greater,minus]
    prec .= [ L.map (L.map Right)
                      [ [apply]
                      , [power]
-                     , [mult]
-                     , [plus,minus]
+                     , [mult] ]
+            ++ [Left prefix_minus]
+            : L.map (L.map Right)
+                     [ [plus,minus]
                      , [mk_fun_op]
                      , [ equal,leq
                        , less

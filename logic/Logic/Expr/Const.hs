@@ -347,13 +347,14 @@ mzpow         = typ_fun2 pow_fun
 (.^) :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 (.^) = mzpow
 
-pow_fun,times_fun,plus_fun,minus_fun,less_fun
+pow_fun,times_fun,plus_fun,minus_fun,less_fun,prefix_minus_fun
     :: (IsName n,TypeSystem t) => AbsFun n t
-pow_fun   = mk_fun [] [smt|^|] [int,int] int
-times_fun = mk_fun [] [smt|*|] [int,int] int
-plus_fun  = mk_fun [] [smt|+|] [int,int] int
-minus_fun = mk_fun [] [smt|-|] [int,int] int
-less_fun  = mk_fun [] [smt|<|] [int,int] bool
+pow_fun          = mk_fun [] [smt|^|] [int,int] int
+times_fun        = mk_fun [] [smt|*|] [int,int] int
+plus_fun         = mk_fun [] [smt|+|] [int,int] int
+minus_fun        = mk_fun [] [smt|-|] [int,int] int
+less_fun         = mk_fun [] [smt|<|] [int,int] bool
+prefix_minus_fun = mk_fun [] [smt|-|] [int] int
 
 mzint :: (TypeSystem2 t, Integral int) => int -> ExprPG n t q 
 mzint n       = Right $ zint n

@@ -132,8 +132,7 @@ ctxWith :: [Theory]
         -> (ParserSetting -> b) -> b
 ctxWith xs cmd f = f r
     where
-        r = execState cmd (theory_setting $ (empty_theory' "empty") { _extends = 
-                symbol_table $ xs ++ M.elems preludeTheories } )
+        r = execState cmd (theory_setting' (symbol_table $ xs ++ M.elems preludeTheories))
 
 ctx :: State ParserSetting a 
     -> (ParserSetting -> b) -> b
