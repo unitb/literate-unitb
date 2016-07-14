@@ -1,5 +1,9 @@
 name:              web-prover
 version:           0.0.0
+license:           MIT
+license-file:      LICENSE
+author:            Amin Bandali
+maintainer:        amin@aminb.org
 cabal-version:     >= 1.8
 build-type:        Simple
 
