@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+
 module Handler.Home where
 
 import Import
@@ -5,8 +7,13 @@ import Text.Julius (RawJS (..))
 
 import qualified Data.Char as C
 import qualified Data.Map as M
+import qualified Data.Text as T
+import qualified Data.Vector as V
 import qualified Logic.Theories as Theories
 import Logic.Names (render)
+
+import Model.Presets
+import Model.ProofForm
 
 -- This is a handler function for the GET request method on the HomeR
 -- resource pattern. All of your resource patterns are defined in
@@ -41,3 +48,12 @@ theoryNames = render <$> M.keys Theories.supportedTheories
 capitalize :: String -> String
 capitalize (h:rest) = C.toUpper h : (C.toLower <$> rest)
 capitalize [] = []
+
+ts :: forall a. ProofForm a -> [Char]
+ts = intercalate ";" . V.toList . theories 
+
+ds :: forall c. (IsString c, Monoid c) => ProofForm c -> c
+ds = intercalate ";" . map snd . V.toList . declarations
+
+as :: forall c. (IsString c, Monoid c) => ProofForm c -> c
+as = intercalate ";" . map snd . map snd . V.toList . assumptions

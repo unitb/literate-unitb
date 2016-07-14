@@ -2,7 +2,19 @@
   Literate Unit-B
   <small> Web Prover
 
-<.page-header><h2>Prover
+<.page-header>
+    <.btn-group .pull-right>
+      <button type="button" .btn .btn-primary .dropdown-toggle
+      data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Presets
+        <span .caret>
+      <ul .dropdown-menu>
+        <li .dropdown-header>Theories
+        $forall (Preset name _) <- presets
+          <li>
+            <a href="#" data-toggle="modal" data-target="##{name}Modal">
+              #{T.toTitle name}
+    <h2>Prover
 
 <noscript>
   <section.list-group>
@@ -64,7 +76,7 @@
         <small>
           <span .glyphicon .glyphicon-refresh .icon-margin>
         Prove
-      <button .btn .btn-normal type="reset">
+      <button .btn .btn-default type="reset">
         Clear
 
   <.col-lg-6 .col-lg-offset-1>
@@ -106,3 +118,17 @@
             <td><code>\dom.(x \fun y) = \{ x \} \3\land \ran.(x \fun y) = \{ y \}
             <td><img src=@{StaticR img_ex6_png}>
 
+<!-- Modals -->
+$forall (Preset name items) <- presets
+  <.modal .fade ##{name}Modal tabindex="-1" role="dialog" aria-labelledby="#{name}Label">
+    <.modal-dialog role="document">
+      <.modal-content>
+        <.modal-header>
+          <button type="button" .close data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;
+          <h4 class="modal-title" id="myModalLabel">#{T.toTitle name}
+        <.modal-body>
+            <.list-group>
+              $forall (PresetItem desc form) <- items
+                <a href="#" .list-group-item
+                onclick="preset('#{ts form}','#{ds form}','#{as form}','#{goal form}')">#{desc}

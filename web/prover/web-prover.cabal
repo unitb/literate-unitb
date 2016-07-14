@@ -23,11 +23,11 @@ library
                      Import.NoFoundation
                      Settings
                      Settings.StaticFiles
-                     Data.JSON
                      Handler.Common
                      Handler.Goal
                      Handler.Home
                      Logic.Prover
+                     Model.Presets
                      Model.ProofForm
                      Model.ProofResult
 

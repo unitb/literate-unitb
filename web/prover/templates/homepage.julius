@@ -242,5 +242,37 @@ $(function() {
     }
   }
 
-    $("##{rawJS resultBar}").fadeIn();
+  $("##{rawJS resultBar}").fadeIn();
+  $('.modal .list-group a').click(function(e) {
+    e.preventDefault();
+  });
+
 });
+
+function preset(theories, declarations, assumptions, goal) {
+  // theories is a string of theory names separated by ;
+  $(':reset').trigger('click');
+  $(".selectpicker").selectpicker("val", theories.split(";"));
+
+  // declarations is a string of declarations separated by ;
+  var ds = declarations.split(";");
+  $("##{rawJS declPrefix}1").val(ds[0]);
+  // if there's more, click the + button and add them
+  for (var i = 1; i < ds.length; i++) {
+    $("#add-#{rawJS declPrefix}").click();
+    $("##{rawJS declPrefix}" + (i+1)).val(ds[i]);
+  }
+
+  // assumptions is a string of declarations separated by ;
+  var as = assumptions.split(";");
+  $("##{rawJS asmPrefix}1").val(as[0]);
+  // if there's more, click the + button and add them
+  for (var i = 1; i < as.length; i++) {
+    $("#add-#{rawJS asmPrefix}").click();
+    $("##{rawJS asmPrefix}" + (i+1)).val(as[i]);
+  }
+  
+  $("##{rawJS goalTextareaId}").val(goal);
+  $(".modal").modal("hide");
+  $("##{rawJS goalTextareaId}").focus();
+}

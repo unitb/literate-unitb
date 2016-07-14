@@ -2,7 +2,6 @@ module Handler.Goal where
 
 import Import
 
-import Data.JSON()
 import Logic.Prover
 import Model.ProofForm
 

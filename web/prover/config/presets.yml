@@ -1,0 +1,42 @@
+- name: arithmetic
+  items:
+    - desc: Basic arithmetic (inequality)
+      form:
+        theories: 
+          - "arithmetic"
+        declarations: 
+          - - "decl1"
+            - "x : \\\\Int"
+        assumptions: 
+          - - "asm1"
+            - - "asm1"
+              - "x = 3"
+          - - "asm1"
+            - - "asm1"
+              - "x > 1"
+        goal: "x > 2"
+
+- name: sets
+  items:
+    - desc: Union and Subseteq
+      form:
+        theories: 
+          - "sets"
+        declarations: 
+          - - "decl1"
+            - "x,y,z,w : \\\\set[\\\\Int]"
+        assumptions: []
+        goal: "x \\\\bunion y \\\\subseteq z \\\\binter w"
+
+- name: functions
+  items:
+    - desc: Functions and Sets, with Exists
+      form:
+        theories: 
+          - "functions"
+          - "sets"
+        declarations: 
+          - - "decl1"
+            - "f : \\\\Int \\\\pfun \\\\set [\\\\Int]"
+        assumptions: []
+        goal: "\\\\qexists{x}{x \\\\in \\\\dom.f}{f.x \\\\subseteq \\\\dom.f}"
