@@ -2,36 +2,36 @@ module Logic.Expr.TypeChecking where
 
     -- Modules
 import Logic.Expr.Classes
-import Logic.Expr.Const
+import Logic.Expr.Context
 import Logic.Expr.Expr
 import Logic.Expr.Genericity
 import Logic.Expr.Type
-import Logic.Expr.Label
+import Logic.Names
 
     -- Libraries
-import Control.Monad.Reader
-import Control.Lens ((^.),view)
+import Control.Lens.Misc
+
+import Control.Monad
+import Control.Lens ((^.),(^?),_1,view)
 
 import Data.Either
 import Data.List
-import qualified Data.Map as M
+import qualified Data.Map.Class as M
 import qualified Data.Set as S
 
-import Text.Printf
+import Text.Pretty
+import Text.Printf.TH
 
-stripTypes :: GenExpr t0 t1 q -> GenExpr () t1 q
+stripTypes :: GenExpr n t0 t1 q -> GenExpr n () t1 q
 stripTypes (Word (Var n _))  = Word (Var n ())
-stripTypes (Const n _)       = Const n ()
-stripTypes (FunApp fun args) = FunApp fun' (map stripTypes args)
-    where
-        f = map $ const ()
-        fun' = Fun (f ts) n lf (f targs) ()
-        Fun ts n lf targs _rt = fun
+stripTypes (Lit n _)         = Lit n ()
+stripTypes (FunApp fun args) = FunApp fun (map stripTypes args)
 stripTypes (Binder q vs r t _) = Binder q (f vs) (stripTypes r) (stripTypes t) ()
     where
         f = map (\(Var n _) -> (Var n ()))
-stripTypes (Cast e t) = Cast (stripTypes e) t
+stripTypes (Cast ct e t) = Cast ct (stripTypes e) t
 stripTypes (Lift e t) = Lift (stripTypes e) t
+stripTypes (Record r) = Record $ stripTypes <$> r
 
 bind :: Maybe a -> String -> Either [String] a
 bind (Just x) _  = Right x
@@ -52,60 +52,69 @@ parCheck mx my = Left $ errors mx ++ errors my
         errors (Left xs) = xs
         errors (Right _) = []
 
-getElementType :: Type -> Either [String] Type
-getElementType t = runReaderT (getElementType_aux t t) 1
-
-getElementType_aux :: Type -> Type -> ReaderT Int (Either [String]) Type
-getElementType_aux orgt (VARIABLE _) = lift $ Left [[printf|Expecting array type but found %s|] $ show orgt]
-getElementType_aux orgt (GENERIC _)  = lift $ Left [[printf|Expecting array type but found %s|] $ show orgt]
-getElementType_aux _ (Gen (Sort "Array" "Array" 2) [_x,y]) = return y
-getElementType_aux orgt (Gen (DefSort _ _ args t) xs) = do
-    n <- ask
-    if n == 0 
-        then lift $ Left [[printf|Expecting array type but found %s|] $ show orgt]
-        else local (-1 +) $ getElementType_aux orgt $ instantiate (M.fromList $ zip args xs) t
-getElementType_aux orgt (Gen _ _) = lift $ Left [[printf|Expecting array type but found %s|] $ show orgt]
-
 newContext :: [UntypedVar] -> Context -> Context
 newContext us c@(Context ss vs fs ds dums) = Context ss (M.union vs' vs) fs ds dums
     where
         vs' = newDummies us c
 
-newDummies :: [UntypedVar] -> Context -> M.Map String Var
+newDummies :: [UntypedVar] -> Context -> M.Map Name Var
 newDummies us (Context _ _ _ _ dums) = vs'
         -- Context ss vs' fs ds dums
     where
         vs' = M.differenceWith favorSecond
                 (symbol_table (map addType us)) dums
-        addType (Var n ()) = Var n (GENERIC "a") 
+        addType (Var n ()) = Var n gA 
         favorSecond _x y = Just y
+
+tryBoth :: Either a b -> Either a b -> Either a b
+tryBoth x@(Right _) _ = x
+tryBoth (Left _) x    = x
 
 checkTypes :: Context -> UntypedExpr -> Either [String] Expr
 checkTypes c (Word (Var n ())) = do
     v <- bind (n `M.lookup` (c^.constants))
-        ([printf|%s is undeclared|] )
+        ([printf|%s is undeclared|] $ render n)
     return $ Word v
-checkTypes _ (Const n ()) = do
+checkTypes _ (Lit n ()) = do
     let t = case n of 
              RealVal _ -> real
              IntVal _  -> int
-    return (Const n t)
+    return (Lit n t)
 checkTypes c (FunApp f args) = do
-    let Fun _ n _ _ _ = f ;
+    let Fun _ n _ _ _ _ = f ;
         targs = map (checkTypes c) args
     tfun <- bind (n `M.lookup` (c^.functions))
-        ([printf|%s is undeclared|] ) ;
+        ([printf|%s is undeclared|] $ render n ) ;
     check_type tfun targs
-checkTypes c (Cast e t) = do
+checkTypes c r@(Record (FieldLookup e field)) = do
+    e' <- checkTypes c e
+    let t = type_of e'
+    trecs <- bind (t^?_FromSort._1._RecordSort)
+        ([printf|Record %s has no field %s|] (show r) (render field))
+    _ <- bind (field `M.lookup` trecs)
+        ([printf|Type error when type checking field %s|] $ render field)
+    return (Record (FieldLookup e' field))
+checkTypes c (Record (RecUpdate e table)) = do
+    e' <- checkTypes c e
+    let t = type_of e'
+    _ <- bind (t^?_FromSort._1._RecordSort)
+        ([printf|Expression %s is not a record|] (show e))
+    Record . RecUpdate e' <$> traverseValidation (checkTypes c) table
+checkTypes c (Record (RecLit table)) =
+    Record . RecLit <$> traverseValidation (checkTypes c) table
+checkTypes c (Cast ct e t) = do
     e' <- zcast t $ checkTypes c e
-    return (Cast e' t)
-checkTypes c (Lift e t) = do
-    elt <- getElementType t
-    e'  <- zcast elt $ checkTypes c e
-    return (Lift e' t)
+    return (Cast ct e' t)
+checkTypes c (Lift e _) = do
+    let phonyFun t = Fun [] [smt|lift|] Lifted [t] int FiniteWD
+        setT = set_type gA
+        arrayT = array gA gB
+        mkLift _ e t = Lift (head e) (head t)
+    check_type' mkLift (phonyFun setT) [checkTypes c e] `tryBoth`
+        check_type' mkLift (phonyFun arrayT) [checkTypes c e] 
 checkTypes c' (Binder q vs' r t _) = do
     let c  = newContext vs' c'
-        ns = map (view name) vs' :: [String]
+        ns = map (view name) vs' :: [Name]
         vs = M.ascElems $ newDummies vs' c'
     (r'',t'') <- parCheck 
         (zcast bool $ checkTypes c r) 
@@ -119,7 +128,7 @@ checkTypes c' (Binder q vs' r t _) = do
         let ys = map var_type $ S.toList xs
         t' <- maybe 
             (fail $ [printf|Inconsistent type for %s: %s|] 
-                    x
+                    (render x)
                     $ intercalate "," $ map pretty ys)
             return
             $ foldM common gA ys

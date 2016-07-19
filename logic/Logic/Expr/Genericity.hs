@@ -4,7 +4,7 @@
 module Logic.Expr.Genericity 
     ( TypeSystem2(..)
     , typ_fun1, typ_fun2, typ_fun3
-    , common, check_type
+    , common, check_type, check_type'
     , unify, normalize_generics
     , ambiguities, suffix_generics
     , specialize
@@ -88,14 +88,21 @@ class TypeSystem t => TypeSystem2 t where
                => [AbsExpr n t q] 
                -> AbsFun n t 
                -> Maybe (AbsExpr n t q) 
+    check_args xs f = check_args' (\f xs _ -> FunApp f xs) f xs
+    check_args' :: (IsQuantifier q,IsName n)
+                => (AbsFun n t -> [AbsExpr n t q] -> [t] -> AbsExpr n t q)
+                -> AbsFun n t 
+                -> [AbsExpr n t q]
+                -> Maybe (AbsExpr n t q) 
     zcast :: (IsQuantifier q,IsName n)
           => t -> ExprPG n t q
           -> ExprPG n t q
 
 instance TypeSystem2 FOType where
-    check_args xp f@(Fun _ _ _ ts _ _) = do
-            guard (map type_of xp == ts)
-            return $ FunApp f xp
+    check_args' f fun xp = do
+            let ts = fun^.arguments
+            guard (fmap type_of xp == ts)
+            return $ f fun xp ts
     zcast t me = do
             e <- me
             let { err_msg = unlines
@@ -109,7 +116,7 @@ instance TypeSystem2 FOType where
             return e
 
 instance TypeSystem2 GenericType where
-    check_args xp (Fun gs name lf ts t wd) = do
+    check_args' f (Fun gs name lf ts t wd) xp = do
             let n       = length ts
             guard (n == length ts)
             let args    = zipWith rewrite_types (map show [1..n]) xp
@@ -125,7 +132,7 @@ instance TypeSystem2 GenericType where
                 us    = L.map (ft "1") ts
                 u     = ft "1" t
                 args2 = map (fe "2") args
-                expr = FunApp (Fun gs2 name lf us u wd) $ args2 
+                expr = f (Fun gs2 name lf us u wd) args2 us
             return expr
     zcast t me = do
             e <- me
@@ -148,7 +155,15 @@ check_type :: (IsQuantifier q,IsName n)
            => AbsFun n Type 
            -> [ExprPG n Type q] 
            -> ExprPG n Type q
-check_type f@(Fun _ n _ ts t _) mxs = do
+check_type = check_type' $ \fun xs _ -> FunApp fun xs
+
+check_type' :: (IsQuantifier q,IsName n)
+            => (AbsFun n Type
+                 -> [AbsExpr n Type q] -> [Type] -> AbsExpr n Type q)
+            -> AbsFun n Type 
+            -> [ExprPG n Type q] 
+            -> ExprPG n Type q
+check_type' f fun@(Fun _ n _ ts t _) mxs = do
         xs <- check_all mxs
         let args = unlines $ map (\(i,x) -> unlines 
                                     [ [printf|   argument %d:  %s|] i (pretty x)
@@ -158,7 +173,7 @@ check_type f@(Fun _ n _ ts t _) mxs = do
                         [ [printf|arguments of '%s' do not match its signature:|] (render n)
                         , [printf|   signature: %s -> %s|] (pretty ts) (pretty t)
                         , [printf|%s|] args ]
-        maybe (Left [err_msg]) Right $ check_args xs f
+        maybe (Left [err_msg]) Right $ check_args' f fun xs
 
 type OneExprP n t q   = IsQuantifier q => ExprPG n t q -> ExprPG n t q
 type TwoExprP n t q   = IsQuantifier q => ExprPG n t q -> ExprPG n t q -> ExprPG n t q
