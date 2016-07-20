@@ -6,7 +6,7 @@
           - "arithmetic"
         declarations: 
           - - "decl1"
-            - "x : \\\\Int"
+            - "x : \\Int"
         assumptions: 
           - - "asm1"
             - - "asm1"
@@ -24,9 +24,9 @@
           - "sets"
         declarations: 
           - - "decl1"
-            - "x,y,z,w : \\\\set[\\\\Int]"
+            - "x,y,z,w : \\set[\\Int]"
         assumptions: []
-        goal: "x \\\\bunion y \\\\subseteq z \\\\binter w"
+        goal: "x \\bunion y \\subseteq z \\binter w"
 
 - name: functions
   items:
@@ -37,6 +37,6 @@
           - "sets"
         declarations: 
           - - "decl1"
-            - "f : \\\\Int \\\\pfun \\\\set [\\\\Int]"
+            - "f : \\Int \\pfun \\set [\\Int]"
         assumptions: []
-        goal: "\\\\qexists{x}{x \\\\in \\\\dom.f}{f.x \\\\subseteq \\\\dom.f}"
+        goal: "\\qexists{x}{x \\in \\dom.f}{f.x \\subseteq \\dom.f}"

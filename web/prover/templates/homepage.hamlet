@@ -10,7 +10,7 @@
         <span .caret>
       <ul .dropdown-menu>
         <li .dropdown-header>Theories
-        $forall (Preset name _) <- presets
+        $forall (PresetMap _ name _) <- presetMaps presets
           <li>
             <a href="#" data-toggle="modal" data-target="##{name}Modal">
               #{T.toTitle name}
@@ -80,7 +80,7 @@
         Clear
 
   <.col-lg-6 .col-lg-offset-1>
-    <div ##{resultBar} .alert .alert-info role="alert" style="display: none">
+    <div ##{resultBarId} .alert .alert-info role="alert" style="display: none">
       <span .glyphicon .glyphicon-info-sign .icon-margin aria-hidden="true">
       <span .sr-only>Ready
       Ready
@@ -119,7 +119,7 @@
             <td><img src=@{StaticR img_ex6_png}>
 
 <!-- Modals -->
-$forall (Preset name items) <- presets
+$forall (PresetMap pmId name items) <- presetMaps presets
   <.modal .fade ##{name}Modal tabindex="-1" role="dialog" aria-labelledby="#{name}Label">
     <.modal-dialog role="document">
       <.modal-content>
@@ -128,7 +128,8 @@ $forall (Preset name items) <- presets
             <span aria-hidden="true">&times;
           <h4 class="modal-title" id="myModalLabel">#{T.toTitle name}
         <.modal-body>
-            <.list-group>
-              $forall (PresetItem desc form) <- items
-                <a href="#" .list-group-item
-                onclick="preset('#{ts form}','#{ds form}','#{as form}','#{goal form}')">#{desc}
+          <.list-group>
+            $forall (PresetItem piId desc _) <- items
+              <a href="#" .list-group-item .presetitem
+              data-presetId="#{pmId}" data-itemId="#{piId}">#{desc}
+

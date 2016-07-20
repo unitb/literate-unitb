@@ -26,6 +26,7 @@ library
                      Handler.Common
                      Handler.Goal
                      Handler.Home
+                     Handler.Preset
                      Logic.Prover
                      Model.Presets
                      Model.ProofForm

@@ -43,6 +43,58 @@ $(function() {
     $form.find('.selectpicker').selectpicker().parent().find("button").focus();
   });
 
+  $('.presetitem').on('click', function(evt) {
+    evt.preventDefault();
+    // Make an AJAX request to the server to request a preset
+    $.ajax({
+      url: '@{PresetR}',
+      type: 'POST',
+      contentType: "application/json",
+      data: JSON.stringify([parseInt(this.getAttribute("data-presetId")),
+        parseInt(this.getAttribute("data-itemId"))]),
+      success: function (data) {
+        // reset the form
+        $(':reset').trigger('click');
+
+        // select the theories
+        $(".selectpicker").selectpicker("val", data.form.theories);
+
+        if (data.form.declarations.length > 0) {
+          // fill in the first declaration
+          $("##{rawJS declPrefix}1").val(data.form.declarations[0][1]);
+          // if there's more, click the + button and add them
+          for (var i = 1; i < data.form.declarations.length; i++) {
+            $("#add-#{rawJS declPrefix}").click();
+            $("##{rawJS declPrefix}" + (i+1)).val(data.form.declarations[i][1]);
+          }
+        }
+
+        if (data.form.assumptions.length > 0) {
+          // fill in the first assumption (and its label)
+          $("##{rawJS asmPrefix}1").val(data.form.assumptions[0][1][1]);
+          $("##{rawJS asmPrefix}1").prev().text(data.form.assumptions[0][1][0]);
+          // if there's more, click the + button and add them
+          for (var i = 1; i < data.form.assumptions.length; i++) {
+            $("#add-#{rawJS asmPrefix}").click();
+            // assumption
+            $("##{rawJS asmPrefix}" + (i+1)).val(data.form.assumptions[i][1][1]);
+            // its label
+            $("##{rawJS asmPrefix}" + (i+1)).prev().text(data.form.assumptions[i][1][0]);
+          }
+        }
+
+        // fill in the goal
+        $("##{rawJS goalTextareaId}").val(data.form.goal);
+
+        $(".modal").modal("hide");
+        $("##{rawJS goalTextareaId}").focus();
+      },
+      error: function (data) {
+        console.log("Error getting preset: " + data);
+      },
+    });
+  });
+
   $("##{rawJS goalFormId}").submit(function(event) {
     event.preventDefault();
 
@@ -93,7 +145,7 @@ $(function() {
   // helper function used for updating the output bar
   // takes a color class, icon class (glyphicons), a text, and a screen-reader text
   function update_bar(color_class, icon_class, text, sr_text) {
-    var bar  = $("##{rawJS resultBar}"),
+    var bar  = $("##{rawJS resultBarId}"),
         icon = $(bar).children(".glyphicon"),
         sr   = $(bar).children(".sr-only");
 
@@ -242,37 +294,9 @@ $(function() {
     }
   }
 
-  $("##{rawJS resultBar}").fadeIn();
+  $("##{rawJS resultBarId}").fadeIn();
   $('.modal .list-group a').click(function(e) {
     e.preventDefault();
   });
 
 });
-
-function preset(theories, declarations, assumptions, goal) {
-  // theories is a string of theory names separated by ;
-  $(':reset').trigger('click');
-  $(".selectpicker").selectpicker("val", theories.split(";"));
-
-  // declarations is a string of declarations separated by ;
-  var ds = declarations.split(";");
-  $("##{rawJS declPrefix}1").val(ds[0]);
-  // if there's more, click the + button and add them
-  for (var i = 1; i < ds.length; i++) {
-    $("#add-#{rawJS declPrefix}").click();
-    $("##{rawJS declPrefix}" + (i+1)).val(ds[i]);
-  }
-
-  // assumptions is a string of declarations separated by ;
-  var as = assumptions.split(";");
-  $("##{rawJS asmPrefix}1").val(as[0]);
-  // if there's more, click the + button and add them
-  for (var i = 1; i < as.length; i++) {
-    $("#add-#{rawJS asmPrefix}").click();
-    $("##{rawJS asmPrefix}" + (i+1)).val(as[i]);
-  }
-  
-  $("##{rawJS goalTextareaId}").val(goal);
-  $(".modal").modal("hide");
-  $("##{rawJS goalTextareaId}").focus();
-}
