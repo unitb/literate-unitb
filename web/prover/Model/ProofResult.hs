@@ -47,8 +47,13 @@ instance ToJSON ProofResult where
   toJSON pr@ProofResult{..} = object [
     either
       (\errs -> "error" .= show_err errs)
-      (\val -> "result" .= show val)
+      (\val -> "result" .= showValidity val)
       (pr ^. result),
     "colorClass" .= colorClassFromResult (pr ^. result),
     "iconClass"  .= iconClassFromResult (pr ^. result)
     ]
+
+showValidity :: Z3.Validity -> Text
+showValidity Z3.Valid      = "Valid"
+showValidity Z3.Invalid    = "Invalid"
+showValidity Z3.ValUnknown = "Unknown"
