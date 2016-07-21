@@ -7,7 +7,6 @@ import Logic.Expr.Const
 import Logic.Operator
 import Logic.Theory
 
-import Logic.Theories.Arithmetic
 import Logic.Theories.SetTheory
 
     -- Libraries
@@ -86,8 +85,7 @@ between_lr = make Command "\\betweenLR" "betweenLR" 3 $ funOf between_lr_fun
 interval_theory :: Theory
 interval_theory = (empty_theory' "intervals") 
         { _extends = symbol_table
-            [ set_theory
-            , arithmetic ]
+            [ set_theory ]
         , _funs = symbol_table
             [ interval_r_fun, interval_l_fun
             , interval_lr_fun, interval_fun 
@@ -161,4 +159,3 @@ interval_notation :: Notation
 interval_notation = empty_notation
     & commands   .~ [ between, between_l, between_r, between_lr
                     , interval, interval_l, interval_r, interval_lr ] 
-          

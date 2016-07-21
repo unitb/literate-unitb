@@ -5,7 +5,6 @@ import Logic.Names
 
 import Logic.Theories.Arithmetic
 import Logic.Theories.FunctionTheory
-import Logic.Theories.IntervalTheory
 import Logic.Theories.PredCalc
 import Logic.Theories.RelationTheory
 import Logic.Theories.SetTheory
@@ -19,8 +18,7 @@ supportedTheories = symbol_table
     , function_theory
     , relation_theory
     , arithmetic
-    , pred_calc
-    , interval_theory ]
+    , pred_calc ]
 
 preludeTheories :: Table Name Theory
 preludeTheories = symbol_table

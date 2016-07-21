@@ -9,6 +9,7 @@ import Logic.Proof hiding (syntacticProp)
 import Logic.Theory
 import Logic.Theory.Monad
 
+import Logic.Theories.IntervalTheory
 import Logic.Theories.SetTheory
 import Logic.Theories.FunctionTheory
 
@@ -61,7 +62,7 @@ znat_set = zcomprehension [n_decl] (0 .<= n) n
 
 arithmetic :: Theory
 arithmetic = (empty_theory' "arithmetic") { 
-        _extends = symbol_table [set_theory]
+        _extends = symbol_table [set_theory,interval_theory]
         , _types = symbol_table [IntSort,RealSort]
         , _funs = symbol_table 
             [ sum_fun gA 
@@ -168,7 +169,7 @@ arith = create $ do
           , ((geq,greater),greater)
           , ((greater,geq),greater)
           , ((greater,greater),greater) ] 
-   commands .= [make Command "\\card" "card" 1 card_fun]
+   commands .= (make Command "\\card" "card" 1 card_fun)
+             : (interval_notation ^. commands)
    quantifiers .= 
         [ ([tex|\qsum|], qsum) ]
-          
