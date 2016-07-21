@@ -353,7 +353,7 @@ instance Typed Integer where
     type_of = id
 
 case10 :: IO String
-case10 = return $ z3_code $ runSequent' $ do
+case10 = return $ z3_code $ _goal $ runSequent' $ do
         let t = record_type $ runMap' $ do
                 x ## int
                 b ## bool
@@ -386,7 +386,7 @@ result10 = unlines
     ]
 
 case11 :: IO String
-case11 = return $ z3_code $ runSequent' $ do
+case11 = return $ z3_code $ _goal $ runSequent' $ do
         include set_theory
         include basic_theory
         let t = record_type $ runMap' $ do
@@ -673,7 +673,7 @@ result11 = unlines
     ]
 
 case12 :: IO Validity
-case12 = discharge ("case12") $ runSequent' $ do
+case12 = discharge ("case12") $ _goal $ runSequent' $ do
         include set_theory
         include basic_theory
         let t = record_type $ runMap' $ do
@@ -798,7 +798,7 @@ result17 = fromRight' $ rec `zelem` set
         foo = [smt|foo|]
 
 case18 :: IO Validity
-case18 = discharge("case13") $ runSequent' $ do
+case18 = discharge("case13") $ _goal $ runSequent' $ do
     declare "x" int
     checkQ $ [expr| x = x |]
 
@@ -806,7 +806,7 @@ result18 :: Validity
 result18 = Valid
 
 case19 :: IO Validity
-case19 = discharge("case14") $ runSequent' $ do
+case19 = discharge("case14") $ _goal $ runSequent' $ do
     declare "x" int
     include set_theory
     checkQ $ [expr| x \in \{x\} |]
@@ -815,7 +815,7 @@ result19 :: Validity
 result19 = Valid
 
 case20 :: IO Validity
-case20 = discharge("case15") $ runSequent' $ do
+case20 = discharge("case15") $ _goal $ runSequent' $ do
     declare "x" int
     assumeQ $ [expr| x = x |]
     checkQ $ [expr| \neg x = x |]
@@ -847,7 +847,7 @@ result21 = Record (FieldLookup r x) `zeq` zint 7
         bar = [smt|bar|]
 
 case22 :: IO Validity
-case22 = discharge "case22" $ runSequent' $ do
+case22 = discharge "case22" $ _goal $ runSequent' $ do
     let t = record_type $ runMap' $ do
                 x ## bool
                 bar ## int

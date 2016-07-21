@@ -2,7 +2,6 @@ module Logic.Prover where
 
 import Logic.Expr
 import Logic.Proof.Monad
-import Logic.Proof.Sequent hiding (goal)
 import Logic.Theories
 import Logic.Theory
 import Utilities.Syntactic
@@ -24,7 +23,7 @@ pfStringToPfStringLi p@(ProofForm _ d a g) =
       , goal = toSringLi "goal" g
     }
 
-pfStringLiToSequent :: ProofForm StringLi -> Either [Error] Sequent
+pfStringLiToSequent :: ProofForm StringLi -> Either [Error] SequentWithWD
 pfStringLiToSequent (ProofForm t d a g) = runSequent $ do
     let theories = getTheories t
     mapM_ include  theories
@@ -32,13 +31,13 @@ pfStringLiToSequent (ProofForm t d a g) = runSequent $ do
     mapM_ assumeE  (map snd $ map snd a)
     checkE g
 
-discharge :: Either [Error] Sequent -> IO ProofResult
+discharge :: Either [Error] SequentWithWD -> IO ProofResult
 discharge e = do
     case e of
         Left err ->
             return $ ProofResult $ Left err
         Right s -> do
-            val <- Z3.discharge "goal" s
+            val <- Z3.dischargeBoth "goal" s
             return $ ProofResult $ Right val
 
 prove :: ProofForm String -> IO ProofResult

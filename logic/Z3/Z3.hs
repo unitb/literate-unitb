@@ -5,6 +5,7 @@ module Z3.Z3
     , Satisfiability ( .. )
     , discharge_all
     , discharge, verify
+    , dischargeBoth
     , Context
     , entailment
     , var_decl 
@@ -31,6 +32,7 @@ where
 import Logic.Expr hiding ((</>))
 import Logic.Expr.Declaration
 import Logic.Proof
+import Logic.Proof.Monad
 
 import Z3.Version
 
@@ -291,6 +293,11 @@ map_failures po_name cmd = catch cmd $ \(Z3Exception i msg) -> do
 
 discharge :: Label -> Sequent -> IO Validity
 discharge lbl po = discharge' Nothing lbl po
+
+dischargeBoth :: Label -> SequentWithWD -> IO (SequentWithWD' Validity)
+dischargeBoth lbl pos = SequentWithWD
+        <$> discharge' Nothing lbl (_wd pos)
+        <*> discharge' Nothing lbl (_goal pos)
 
 discharge' :: Maybe Int      -- Timeout in seconds
            -> Label

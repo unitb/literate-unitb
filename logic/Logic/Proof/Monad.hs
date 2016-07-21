@@ -7,38 +7,75 @@ import Logic.Expr.Printable
 import Logic.Proof.Sequent
 import Logic.Theories
 import Logic.Theory
+import Logic.WellDefinedness
 
     -- Libraries
 import Control.Lens hiding (Context)
 import Control.Monad.RWS hiding ((<>))
+import Control.Monad.State
 import Control.Precondition
 
 import Data.Map.Class as M
 import Data.Set as S
 
+import GHC.Generics.Instances
+
 import Utilities.Syntactic
 import Utilities.Table
 
-newtype SequentM a = SequentM (RWST () ([Sort],[Var],[Expr],[Context]) (ParserSetting,[Theory],Table Name Var) (Either [Error]) a)
+newtype SequentM a = SequentM (RWST () SeqDefinitions (ParserSetting,[Theory],Table Name Var) (Either [Error]) a)
     deriving (Functor,Applicative,Monad)
 
-runSequent :: SequentM Expr -> Either [Error] Sequent
+type SequentWithWD = SequentWithWD' Sequent
+data SequentWithWD' a = SequentWithWD
+    { _wd :: a 
+    , _goal :: a }
+    deriving (Eq, Show, Generic)
+
+data SeqDefinitions = SeqDefinitions
+    { _seqDefinitionsSorts :: [Sort] 
+    , _vars  :: [Var] 
+    , _asms  :: [Expr] 
+    , _facts :: [Expr] 
+    , _ctxs  :: [Context] }
+    deriving Generic
+
+instance Monoid SeqDefinitions where
+    mempty = genericMEmpty
+    mappend = genericMAppend
+    mconcat = genericMConcat
+
+makeLenses ''SeqDefinitions
+makeFields ''SeqDefinitions
+
+runSequent_ :: SequentM Expr -> Either [Error] Sequent
+runSequent_ = fmap _goal . runSequent
+
+runSequent :: SequentM Expr -> Either [Error] SequentWithWD
 runSequent (SequentM cmd) =
-    mkSequent <$> evalRWST cmd () (st, M.elems preludeTheories, M.empty)
+    mkSequent <$> evalRWST cmd () (parser, M.elems preludeTheories, M.empty)
     where
-        st = theory_setting $ (empty_theory' "empty") { _extends =  preludeTheories }
+        parser = theory_setting $ (empty_theory' "empty") { _extends =  preludeTheories }
 
 runSequent' :: Pre
-            => SequentM Expr -> Sequent
+            => SequentM Expr -> SequentWithWD
 runSequent' = fromRight' . runSequent
 
-mkSequent :: (Expr, ([Sort], [Var], [Expr], [Context])) -> Sequent
-mkSequent (g, (s, vs, asm, ctx)) = empty_sequent 
+mkSequent :: (Expr, SeqDefinitions) -> SequentWithWD
+mkSequent (g, (SeqDefinitions s vs asm thms ctx)) = SequentWithWD
+    { _goal = empty_sequent 
         & goal .~ g 
-        & nameless .~ asm
+        & nameless .~ thms ++ asm
         & sorts .~ symbol_table s
         & constants .~ symbol_table vs
         & context %~ merge_ctx (merge_all_ctx ctx)
+    , _wd = empty_sequent
+        & goal .~ well_definedness (zall asm `zimplies` g)
+        & nameless .~ thms
+        & sorts .~ symbol_table s
+        & constants .~ symbol_table vs
+        & context %~ merge_ctx (merge_all_ctx ctx)
+    }
 
 updateSetting :: SequentM ()
 updateSetting = SequentM $ do
@@ -48,10 +85,18 @@ updateSetting = SequentM $ do
     ds <- use _3
     _1.decls %= M.union ds
 
+tell' :: (Monoid w,MonadWriter w m)
+      => State w k
+      -> m ()
+tell' cmd = tell $ execState cmd mempty
+
 include :: Theory -> SequentM ()
 include t = do
     SequentM $ do
-        tell ([],[],M.elems $ theory_facts t,[theory_ctx t])
+        --tell ([],[],M.elems $ theory_facts t,[theory_ctx t])
+        tell' $ do
+            facts .= M.elems (theory_facts t)
+            ctxs .= [theory_ctx t]
         _2 %= (t:)
     updateSetting
 
@@ -60,7 +105,7 @@ assume :: Pre
 assume e = do
         let e' = fromRight' e
         collectDeclaration e'
-        SequentM $ tell ([],[],[e'],[])
+        SequentM $ tell' $ asms .= [e'] -- tell ([],[],[e'],[])
 
 assumeQ :: Pre
         => (ParserSetting -> DispExpr) -> SequentM ()
@@ -76,12 +121,12 @@ assumeE str = do
             Right de -> do
                 let e = getExpr de
                 collectDeclaration e
-                SequentM $ tell ([],[],[e],[])
+                SequentM $ tell' $ asms .= [e] -- tell ([],[],[e],[])
 
 collectDeclaration :: Expr -> SequentM ()
 collectDeclaration e = SequentM $ do
         let ts = types_of e^.partsOf (to S.toList.traverse.foldSorts)
-        tell (ts,[],[],[])
+        tell' $ sorts .= ts -- tell (ts,[],[],[])
 
 check :: Pre
       => ExprP -> SequentM Expr
@@ -116,7 +161,7 @@ declare' :: Pre
 declare' v = do
         collectDeclaration $ Word v
         SequentM $ do
-            tell ([],[v],[],[])
+            tell' $ vars .= [v] -- tell ([],[v],[],[])
             _3 %= insert_symbol v
             _1.decls %= insert_symbol v
         return $ Right $ Word v
