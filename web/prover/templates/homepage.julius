@@ -147,14 +147,15 @@ $(function() {
   function update_bar(color_class, icon_class, text, sr_text) {
     var bar  = $("##{rawJS resultBarId}"),
         icon = $(bar).children(".glyphicon"),
-        sr   = $(bar).children(".sr-only");
+        sr   = $(bar).children(".sr-only"),
+        samp = $(bar).children("samp");
 
     $(bar).fadeOut("fast", function() {
       bar.removeClass();
       bar.addClass("alert " + color_class);
       icon.removeClass();
       icon.addClass("icon-margin glyphicon " + icon_class);
-      $(bar).contents().last().replaceWith(text);
+      $(samp).text(text.trim());
       sr.text(sr_text);
 
       $(bar).fadeIn("fast");

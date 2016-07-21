@@ -83,7 +83,7 @@
     <div ##{resultBarId} .alert .alert-info role="alert" style="display: none">
       <span .glyphicon .glyphicon-info-sign .icon-margin aria-hidden="true">
       <span .sr-only>Ready
-      Ready
+      <samp>Ready
 
 <section.page-header.row>
   <.col-lg-10>
