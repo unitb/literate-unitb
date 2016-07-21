@@ -26,11 +26,9 @@ import Utilities.Table
 newtype SequentM a = SequentM (RWST () SeqDefinitions (ParserSetting,[Theory],Table Name Var) (Either [Error]) a)
     deriving (Functor,Applicative,Monad)
 
-type SequentWithWD = SequentWithWD' Sequent
-data SequentWithWD' a = SequentWithWD
-    { _wd :: a 
-    , _goal :: a }
-    deriving (Eq, Show, Generic)
+data SequentWithWD = SequentWithWD
+    { _wd :: Sequent
+    , _goal :: Sequent }
 
 data SeqDefinitions = SeqDefinitions
     { _seqDefinitionsSorts :: [Sort] 
