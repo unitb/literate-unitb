@@ -127,7 +127,12 @@ $(function() {
         assumptions: asms,
         goal: goal,
       }),
+      beforeSend: function () {
+        $("body, .btn").css('cursor', 'wait');
+      },
       success: function (data) {
+        $("body").css('cursor', 'auto');
+        $(".btn").css('cursor', 'pointer');
         if (data.hasOwnProperty("result")) {
           update_bar(data["colorClass"], data["iconClass"], data["result"], "Result:");
         }
@@ -136,6 +141,8 @@ $(function() {
         }
       },
       error: function (data) {
+        $("body").css('cursor', 'auto');
+        $(".btn").css('cursor', 'pointer');
         console.log("Error creating goal: " + data);
       },
     });
