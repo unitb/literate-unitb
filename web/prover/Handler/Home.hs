@@ -9,6 +9,7 @@ import qualified Data.Char as C
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Logic.Theories as Theories
+import Logic.Theories.IntervalTheory (interval_theory)
 import Logic.Names (render)
 
 import Model.Presets
@@ -40,7 +41,8 @@ resultBarId = "resultBar"
 
 
 theoryNames :: [String]
-theoryNames = render <$> M.keys Theories.supportedTheories
+theoryNames = render <$> M.keys
+    (M.filter (/= interval_theory) Theories.supportedTheories)
 
 capitalize :: String -> String
 capitalize (h:rest) = C.toUpper h : (C.toLower <$> rest)

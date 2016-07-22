@@ -91,6 +91,7 @@ library
                  , lens
                  , literate-unitb-logic
                  , literate-unitb-utils
+                 , invariants
 
 executable         web-prover
     if flag(library-only)
