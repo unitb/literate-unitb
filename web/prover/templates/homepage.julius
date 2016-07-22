@@ -37,6 +37,39 @@ $(function() {
   $(':reset').on('click', function(evt) {
     evt.preventDefault();
     $form = $(evt.target).closest('form');
+    var classes = ["#{rawJS declPrefix}", "#{rawJS asmPrefix}"];
+
+    // form a string of the format ".add-decl:not(:first), .add-asm:not(:first)"
+    // to query all added input boxes, except the first one of each group,
+    // then remove them.
+    $form.find(
+      classes
+        .map(function(el) { return "." + el + ":not(:first)"; })
+        .join(", ")
+      ).remove();
+
+    // make sure the remaining one input box of each group is the "#1"
+    // of that group (e.g. asm1)
+    classes.forEach(function (item) {
+      var $item = $("." + item);
+
+      $item.find("input")               // get the input field of the new element
+        .attr("id", item + "1")         // assign new id to the input
+        .attr("name", item + "1");      // assign new name
+
+      var lbl = $item.find("label");    // get the label of the new element
+      lbl.text(item + "1");             // update the label text
+
+      // only set the for attribute if contenteditable attribute is not present
+      if (! lbl[0].hasAttribute("contenteditable")) {
+          lbl.attr("for", item + "1");  // assign new for
+      }
+
+      // reset the numeric part of the id of the container to 1
+      // e.g. div-asm1
+      $item.attr("id", $item.attr("id").replace(/\d+/g,'') + "1");
+    });
+
     $form[0].reset();
     $form.find('select').selectpicker('render');
     update_bar("alert-info", "glyphicon-info-sign", "Ready", "Ready");
