@@ -221,7 +221,7 @@ test = test_cases "genericity"
         , aCase "Records lookup syntax" case21 result21
         , aCase "Proofs with record lookup" case22 result22
         , aCase "Testing the parser (\\qforall{x,y}{}{x = y})" case23 result23
-        , aCase "Testing the parser (\\neg (-2) = 2)" case23 result23
+        , aCase "Testing the parser (\\neg (-2) = 2)" case24 result24
         ]
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)

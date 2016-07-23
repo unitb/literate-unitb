@@ -1,233 +1,664 @@
-Preprocessing library literate-unitb-0.1.0.0...
-In-place registering literate-unitb-0.1.0.0...
-Preprocessing executable 'test' for literate-unitb-0.1.0.0...
-Running test...
+failed
+
+src/Document/Tests/LockFreeDeque.hs:5301:63:
+    = is undeclared
+
+failed
+
+src/Document/Tests/SmallMachine.hs:455:25:
+    = is undeclared
+
+failed
+
+src/Document/Tests/SmallMachine.hs:460:41:
+    = is undeclared
+
+failed
+
+src/Document/Phase/Test.hs:622:58:
+    <= is undeclared
+
+failed
+
+src/Document/Phase/Test.hs:464:78:
+    = is undeclared
+
+failed
+
+src/Document/Phase/Test.hs:464:78:
+    = is undeclared
+
+failed
+
+src/Document/Tests/TrainStation.hs:229:32:
+    elem is undeclared
+
+failed
+
+src/Document/Phase/Test.hs:464:78:
+    = is undeclared
+
+failed
+
+src/Document/Phase/Test.hs:464:78:
+    = is undeclared
+
+*** EXCEPTION ***
+1: train, model 0, verification
+
+src/UnitB/Test.hs:115:83:
+    = is undeclared
+
+failed
+
+src/UnitB/Test.hs:530:38:
+    = is undeclared
+
 +- Literate Unit-B Test Suite
 |  +- Unit-B Document
 |  |  +- basic syntax and scopes
+|  |  *** FAILED ***
+src/Document/Test.hs:52:11
 |  |  +- Specification and refinement of a lock-free algorithm
 |  |  |  +- test 0, verification, specification with intervals
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:33:16
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 1, verification, failed proof with intervals
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:35:16
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 2, error message name clash in guards
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:37:16
 |  |  |  +- test 3, verification, looking up function outside of domain
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:39:16
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 4, m1, liveness implemented with conditional behavior
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:41:16
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 5, transient, two branches, enablement of non-empty
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:43:16
 |  |  |  +- test 6, transient, two branches, enablement of empty
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:46:16
 |  |  |  +- test 7, transient, two branches, negation of empty
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:49:16
 |  |  |  +- test 8, transient, two branches, negation of non-empty
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:52:16
 |  |  |  +- test 9, transient, two branches, follow and disjunction
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:55:16
 |  |  |  +- test 10, duplicate refinement of liveness properties
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:58:16
 |  |  |  +- test 11, missing witness
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:61:15
 |  |  |  +- test 12, carrier sets without using sets
 |  |  |  +- test 13, event splitting
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:66:15
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 14, event splitting, event sets
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:68:15
 |  |  |  +- test 15, event splitting, expression sets
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:70:15
 |  |  |  +- test 16, event splitting, index decl
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:72:15
 |  |  |  +- test 17, empty parameter list
 |  |  |  +- test 18, empty list in VarScope
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:76:15
 |  |  |  +- test 19, splitting POs
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:78:15
 |  |  |  +- test 20, Lamport proofs
-|  |  |  +- test 21, new index witness
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:80:15
+./Logic/UnitTest.hs:41:35
+
+src/Document/Tests/LockFreeDeque.hs:5301:63:
+    = is undeclared
+
 |  |  |  +- test 22, new index proof obligation part a
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:84:15
 |  |  |  +- test 23, new index proof obligation part b
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:86:15
 |  |  |  +- test 24, scoping in index witness feasibility
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:88:15
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 25, parameter promotion and inheritance
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:90:15
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 26, scoping problem in sequents
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:92:15
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 28, large WD-condition
-|  |  +- [ Success: 28 / 28 ]
+|  |  |  *** FAILED ***
+src/Document/Tests/LockFreeDeque.hs:96:15
+|  |  +- [ Success: 2 / 28 ]
 |  |  +- small machine example
-|  |  |  +- test 0
-|  |  |  +- test 1 (separate machine blocks)
+
+src/Document/Tests/SmallMachine.hs:455:25:
+    = is undeclared
+
+
+src/Document/Tests/SmallMachine.hs:460:41:
+    = is undeclared
+
 |  |  |  +- test 2 (verification, one failure)
+|  |  |  *** FAILED ***
+src/Document/Tests/SmallMachine.hs:34:10
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 3 (verification)
+|  |  |  *** FAILED ***
+src/Document/Tests/SmallMachine.hs:36:10
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 4 (proof obligation, invariance)
+|  |  |  *** FAILED ***
+src/Document/Tests/SmallMachine.hs:38:10
 |  |  |  +- test 5 (co, 'skip' proof obligation)
+|  |  |  *** FAILED ***
+src/Document/Tests/SmallMachine.hs:40:10
 |  |  |  +- test 6 (verification, coarse schedule stronger than guard)
+|  |  |  *** FAILED ***
+src/Document/Tests/SmallMachine.hs:42:10
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 7 (schedulability proof obligation)
+|  |  |  *** FAILED ***
+src/Document/Tests/SmallMachine.hs:44:10
 |  |  |  +- test 8 (schedulability without selecting schedules (trivially true))
+|  |  |  *** FAILED ***
+src/Document/Tests/SmallMachine.hs:46:10
 |  |  |  +- test 10 (transient PO, enablement)
+|  |  |  *** FAILED ***
+src/Document/Tests/SmallMachine.hs:51:10
 |  |  |  +- test 11 (transient PO, negation)
+|  |  |  *** FAILED ***
+src/Document/Tests/SmallMachine.hs:53:10
 |  |  |  +- test 12 name clash between coarse schedule and co properties
-|  |  +- [ Success: 12 / 12 ]
+|  |  |  *** FAILED ***
+src/Document/Tests/SmallMachine.hs:55:10
+|  |  +- [ Success: 0 / 12 ]
 |  |  +- Contextual predicate visibility rules
+|  |  *** FAILED ***
+src/Document/Test.hs:57:11
 |  |  +- The king and his advisors puzzle
 |  |  |  +- puzzle, m0
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:28:11
+./Logic/UnitTest.hs:41:35
 |  |  |  +- puzzle, m1
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:29:11
+./Logic/UnitTest.hs:41:35
 |  |  |  +- puzzle, proof obligation
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:30:11
 |  |  |  +- puzzle, event visit
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:31:11
 |  |  |  +- puzzle, visit enablement, PO
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:32:11
 |  |  |  +- puzzle, visit negation, PO
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:33:11
 |  |  |  +- puzzle, m2
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:35:11
+./Logic/UnitTest.hs:41:35
 |  |  |  +- puzzle, m3
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:36:11
+./Logic/UnitTest.hs:41:35
 |  |  |  +- puzzle m3, wd of sums
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:37:11
 |  |  |  +- puzzle m3, proofs with sums
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:38:11
 |  |  |  +- puzzle, m4
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:39:11
+./Logic/UnitTest.hs:41:35
 |  |  |  +- puzzle, deleted variables, m3
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:40:11
 |  |  |  +- puzzle, deleted variables, m4
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:41:11
 |  |  |  +- puzzle, error: invariant referring to deleted variable
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:42:11
 |  |  |  +- puzzle, error: assignment to deleted variable
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:43:11
 |  |  |  +- test 16, puzzle, removing actions, m3
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:44:11
 |  |  |  +- test 17, puzzle, removed actions, m4
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:45:11
 |  |  |  +- test 18, simulation proof obligation
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:46:11
 |  |  |  +- test 19, simulation proof obligation (init)
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:47:11
 |  |  |  +- test 20, crashing proof obligation of invariant with witness
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:48:11
 |  |  |  +- test 21, deleting non-existant action
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:49:11
 |  |  |  +- test 22, error providing a witness for non-deleted variable
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:50:11
 |  |  |  +- test 23, error deleting non-existant variable
 |  |  |  +- test 24, inherited vs local invariants
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:52:15
 |  |  |  +- test 25, error: schedules and guards refer to deleted variables
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:53:11
 |  |  |  +- test 27, old guards / new guards
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:54:11
 |  |  |  +- test 28, illegal type application
 |  |  |  +- test 29, theorem well-definedness
-|  |  +- [ Success: 28 / 28 ]
+|  |  |  *** FAILED ***
+src/Document/Tests/Puzzle.hs:56:11
+|  |  +- [ Success: 2 / 28 ]
 |  |  +- Unless / except clause
 |  |  |  +- test 0, unless/except without indices
+|  |  |  *** FAILED ***
+src/Document/Tests/UnlessExcept.hs:14:16
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 1, unless/except with indices and free variables
-|  |  +- [ Success: 2 / 2 ]
+|  |  |  *** FAILED ***
+src/Document/Tests/UnlessExcept.hs:16:16
+./Logic/UnitTest.hs:41:35
+|  |  +- [ Success: 0 / 2 ]
 |  |  +- Unit tests for the parser
 |  |  |  +- test 0, phase 1 (structure), create object
 |  |  |  +- test 1, phase 1, parsing
 |  |  |  +- test 2, phase 2 (variables), creating state
 |  |  |  +- test 3, phase 2, parsing
-|  |  |  +- test 4, phase 3 (expressions), create object
-|  |  |  +- test 5, phase 3, parsing
-|  |  |  +- test 6, phase 4 (proofs), create object
-|  |  |  +- test 7, phase 4, parsing
-|  |  |  +- test 8, make machine
+
+src/Document/Phase/Test.hs:464:78:
+    = is undeclared
+
+
+src/Document/Phase/Test.hs:464:78:
+    = is undeclared
+
+
+src/Document/Phase/Test.hs:464:78:
+    = is undeclared
+
+
+src/Document/Phase/Test.hs:464:78:
+    = is undeclared
+
+
+src/Document/Phase/Test.hs:622:58:
+    <= is undeclared
+
 |  |  |  +- QuickCheck inheritance
-|  |  +- [ Success: 10 / 10 ]
+|  |  +- [ Success: 5 / 10 ]
 |  |  +- table of cubes example
 |  |  |  +- test 0 (syntax)
+|  |  |  *** FAILED ***
+src/Document/Tests/Cubes.hs:28:12
 |  |  |  +- test 1 (verification)
+|  |  |  *** FAILED ***
+src/Document/Tests/Cubes.hs:30:12
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test 2 (init/fis po)
+|  |  |  *** FAILED ***
+src/Document/Tests/Cubes.hs:32:12
 |  |  |  +- proof of inv0
+|  |  |  *** FAILED ***
+src/Document/Tests/Cubes.hs:34:12
 |  |  |  +- empty proof
-|  |  +- [ Success: 5 / 5 ]
+|  |  |  *** FAILED ***
+src/Document/Tests/Cubes.hs:36:12
+|  |  +- [ Success: 0 / 5 ]
 |  |  +- train station example
 |  |  |  +- part 0
-|  |  |  |  +- test 0, syntax
+
+src/Document/Tests/TrainStation.hs:229:32:
+    elem is undeclared
+
 |  |  |  |  +- test 21, multiple imports of sets
-|  |  |  +- [ Success: 2 / 2 ]
+|  |  |  +- [ Success: 1 / 2 ]
 |  |  |  +- part 1
 |  |  |  |  +- test 1, verification
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:53:16
+./Logic/UnitTest.hs:41:35
 |  |  |  |  +- test 2, proof obligation, INIT/fis, in
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:54:16
 |  |  |  |  +- test 20, proof obligation, INIT/fis, loc
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:55:16
 |  |  |  |  +- test 3, proof obligation, leave/fis, in'
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:56:16
 |  |  |  |  +- test 19, proof obligation, leave/fis, loc'
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:57:16
 |  |  |  |  +- test 4, proof obligation, leave/sch
-|  |  |  +- [ Success: 6 / 6 ]
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:58:16
+|  |  |  +- [ Success: 0 / 6 ]
 |  |  |  +- part 2
 |  |  |  |  +- test 5, proof obligation, leave/en/tr0/WFIS
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:63:16
 |  |  |  |  +- test 23, proof obligation, leave/en/tr0/EN
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:64:16
 |  |  |  |  +- test 24, proof obligation, leave/en/tr0/NEG
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:65:16
 |  |  |  |  +- test 7, undeclared symbol
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:66:16
 |  |  |  |  +- test 8, undeclared event (wrt transient)
 |  |  |  |  +- test 9, undeclared event (wrt c sched)
-|  |  |  +- [ Success: 6 / 6 ]
+|  |  |  +- [ Success: 2 / 6 ]
 |  |  |  +- part 3
 |  |  |  |  +- test 10, undeclared event (wrt indices)
 |  |  |  |  +- test 11, undeclared event (wrt assignment)
 |  |  |  |  +- test 12, proof obligation leave/INV/inv2
-|  |  |  +- [ Success: 3 / 3 ]
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:75:16
+|  |  |  +- [ Success: 2 / 3 ]
 |  |  |  +- part 4
 |  |  |  |  +- test 13, verification, name clash between dummy and index
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:80:16
 |  |  |  |  +- test 14, verification, non-exhaustive case analysis
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:81:16
+./Logic/UnitTest.hs:41:35
 |  |  |  |  +- test 15, verification, incorrect new assumption
-|  |  |  +- [ Success: 3 / 3 ]
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:82:16
+./Logic/UnitTest.hs:41:35
+|  |  |  +- [ Success: 0 / 3 ]
 |  |  |  +- part 5
 |  |  |  |  +- test 16, verification, proof by parts
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:88:16
+./Logic/UnitTest.hs:41:35
 |  |  |  |  +- test 17, ill-defined types
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:89:16
 |  |  |  |  +- test 18, assertions have type bool
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:90:16
 |  |  |  |  +- test 22, missing witness
-|  |  |  +- [ Success: 4 / 4 ]
-|  |  +- [ Success: 24 / 24 ]
+|  |  |  |  *** FAILED ***
+src/Document/Tests/TrainStation.hs:91:16
+|  |  |  +- [ Success: 0 / 4 ]
+|  |  +- [ Success: 5 / 24 ]
 |  |  +- lambda expressions in the cube example
 |  |  |  +- part 0
 |  |  |  |  +- test 0, verification, lambda vs empty-fun
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:37:16
+./Logic/UnitTest.hs:41:35
 |  |  |  |  +- test 1, verification, lambda vs ovl, mk-fun
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:39:16
+./Logic/UnitTest.hs:41:35
 |  |  |  |  +- test 2, verification, lambda vs apply
-|  |  |  +- [ Success: 3 / 3 ]
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:41:16
+./Logic/UnitTest.hs:41:35
+|  |  |  +- [ Success: 0 / 3 ]
 |  |  |  +- part 1
 |  |  |  |  +- test 3, verification, set comprehension, failed proof
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:47:16
+./Logic/UnitTest.hs:41:35
 |  |  |  |  +- test 4, adding a progress property
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:49:16
 |  |  |  |  +- test 5, unless properties
-|  |  |  +- [ Success: 3 / 3 ]
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:50:16
+|  |  |  +- [ Success: 0 / 3 ]
 |  |  |  +- part 2
 |  |  |  |  +- test 6, verify progress refinement
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:55:16
+./Logic/UnitTest.hs:41:35
 |  |  |  |  +- test 7, verify refinement rules
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:56:16
+./Logic/UnitTest.hs:41:35
 |  |  |  |  +- test 8, verify refinement rules
-|  |  |  +- [ Success: 3 / 3 ]
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:57:16
+./Logic/UnitTest.hs:41:35
+|  |  |  +- [ Success: 0 / 3 ]
 |  |  |  +- part 3
 |  |  |  |  +- test 9, verify disjunction rule
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:62:16
+./Logic/UnitTest.hs:41:35
 |  |  |  |  +- test 10, error: cyclic proof
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:63:16
 |  |  |  |  +- test 11, intermediate goals of monotonic simplification
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:64:16
 |  |  |  |  +- test 12, bound variable with ambiguous type
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:66:16
 |  |  |  |  +- test 13, inv6, PO
-|  |  |  +- [ Success: 5 / 5 ]
-|  |  +- [ Success: 14 / 14 ]
+|  |  |  |  *** FAILED ***
+src/Document/Tests/Lambdas.hs:68:15
+|  |  |  +- [ Success: 0 / 5 ]
+|  |  +- [ Success: 0 / 14 ]
 |  |  +- refinement relations in the phase example
 |  |  |  +- test 0, cyclic refinement relation between machines
 |  |  |  +- test 1, valid references to variables and event declared in ancestor
+|  |  |  *** FAILED ***
+src/Document/Tests/Phase.hs:17:16
 |  |  |  +- test 2, invalid proof obligations
-|  |  +- [ Success: 3 / 3 ]
+|  |  |  *** FAILED ***
+src/Document/Tests/Phase.hs:18:16
+|  |  +- [ Success: 1 / 3 ]
 |  |  +- train station example, with refinement
 |  |  |  +- verify machine m0 (ref)
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationRefinement.hs:18:15
+./Logic/UnitTest.hs:41:35
 |  |  |  +- verify machine m1 (ref)
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationRefinement.hs:19:15
+./Logic/UnitTest.hs:41:35
 |  |  |  +- verify machine m2 (ref)
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationRefinement.hs:20:15
+./Logic/UnitTest.hs:41:35
 |  |  |  +- verify machine m2 (ref), in many files
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationRefinement.hs:21:15
+./Logic/UnitTest.hs:41:35
 |  |  |  +- cyclic proof of liveness through 3 refinements
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationRefinement.hs:23:15
 |  |  |  +- refinement of undefined machine
 |  |  |  +- repeated imports
-|  |  +- [ Success: 7 / 7 ]
+|  |  +- [ Success: 2 / 7 ]
 |  |  +- train station example, with sets
 |  |  |  +- verify machine m0 (sets)
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationSets.hs:14:15
+./Logic/UnitTest.hs:41:35
 |  |  |  +- verify machine m1 (sets)
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationSets.hs:15:15
+./Logic/UnitTest.hs:41:35
 |  |  |  +- verify machine m2 (sets)
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationSets.hs:16:15
+./Logic/UnitTest.hs:41:35
 |  |  |  +- m2, enablement proof obligation
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationSets.hs:17:15
 |  |  |  +- m2, transient proof obligation, feasibility
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationSets.hs:18:15
 |  |  |  +- m2, transient proof obligation, enablement
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationSets.hs:19:15
 |  |  |  +- m2, transient proof obligation, negation
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationSets.hs:20:15
 |  |  |  +- m2, safety property of schedule replacement
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationSets.hs:21:15
 |  |  |  +- verify machine m3 (sets)
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationSets.hs:22:15
+./Logic/UnitTest.hs:41:35
 |  |  |  +- type checking of boolean expressions
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationSets.hs:23:15
 |  |  |  +- verify machine m3 error (wandering free variable)
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationSets.hs:24:15
 |  |  |  +- witness well definedness PO
-|  |  +- [ Success: 12 / 12 ]
+|  |  |  *** FAILED ***
+src/Document/Tests/TrainStationSets.hs:25:15
+|  |  +- [ Success: 0 / 12 ]
 |  |  +- Garbage collector
 |  |  |  +- test0: verify m0
+|  |  |  *** FAILED ***
+src/Document/Tests/GarbageCollector.hs:20:7
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test1: verify m1
+|  |  |  *** FAILED ***
+src/Document/Tests/GarbageCollector.hs:21:7
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test2: verify m2
+|  |  |  *** FAILED ***
+src/Document/Tests/GarbageCollector.hs:22:7
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test3: monotonic simplification
+|  |  |  *** FAILED ***
+src/Document/Tests/GarbageCollector.hs:23:7
 |  |  |  +- test4: monotonicity of POs
+|  |  |  *** FAILED ***
+src/Document/Tests/GarbageCollector.hs:24:7
 |  |  |  +- test5: monotonicity in relation theory
 |  |  |  +- test6: monotonicity of POs
+|  |  |  *** FAILED ***
+src/Document/Tests/GarbageCollector.hs:26:7
 |  |  |  +- test7: POs, step 3 (monotonicity, associativity)
+|  |  |  *** FAILED ***
+src/Document/Tests/GarbageCollector.hs:27:7
 |  |  |  +- test8: POs, step 4 (monotonicity, associativity)
-|  |  +- [ Success: 9 / 9 ]
+|  |  |  *** FAILED ***
+src/Document/Tests/GarbageCollector.hs:28:7
+|  |  +- [ Success: 1 / 9 ]
 |  |  +- Termination Detection
 |  |  |  +- test0: verify m0
+|  |  |  *** FAILED ***
+src/Document/Tests/TerminationDetection.hs:10:7
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test1: verify m1
+|  |  |  *** FAILED ***
+src/Document/Tests/TerminationDetection.hs:11:7
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test2: verify m2
+|  |  |  *** FAILED ***
+src/Document/Tests/TerminationDetection.hs:12:7
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test3: verify m3
+|  |  |  *** FAILED ***
+src/Document/Tests/TerminationDetection.hs:13:7
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test4: quantified union
-|  |  +- [ Success: 5 / 5 ]
+|  |  |  *** FAILED ***
+src/Document/Tests/TerminationDetection.hs:14:7
+./Logic/UnitTest.hs:41:35
+|  |  +- [ Success: 0 / 5 ]
 |  |  +- Parser
 |  |  |  +- test0: verify m0
+|  |  |  *** FAILED ***
+src/Document/Tests/Parser.hs:23:7
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test1: verify m1
+|  |  |  *** FAILED ***
+src/Document/Tests/Parser.hs:24:7
+./Logic/UnitTest.hs:41:35
 |  |  |  +- test2: verify m2
-|  |  |  +- test3: spontaneous events
-|  |  +- [ Success: 4 / 4 ]
+|  |  |  *** FAILED ***
+src/Document/Tests/Parser.hs:25:7
+./Logic/UnitTest.hs:41:35
+failed
+
+src/Document/Tests/Parser.hs:266:41:
+    ovl is undeclared
+
+
+src/Document/Tests/Parser.hs:266:41:
+    ovl is undeclared
+
+|  |  +- [ Success: 0 / 4 ]
 |  |  +- QuickCheck spec of machine parser
+|  |  *** FAILED ***
+src/Document/Test.hs:50:8
 |  |  +- the parser is exception free
 |  |  +- conformance of instances to type class axioms
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
-|  +- [ Success: 170 / 170 ]
+|  +- [ Success: 22 / 170 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
+|  |  *** FAILED ***
+src/UnitB/Test.hs:46:12
+./Logic/UnitTest.hs:41:35
 |  |  +- 2: train, m0 transient / enablement PO
+   Exception:  
+
+src/UnitB/Test.hs:115:83:
+    = is undeclared
+
+|  |  *** FAILED ***
+src/UnitB/Test.hs:47:12
 |  |  +- 3: train, m0 transient / falsification PO
+   Exception:  
+
+src/UnitB/Test.hs:115:83:
+    = is undeclared
+
+|  |  *** FAILED ***
+src/UnitB/Test.hs:48:12
 |  |  +- 4: Feasibility and partitioning
 |  |  +- 5: Debugging the partitioning
 |  |  +- genericity
@@ -255,19 +686,91 @@ Running test...
 |  |  |  +- Record sets
 |  |  |  +- Record sets in Z3
 |  |  |  +- Syntax for record literals
+   Exception:  
+
+./Logic/Test.hs:699:36:
+    union is undeclared
+
+|  |  |  *** FAILED ***
+./Logic/Test.hs:213:11
 |  |  |  +- Syntax for record update
+   Exception:  
+
+./Logic/Test.hs:710:37:
+    union is undeclared
+
+|  |  |  *** FAILED ***
+./Logic/Test.hs:214:11
 |  |  |  +- Record syntax: empty record
 |  |  |  +- Records: multiple updates
+   Exception:  
+
+./Logic/Test.hs:745:37:
+    union is undeclared
+
+|  |  |  *** FAILED ***
+./Logic/Test.hs:216:11
 |  |  |  +- Records sets syntax
+   Exception:  
+
+./Logic/Test.hs:774:21:
+    elem is undeclared
+
+|  |  |  *** FAILED ***
+./Logic/Test.hs:217:11
 |  |  |  +- QuasiQuotes with proof monads
+   Exception:  
+
+./Logic/Test.hs:807:20:
+    = is undeclared
+
+|  |  |  *** FAILED ***
+./Logic/Test.hs:218:11
 |  |  |  +- QuasiQuotes with proof monads and set theory
+   Exception:  
+
+./Logic/Test.hs:816:20:
+    elem is undeclared
+
+|  |  |  *** FAILED ***
+./Logic/Test.hs:219:11
 |  |  |  +- QuasiQuotes with proof monads and assumptions
+   Exception:  
+
+./Logic/Test.hs:825:20:
+    not is undeclared
+
+|  |  |  *** FAILED ***
+./Logic/Test.hs:220:11
 |  |  |  +- Records lookup syntax
+   Exception:  
+
+./Logic/Test.hs:831:37:
+    = is undeclared
+
+|  |  |  *** FAILED ***
+./Logic/Test.hs:221:11
 |  |  |  +- Proofs with record lookup
-|  |  +- [ Success: 33 / 33 ]
-|  |  +- 6: unless with except and split event
+   Exception:  
+
+./Logic/Test.hs:862:19:
+    = is undeclared
+
+|  |  |  *** FAILED ***
+./Logic/Test.hs:222:11
+|  |  |  +- Testing the parser (\qforall{x,y}{}{x = y})
+|  |  |  *** FAILED ***
+./Logic/Test.hs:223:11
+|  |  |  +- Testing the parser (\neg (-2) = 2)
+|  |  |  *** FAILED ***
+./Logic/Test.hs:224:11
+|  |  +- [ Success: 24 / 35 ]
+
+src/UnitB/Test.hs:530:38:
+    = is undeclared
+
 |  |  +- 7: QuickCheck names
-|  +- [ Success: 41 / 41 ]
+|  +- [ Success: 28 / 43 ]
 |  +- latex parser
 |  |  +- quickcheck
 |  |  +- sample.tex
@@ -312,39 +815,69 @@ Running test...
 |  +- [ Success: 17 / 17 ]
 |  +- code generation in the cube example
 |  |  +- test0: code for the {state}
+|  |  *** FAILED ***
+src/Code/Test.hs:38:16
 |  |  +- test1: code for the {event}
+|  |  *** FAILED ***
+src/Code/Test.hs:39:16
 |  |  +- test2: code for the {initialization}
+|  |  *** FAILED ***
+src/Code/Test.hs:40:16
 |  |  +- test3: code for the {procedure + loop}
+|  |  *** FAILED ***
+src/Code/Test.hs:41:16
 |  |  +- test4: {whole source file}
+|  |  *** FAILED ***
+src/Code/Test.hs:42:16
 |  |  +- test5: run {source file}
+|  |  *** FAILED ***
+src/Code/Test.hs:43:16
 |  |  +- test6: verify {control flow graph}
+|  |  *** FAILED ***
+src/Code/Test.hs:44:16
 |  |  +- test7: {concurrent} code
+|  |  *** FAILED ***
+src/Code/Test.hs:45:16
 |  |  +- test8: {run concurrent} code
-|  +- [ Success: 9 / 9 ]
+|  |  *** FAILED ***
+src/Code/Test.hs:46:16
+|  +- [ Success: 0 / 9 ]
 |  +- Documentation generation
 |  |  +- m2, event m1:moveout
+|  |  *** FAILED ***
+src/Documentation/Test.hs:29:11
 |  |  +- m3, event m1:moveout
+|  |  *** FAILED ***
+src/Documentation/Test.hs:30:11
 |  |  +- safety properties of m2
+|  |  *** FAILED ***
+src/Documentation/Test.hs:31:11
 |  |  +- progress properties of m2
+|  |  *** FAILED ***
+src/Documentation/Test.hs:32:11
 |  |  +- File structure
+|  |  *** FAILED ***
+src/Documentation/Test.hs:33:11
 |  |  +- Root machine
-|  +- [ Success: 6 / 6 ]
+|  |  *** FAILED ***
+src/Documentation/Test.hs:34:11
+|  +- [ Success: 0 / 6 ]
 |  +- Reactive.Banana extensions
 |  |  +- QuickCheck : Reactive.Banana.Property
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 263 / 263 ]
++- [ Success: 87 / 265 ]
 Data.Map.Base
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-   37686 total
+   37801 total
     1038 src/UnitB/PO.hs
      926 src/Document/Phase/Expressions.hs
      782 src/Document/Visitor.lhs
+     765 logic/Logic/Expr/Expr.hs
      751 src/Document/Phase.hs
-     745 logic/Logic/Expr/Expr.hs
-Run time: 1m 50s
+Run time: 1m 7s

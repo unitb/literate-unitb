@@ -12,6 +12,7 @@ import Logic.Expr.Parser.Internal.Monad
 import Logic.Expr.Parser.Internal.Scanner
 import Logic.Expr.Parser.Internal.Setting hiding (with_vars)
 import Logic.Expr.Printable
+import Logic.Expr.TypeChecking
 import Logic.Operator
 
 import Logic.Theories.SetTheory
@@ -580,9 +581,10 @@ parse_expr :: ParserSetting
            -> StringLi
            -> Either [Error] DispExpr
 parse_expr set xs = do
-        let li  = line_info xs
-        x  <- parse_expression set xs
-        e  <- type_check x
+        let li = line_info xs
+            c  = contextOf set
+        x <- parse_expression set xs
+        e <- checkTypes c x li
         typed_x  <- case set^.expected_type of
             Just _ -> mapLeft
                 (\xs -> map (`Error` li) xs) $ Right e
@@ -594,6 +596,3 @@ parse_expr set xs = do
         return $ DispExpr (flatten xs) x
     where
         msg   = [printf|type of %s is ill-defined: %s|]
-
-type_check :: UntypedExpr -> Either [Error] Expr
-type_check = undefined'

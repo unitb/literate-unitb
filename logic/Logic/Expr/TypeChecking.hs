@@ -12,7 +12,7 @@ import Logic.Names
 import Control.Lens.Misc
 
 import Control.Monad
-import Control.Lens ((^.),(^?),_1,view)
+import Control.Lens ((^.),(^?),(&),(%~),_Left,_1,view)
 
 import Data.Either
 import Data.List
@@ -21,6 +21,8 @@ import qualified Data.Set as S
 
 import Text.Pretty
 import Text.Printf.TH
+
+import Utilities.Syntactic
 
 stripTypes :: GenExpr n t0 t1 q -> GenExpr n () t1 q
 stripTypes (Word (Var n _))  = Word (Var n ())
@@ -70,55 +72,61 @@ tryBoth :: Either a b -> Either a b -> Either a b
 tryBoth x@(Right _) _ = x
 tryBoth (Left _) x    = x
 
-checkTypes :: Context -> UntypedExpr -> Either [String] Expr
-checkTypes c (Word (Var n ())) = do
+checkTypes :: Context -> UntypedExpr -> LineInfo -> Either [Error] Expr
+checkTypes c ue li = do
+    (checkTypes' c ue) & _Left.traverse %~ strToErr
+    where
+        strToErr = \msg -> Error msg li
+
+checkTypes' :: Context -> UntypedExpr -> Either [String] Expr
+checkTypes' c (Word (Var n ())) = do
     v <- bind (n `M.lookup` (c^.constants))
         ([printf|%s is undeclared|] $ render n)
     return $ Word v
-checkTypes _ (Lit n ()) = do
+checkTypes' _ (Lit n ()) = do
     let t = case n of 
              RealVal _ -> real
              IntVal _  -> int
     return (Lit n t)
-checkTypes c (FunApp f args) = do
+checkTypes' c (FunApp f args) = do
     let Fun _ n _ _ _ _ = f ;
-        targs = map (checkTypes c) args
+        targs = map (checkTypes' c) args
     tfun <- bind (n `M.lookup` (c^.functions))
         ([printf|%s is undeclared|] $ render n ) ;
     check_type tfun targs
-checkTypes c r@(Record (FieldLookup e field)) = do
-    e' <- checkTypes c e
+checkTypes' c r@(Record (FieldLookup e field)) = do
+    e' <- checkTypes' c e
     let t = type_of e'
     trecs <- bind (t^?_FromSort._1._RecordSort)
         ([printf|Record %s has no field %s|] (show r) (render field))
     _ <- bind (field `M.lookup` trecs)
         ([printf|Type error when type checking field %s|] $ render field)
     return (Record (FieldLookup e' field))
-checkTypes c (Record (RecUpdate e table)) = do
-    e' <- checkTypes c e
+checkTypes' c (Record (RecUpdate e table)) = do
+    e' <- checkTypes' c e
     let t = type_of e'
     _ <- bind (t^?_FromSort._1._RecordSort)
         ([printf|Expression %s is not a record|] (show e))
-    Record . RecUpdate e' <$> traverseValidation (checkTypes c) table
-checkTypes c (Record (RecLit table)) =
-    Record . RecLit <$> traverseValidation (checkTypes c) table
-checkTypes c (Cast ct e t) = do
-    e' <- zcast t $ checkTypes c e
+    Record . RecUpdate e' <$> traverseValidation (checkTypes' c) table
+checkTypes' c (Record (RecLit table)) =
+    Record . RecLit <$> traverseValidation (checkTypes' c) table
+checkTypes' c (Cast ct e t) = do
+    e' <- zcast t $ checkTypes' c e
     return (Cast ct e' t)
-checkTypes c (Lift e _) = do
+checkTypes' c (Lift e _) = do
     let phonyFun t = Fun [] [smt|lift|] Lifted [t] int FiniteWD
         setT = set_type gA
         arrayT = array gA gB
         mkLift _ e t = Lift (head e) (head t)
-    check_type' mkLift (phonyFun setT) [checkTypes c e] `tryBoth`
-        check_type' mkLift (phonyFun arrayT) [checkTypes c e] 
-checkTypes c' (Binder q vs' r t _) = do
+    check_type' mkLift (phonyFun setT) [checkTypes' c e] `tryBoth`
+        check_type' mkLift (phonyFun arrayT) [checkTypes' c e] 
+checkTypes' c' (Binder q vs' r t _) = do
     let c  = newContext vs' c'
         ns = map (view name) vs' :: [Name]
         vs = M.ascElems $ newDummies vs' c'
     (r'',t'') <- parCheck 
-        (zcast bool $ checkTypes c r) 
-        (zcast (termType q) $ checkTypes c t)
+        (zcast bool $ checkTypes' c r) 
+        (zcast (termType q) $ checkTypes' c t)
     let vars = used_var r'' `S.union` used_var t''
         v_type = id -- L.filter ((1 <) . S.size . snd) 
                     $ zip vs
@@ -144,5 +152,5 @@ checkTypes c' (Binder q vs' r t _) = do
     return (Binder q vs' r' t' (exprType q tuple (type_of t')))
 
     -- return $ FunApp _ _
--- checkTypes c (Const xs n ()) = do
+-- checkTypes' c (Const xs n ()) = do
 --  _
