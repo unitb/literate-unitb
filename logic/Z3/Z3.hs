@@ -206,7 +206,11 @@ z3_code :: Sequent -> String
 z3_code = unlines . L.map pretty_print' . z3_commands
 
 z3_commands :: Sequent -> [Command]
-z3_commands po = D.toList
+z3_commands = fromMaybe [] . z3_commands' False
+
+z3_commands' :: Bool -> Sequent -> Maybe [Command]
+z3_commands' skip po 
+    | not skip || assert /= ztrue = Just $ D.toList
     (      D.fromList [] 
         <> D.fromList [SetOption "auto-config" "false"]
         <> D.fromList [SetOption "smt.timeout" $ show tout]
@@ -219,6 +223,7 @@ z3_commands po = D.toList
         <> D.fromList [Assert (znot assert) $ Just "goal"]
         <> D.fromList [CheckSat]
         <> D.fromList [] )
+    | otherwise = Nothing
     where
         (Sequent tout _ d _ assume hyps assert) = firstOrderSequent po
         f ((lbl,xp),n) = [ Comment $ pretty lbl
@@ -309,20 +314,24 @@ discharge' :: Maybe Int      -- Timeout in seconds
 discharge' n lbl po
     | (po^.goal) == ztrue = return Valid
     | otherwise = withSemN total_caps (fromIntegral $ po^.resource) $ do
-        let code  = z3_commands $ po & timeout %~ (`div` 4)
-            code' = z3_commands po
+        let code  = z3_commands' True po
+            code' = z3_commands po'
+            po' = po & timeout %~ (`div` 4)
             t = fromMaybe default_timeout n
-        s  <- verify lbl code t
-        s' <- if s == Right SatUnknown 
-            then verify lbl code' t
-            else return s
-        case s' of
-            Right Sat -> return Invalid
-            Right Unsat -> return Valid
-            Right SatUnknown -> do
-                return ValUnknown
-            Left xs -> do
-                fail $ "discharge: " ++ xs
+        case code of
+            Just code -> do
+                s  <- verify lbl code' t
+                s' <- if s == Right SatUnknown 
+                    then verify lbl code t
+                    else return s
+                case s' of
+                    Right Sat -> return Invalid
+                    Right Unsat -> return Valid
+                    Right SatUnknown -> do
+                        return ValUnknown
+                    Left xs -> do
+                        fail $ "discharge: " ++ xs
+            Nothing -> return Valid
 
 log_count :: MVar Int
 log_count = unsafePerformIO $ newMVar 0
