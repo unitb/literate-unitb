@@ -54,6 +54,7 @@ packages:
 - libs/typelist-functor
 - libs/unfoldable
 - libs/unitb-testing
+- web/prover
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
 - assert-0.0.1.2

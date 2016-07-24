@@ -143,3 +143,6 @@ test-suite test
                  , aeson
                  , literate-unitb-logic
                  , literate-unitb-utils
+                 , lens
+                 , text
+                 , bytestring

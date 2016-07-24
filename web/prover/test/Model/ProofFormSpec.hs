@@ -3,7 +3,7 @@ module Model.ProofFormSpec (spec) where
 import TestImport
 import Model.ProofForm
 
-import Data.JSON
+import Data.Aeson
 
 spec :: Spec
 spec = do

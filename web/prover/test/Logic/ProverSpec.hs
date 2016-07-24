@@ -5,7 +5,7 @@ import Logic.Prover
 import Model.ProofForm
 import Model.ProofResult
 
-import Data.JSON
+import Data.Aeson
 import qualified Z3.Z3 as Z3
 import Data.Maybe
 
@@ -48,8 +48,8 @@ spec = describe "prove" $ do
             assumptions  = fromList [("asm1", ("xIs3", "x = 3"))],
             goal         = ("x < 3" :: String)
         }
-        prValid      = ProofResult { result = Right Z3.Valid }
-        prStrInvalid = "{\"result\":{\"Right\":\"Invalid\"}}"
-        prInvalid    = ProofResult { result = Right Z3.Invalid }
+        prValid      = ProofResult { _result = Right $ Just Z3.Valid }
+        prStrInvalid = "{\"_result\":{\"Right\":\"Invalid\"}}"
+        prInvalid    = ProofResult { _result = Right $ Just Z3.Invalid }
         justPFStr = fromJust :: Maybe (ProofForm String) -> ProofForm String
         justPR    = fromJust :: Maybe ProofResult -> ProofResult
