@@ -8,4 +8,5 @@ pipelines:
   default:
     - step:
         script:
+          - curl -sSL https://get.haskellstack.org/ | sh
           - stack test
