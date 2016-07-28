@@ -9,4 +9,5 @@ pipelines:
     - step:
         script:
           - curl -sSL https://get.haskellstack.org/ | sh
+          - stack setup
           - stack test
