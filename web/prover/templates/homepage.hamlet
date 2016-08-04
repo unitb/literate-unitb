@@ -79,7 +79,7 @@
       <button .btn .btn-default type="reset">
         Clear
 
-  <.col-lg-6 .col-lg-offset-1>
+  <.col-lg-6 .col-lg-offset-1 #output-area>
     <div ##{resultBarId} .alert .alert-info role="alert" style="display: none">
       <span .glyphicon .glyphicon-info-sign .icon-margin aria-hidden="true">
       <span .sr-only>Ready

@@ -172,6 +172,7 @@ $(function() {
         else {
           update_bar(data["colorClass"], data["iconClass"], data["error"], "Error:");
         }
+        update_img(data["goalPng"]);
       },
       error: function (data) {
         $("body").css('cursor', 'auto');
@@ -200,6 +201,28 @@ $(function() {
 
       $(bar).fadeIn("fast");
     });
+  }
+
+  // helper function used for updating the rendered image of the goal
+  function update_img(path) {
+    var imgId = "goal-png";
+    var $out_area = $("#output-area");
+    if (!path || path == "") {
+      $("#" + imgId).remove();
+    }
+    else {
+      if ($out_area.children("#" + imgId).length != 0) {
+        $("#" + imgId).attr("src", path);
+      }
+      else {
+        var img = $("<img />", {
+          id:  imgId,
+          src: path,
+          alt: "Rendered goal"
+        });
+        img.appendTo($out_area);
+      }
+    }
   }
 
   // given an array of objects of the following form

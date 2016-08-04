@@ -52,3 +52,11 @@ prettyPrint (DispExpr x _) = x
 
 instance NFData DispExpr
 
+class FromDispExpr expr where
+    fromDispExpr :: DispExpr -> expr
+
+instance FromDispExpr Expr where
+    fromDispExpr = getExpr
+
+instance FromDispExpr DispExpr where
+    fromDispExpr = id

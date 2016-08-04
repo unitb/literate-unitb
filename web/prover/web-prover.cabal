@@ -92,6 +92,8 @@ library
                  , literate-unitb-logic
                  , literate-unitb-utils
                  , invariants
+                 , tex2png-hs
+                 , filepath
 
 executable         web-prover
     if flag(library-only)

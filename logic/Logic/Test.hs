@@ -361,8 +361,8 @@ case10 = return $ z3_code $ _goal $ runSequent' $ do
             b = [smt|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
-        assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
-        assume $ v2 .=. zrec_update v1 (x ## 7)
+        assume "v1: x:=7, b:=true" $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
+        assume "v2: v1[x:=7]" $ v2 .=. zrec_update v1 (x ## 7)
         check $ v1 .=. v2
 
 result10 :: String
@@ -396,8 +396,9 @@ case11 = return $ z3_code $ _goal $ runSequent' $ do
             b = [smt|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
-        assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
-        assume $ v2 `zelem` zrecord_set' (x ## zmk_set 7 >> b ## zcast (set_type bool) zset_all)
+        assume "v1: x:=7, b:=true" $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
+        assume "v2 \\in ['x : {7}, 'b : (all:\\Bool)]" $ v2 `zelem`
+                    zrecord_set' (x ## zmk_set 7 >> b ## zcast (set_type bool) zset_all)
         check $ v1 .=. v2
 
 result11 :: String
@@ -683,8 +684,9 @@ case12 = discharge ("case12") $ _goal $ runSequent' $ do
             b = [smt|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
-        assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
-        assume $ v2 `zelem` zrecord_set' (x ## zmk_set 7 >> b ## zmk_set mztrue)
+        assume "v1: x:=7, b:=true" $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
+        assume "v2 \\in ['x : {7}, 'b : {true}]" $
+                v2 `zelem` zrecord_set' (x ## zmk_set 7 >> b ## zmk_set mztrue)
         check $ v1 .=. v2
 
 result12 :: Validity
@@ -817,7 +819,7 @@ result19 = Valid
 case20 :: IO Validity
 case20 = discharge("case15") $ _goal $ runSequent' $ do
     declare "x" int
-    assumeQ $ [expr| x = x |]
+    assumeQ "x = x" [expr| x = x |]
     checkQ $ [expr| \neg x = x |]
 
 result20 :: Validity
@@ -854,7 +856,7 @@ case22 = discharge "case22" $ _goal $ runSequent' $ do
         x   = [smt|x|]
         bar = [smt|bar|]
     declare "r" t
-    assumeQ [expr| r = [ 'x := \true, 'bar := 7 ] |]
+    assumeQ "r = [ 'x := \true, 'bar := 7 ]" [expr| r = [ 'x := \true, 'bar := 7 ] |]
     checkQ  [expr| r.'bar = 8 |]
 
 result22 :: Validity

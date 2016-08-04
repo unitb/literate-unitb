@@ -299,13 +299,16 @@ map_failures po_name cmd = catch cmd $ \(Z3Exception i msg) -> do
 discharge :: Label -> Sequent -> IO Validity
 discharge lbl po = discharge' Nothing lbl po
 
-dischargeBoth :: Label -> SequentWithWD -> IO (Maybe Validity)
+dischargeBoth :: HasExpr expr
+              => Label
+              -> SequentWithWD' expr
+              -> IO (Maybe Validity)
 dischargeBoth lbl pos = do
     wdValidity <- discharge' Nothing lbl (_wd pos)
     if wdValidity /= Valid then
         return Nothing
     else
-        Just <$> discharge' Nothing lbl (_goal pos)
+        Just <$> discharge' Nothing lbl (getExpr <$> _goal pos)
 
 discharge' :: Maybe Int      -- Timeout in seconds
            -> Label

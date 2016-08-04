@@ -11,8 +11,9 @@ import qualified Z3.Z3 as Z3
 
 type Result = Either [Error] (Maybe Z3.Validity)
 
-newtype ProofResult = ProofResult {
-  _result :: Result
+data ProofResult = ProofResult {
+  _result  :: Result,
+  _goalPng :: FilePath
 } deriving (Generic, Eq, Show)
 
 makeLenses ''ProofResult
@@ -52,6 +53,7 @@ instance ToJSON ProofResult where
       (\errs     -> "error"  .= show_err errs)
       (\maybeVal -> "result" .= showValidity maybeVal)
       (pr ^. result),
+    "goalPng" .= (pr^.goalPng),
     "colorClass" .= colorClassFromResult (pr ^. result),
     "iconClass"  .= iconClassFromResult (pr ^. result)
     ]
