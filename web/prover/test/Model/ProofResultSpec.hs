@@ -20,10 +20,11 @@ spec = do
             decode prStr `shouldBe` (Just pr)
 
     where
-        pr    = ProofResult { _result = Right $ Just Z3.Valid }
-        prStr = "{\"_result\":{\"Right\":\"Valid\"}}"
+        pr    = ProofResult { _result = Right $ Just Z3.Valid, _goalPng="" }
+        prStr = "{\"_result\":{\"Right\":\"Valid\"},\"_goalPng\":\"\"}"
         prStr2 = T.concat
             [ "{\"result\":\"Valid\","
+            , "\"goalPng\":\"\","
             , "\"iconClass\":\""
             , T.fromStrict $ iconClassFromResult (pr ^. result)
             , "\",\"colorClass\":\""

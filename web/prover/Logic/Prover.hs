@@ -74,8 +74,20 @@ discharge e = do
                        , "& ", prettyPrint $ sequent^.(S.goal)
                        ]
 
+discharge' :: Either [Error] DispSequentWithWD -> IO ProofResult
+discharge' e = do
+    case e of
+        Left err ->
+            return $ ProofResult { _result = Left err, _goalPng = "" }
+        Right s -> do
+            val <- Z3.dischargeBoth "goal" s
+            return $ ProofResult { _result = Right val, _goalPng = "" }
+
 prove :: ProofForm String -> IO ProofResult
 prove = discharge . pfStringLiToSequent . pfStringToPfStringLi
+
+prove' :: ProofForm String -> IO ProofResult
+prove' = discharge' . pfStringLiToSequent . pfStringToPfStringLi
 
 getTheories :: Vector String -> Vector Theory
 getTheories = fromList . concat . map getTheory
