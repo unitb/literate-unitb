@@ -7,5 +7,5 @@ spec = withApp $ do
     it "loads the index and checks it looks right" $ do
         get HomeR
         statusIs 200
-        htmlAllContain "h1" "Literate Unit-B"
-        htmlAllContain "h1 small" "Web Prover"
+        htmlAllContain "h1" "Unit-B"
+        htmlAllContain "h1 small" "Web"
