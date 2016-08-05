@@ -65,10 +65,8 @@ newtype Factor = Factor { getFactor :: Float }
 readString :: LatexDoc -> Either [Error] String
 readString x = do
         let x' = trim_blank_text' x
-        case asSingleton x' of
-            Just (Text (TextBlock x _))
-                -> Right x
-            Just (Text (Command x _))
+        case isWord x' of
+            Just x
                 -> Right x
             _   -> err_msg x'
     where

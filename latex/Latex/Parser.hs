@@ -23,8 +23,9 @@ import qualified Data.Foldable as F
 import Data.Graph
 import Data.List ( intercalate )
 import qualified Data.List as L
-import Data.Map as M hiding ( foldl, map, null, size, (!) )
-import Data.Semigroup
+import Data.Map as M  hiding ( foldl, map, null, size, (!) )
+import Data.Semigroup hiding ( (<>) )
+import qualified Data.Semigroup as S 
 import Data.String.Lines as LN
 import Data.Typeable
 
@@ -74,6 +75,7 @@ data LatexToken =
     deriving (Eq, Show, Typeable, Generic)
 
 makePrisms ''LatexToken
+makePrisms ''LatexNode
 
 envType :: Environment -> String
 envType (Env _ n _ _ _) = n
@@ -177,6 +179,13 @@ map_docM_ :: Monad m
          => (LatexNode -> m b)
          -> LatexNode -> m ()
 map_docM_ f doc = mapM_ f $ contents' $ contents doc
+
+isWord :: LatexDoc -> Maybe String
+isWord (Doc _ xs _) = concat <$> mapM (f <=< preview _Text) xs 
+    where
+        f (TextBlock x _) = Just x
+        f (Command x _)   = Just x
+        f _               = Nothing
 
 asSingleton :: LatexDoc -> Maybe LatexNode
 asSingleton (Doc _ [x] _) = Just x
