@@ -198,9 +198,8 @@ read_label :: Monad m
 read_label = do
     x  <- get_next    
     let x' = trim_blank_text' x
-    lift $ case asSingleton x' of
-        Just (Text (TextBlock x li)) -> right (x,li)
-        Just (Text (Command x li))   -> right (x,li)
+    lift $ case isWord' x' of
+        Just (x,li) -> right (x,li)
         _   -> E.left [Error "expecting a label" $ line_info x']
 
 instance Readable Str where
@@ -419,10 +418,8 @@ get_1_lbl :: (Monad m)
 get_1_lbl xs = do 
         ([x],z) <- cmd_params 1 xs
         let x' = trim_blank_text' x
-        case asSingleton x' of
-            Just (Text (TextBlock x _))
-                -> right (x,z)
-            Just (Text (Command x _))
+        case isWord x' of
+            Just x
                 -> right (x,z)
             _   -> err_msg x'
     where

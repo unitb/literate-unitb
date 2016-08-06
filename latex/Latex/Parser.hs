@@ -181,15 +181,16 @@ map_docM_ :: Monad m
 map_docM_ f doc = mapM_ f $ contents' $ contents doc
 
 isWord :: LatexDoc -> Maybe String
-isWord (Doc _ xs _) = concat <$> mapM (f <=< preview _Text) xs 
-    where
-        f (TextBlock x _) = Just x
-        f (Command x _)   = Just x
-        f _               = Nothing
+isWord = fmap fst . isWord'
 
-asSingleton :: LatexDoc -> Maybe LatexNode
-asSingleton (Doc _ [x] _) = Just x
-asSingleton (Doc _ _ _) = Nothing
+isWord' :: LatexDoc -> Maybe (String,LineInfo)
+isWord' (Doc _ xs _) = concat' =<< mapM (f <=< preview _Text) xs 
+    where
+        concat' ((x,li):xs) = Just (x ++ concatMap fst xs,li)
+        concat' [] = Nothing
+        f (TextBlock x li) = Just (x,li)
+        f (Command x li)   = Just (x,li)
+        f _                = Nothing
 
 class IsLatexNode node where
     contents :: node -> LatexDoc
