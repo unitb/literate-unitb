@@ -54,7 +54,7 @@ discharge e = do
             return $ ProofResult { _result = Right val, _goalPng = pngPath }
   where
     args c d = Args "transparent" c (Just d) 150 False True Nothing 1 packages Nothing True
-    packages = Just $ pack <$> ["bsymb", "calculation", "eventB", "unitb"]
+    packages = Just $ pack <$> ["bsymb", "eventB", "unitb", "calculational"]
     getLatex sequent = concat
                        [ "& \\hspace{-4pt} \\begin{array}{l@{\\quad}l}\n"
                        , foldr

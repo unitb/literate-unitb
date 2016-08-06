@@ -27,7 +27,7 @@ getHomeR = do
         let (goalFormId, goalTextareaId) = goalIds
             (declPrefix, declContainerPrefix) = declarationIds
             (asmPrefix, asmContainerPrefix) = assumptionIds
-        setTitle "Literate Unit-B"
+        setTitle "Unit-B Web"
         $(widgetFile "homepage")
 
 
