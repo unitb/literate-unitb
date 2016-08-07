@@ -323,8 +323,11 @@ variable_sum m = section (keyword "variables") $
             forM_ (elems $ view' abs_vars m `M.difference` view' variables m) $ \v -> do
                 item $ tell [[printf|$%s$\\quad(removed)|] $ varDecl v]
                 comment_of m (DocVar $ v^.name)
-        forM_ (elems $ view' variables m) $ \v -> do
+        forM_ (elems $ view' abs_vars m `M.intersection` view' variables m) $ \v -> do
             item $ tell [[printf|$%s$|] $ varDecl v]
+            comment_of m (DocVar $ v^.name)
+        forM_ (elems $ view' variables m `M.difference` view' abs_vars m) $ \v -> do
+            item $ tell [[printf|$%s$\\quad(new)|] $ varDecl v]
             comment_of m (DocVar $ v^.name)
 
 data Member = Elem | Subset

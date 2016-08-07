@@ -10,7 +10,7 @@ import Logic.Names
     -- Libraries
 import Control.Applicative
 import Control.DeepSeq
-import Control.Lens hiding (List,elements)
+import Control.Lens hiding (List,elements,rewriteM)
 import Control.Monad.Reader
 import Control.Precondition
 
@@ -137,6 +137,9 @@ instance Tree GenericType where
             Gen s <$> traverse f ts
     rewriteM _ x@(VARIABLE _) = pure x
     rewriteM _ x@(GENERIC _)  = pure x
+
+instance Plated FOType where
+    plate = rewriteM
 
 instance Tree FOType where
     as_tree' (FOT s ts) = cons_to_tree s ts

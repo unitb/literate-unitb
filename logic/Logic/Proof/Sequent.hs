@@ -289,11 +289,16 @@ remove_type_vars (Sequent tout res ctx m asm hyp goal) = Sequent tout res ctx' m
         seq_types = S.fromList asm_types `S.union` used_types goal'
         -- seq_types = S.unions $ L.map referenced_types $ asm_types ++ S.toList (used_types goal')
 
+        const_types :: [FOType]
+        const_types = concatMap (universe.type_of) 
+                        $ M.elems $ ctx'^.constants 
         decl_types :: S.Set FOType
         decl_types = S.unions $ map used_types $ goal' : asm' ++ M.elems hyp'
         ctx' :: FOContext
         ctx'  = to_fol_ctx decl_types $ ctx
-                    & sorts %~ M.union (symbol_table $ nubSort $ S.toList decl_types^.partsOf (traverse.foldSorts.filtered (is _RecordSort)))
+                    & sorts %~ M.union records
+        records = symbol_table $ nubSort $ 
+                    (S.toList decl_types ++ const_types)^.partsOf (traverse.foldSorts.filtered (is _RecordSort))
         asm' :: [FOExpr]
         asm' = map snd $ concatMap (gen_to_fol seq_types (label "")) asm
         hyp' :: Table Label FOExpr

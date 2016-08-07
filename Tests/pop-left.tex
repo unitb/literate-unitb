@@ -1,0 +1,66 @@
+\documentclass[12pt]{amsart}
+\usepackage[margin=0.5in]{geometry} 
+  % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\usepackage{unitb}
+
+\newcommand{\REQ}{\text{REQ}}
+\newcommand{\OBJ}{\mathcal{O}bj}
+\newcommand{\Addr}{\mathcal{P}tr}
+\newcommand{\link}{\textit{LINK}}
+\newcommand{\trash}{\textit{TRASH}}
+\newcommand{\shared}{\textit{SHARED}}
+
+\begin{document}
+
+\section{m0}
+\input{pop-left/machine_m0}
+\begin{machine}{m0}
+    \with{functions}
+    \[\newset{\Addr_0}\]
+    \[\newset{\OBJ_0}\]
+
+shared:
+    \[ \variable{ LH, RH : \Addr_0 } \]
+    \[ \variable{ free : \set [\Addr_0] } \]
+    \[ \variable{ ver : \Int } \]
+    \[ \variable{ \link, \trash : \Addr_0 \pfun 
+        \{ 'item : \OBJ_0 
+       , 'left : \Addr_0
+       , 'right : \Addr_0  \} } \]
+
+private:
+    \[ \variable{ popL,remL : \Bool } \]
+    \[ \variable{ resL : \OBJ_0 } \]
+
+internal:
+\newevent{add:popL}{req\_popL}
+\newevent{hdl:popL:empty}{hdl\_popL\_empty}
+\newevent{hdl:popL:one}{hdl\_popL\_one}
+\newevent{hdl:popL:more}{hdl\_popL\_more}
+\newevent{returnL}{returnL}
+
+\begin{align*}
+    \evguard{add:popL}{m0:grd0}{\neg popL}
+\end{align*}
+
+external:
+\newevent{ext:pushL:empty}{EXT\_pushL\_empty}
+\newevent{ext:pushL:non:empty}{EXT\_pushL\_non\_empty}
+\newevent{ext:pushR:empty}{EXT\_pushR\_empty}
+\newevent{ext:pushR:non:empty}{EXT\_pushR\_non\_empty}
+\newevent{ext:popL:empty}{EXT\_popL\_empty}
+\newevent{ext:popL:one}{EXT\_popL\_one}
+\newevent{ext:popL:more}{EXT\_popL\_more}
+\newevent{ext:popR:empty}{EXT\_popR\_empty}
+\newevent{ext:popR:one}{EXT\_popR\_one}
+\newevent{ext:popR:more}{EXT\_popR\_more}
+\newevent{ext:return}{EXT\_return}
+
+\end{machine}
+\section{m1}
+
+\end{document}
