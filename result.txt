@@ -1,7 +1,3 @@
-Preprocessing library literate-unitb-0.1.0.0...
-In-place registering literate-unitb-0.1.0.0...
-Preprocessing executable 'test' for literate-unitb-0.1.0.0...
-Running test...
 +- Literate Unit-B Test Suite
 |  +- Unit-B Document
 |  |  +- basic syntax and scopes
@@ -341,10 +337,10 @@ Data.Map.Base
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   37686 total
+   39726 total
     1038 src/UnitB/PO.hs
      926 src/Document/Phase/Expressions.hs
      782 src/Document/Visitor.lhs
      751 src/Document/Phase.hs
      745 logic/Logic/Expr/Expr.hs
-Run time: 1m 50s
+Run time: 3m 40s

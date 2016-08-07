@@ -57,16 +57,21 @@ instance Monoid (SeqDefinitions expr) where
 makeLenses ''SeqDefinitions
 makeFields ''SeqDefinitions
 
-runSequent_ :: HasExpr expr => SequentM' expr expr -> Either [Error] (HOSequent expr)
+runSequent_ :: (HasExpr expr, FromDispExpr expr)
+            => SequentM' expr expr
+            -> Either [Error] (HOSequent expr)
 runSequent_ = fmap _goal . runSequent
 
-runSequent :: HasExpr expr
+runSequent :: (HasExpr expr, FromDispExpr expr)
            => SequentM' expr expr
            -> Either [Error] (SequentWithWD' expr)
 runSequent (SequentM cmd) =
-    mkSequent <$> evalRWST cmd () (parser, M.elems preludeTheories, M.empty)
+    mkSequent <$> evalRWST
+                    (unSequentM (mapM_ include preludeTheories) >> cmd)
+                    ()
+                    (undefined', [], M.empty)
     where
-        parser = theory_setting $ (empty_theory' "empty") { _extends =  preludeTheories }
+        unSequentM (SequentM m) = m
 
 runSequent' :: Pre
             => SequentM Expr -> SequentWithWD
