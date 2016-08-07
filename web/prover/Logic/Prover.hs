@@ -5,7 +5,7 @@ import           Logic.Expr.Printable
 import           Logic.Proof.Monad
 import qualified Logic.Proof.Sequent as S
 import           Logic.Theories
--- import           Logic.Theories.IntervalTheory (interval_theory)
+import           Logic.Theories.IntervalTheory (interval_theory)
 import           Logic.Theory
 import           TeX2PNG
 import           Utilities.Syntactic
@@ -95,8 +95,7 @@ getTheories = fromList . concat . map getTheory
 getTheory :: Pre => String -> [Theory]
 getTheory str@"arithmetic" =
     (fromJust . M.lookup (makeName str) $ supportedTheories)
-    -- : interval_theory
-    : []
+    : interval_theory : []
 getTheory str = (fromJust . M.lookup (makeName str) $ supportedTheories) : []
 
 toSringLi :: String -> String -> StringLi
