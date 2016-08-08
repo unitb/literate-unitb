@@ -816,7 +816,7 @@ strengthen_guard_po m (lbl,evt) =
             named_hyps $ invariants m 
             named_hyps $ evt^.new.guards ) $ do
         case evt^.evt_pairs of
-          evt :| [] ->
+          evt :| [] -> do
             forM_ (M.toList $ evt^.deleted.guards) $ \(lbl,grd) -> do
                 emit_goal [lbl] grd
           es -> emit_goal [] $ zsome $ NE.map (zall . M.ascElems . view (deleted.guards)) es

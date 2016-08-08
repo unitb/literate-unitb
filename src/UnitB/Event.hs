@@ -11,6 +11,7 @@ import UnitB.Expr
 import UnitB.Property
 
     -- Libraries
+import Control.Applicative
 import Control.DeepSeq
 import Control.Lens hiding (indices)
 import Control.Lens.HierarchyTH
@@ -22,7 +23,7 @@ import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map.Class  as M
 import Data.Maybe
-import Data.Semigroup
+import Data.Semigroup hiding (All)
 import Data.Serialize hiding (label)
 import Data.String
 import Data.Typeable
@@ -431,18 +432,34 @@ guards = to $ \e -> M.unions
         , e^.fine_sched
         ]
 
+data Changes = Old | New | All | Kept
 
 {-# INLINE changes #-}
 changes :: (HasExpr expr)
-        => (forall k a map. (IsMap map,IsKey map k) => map k a -> map k a -> map k a)
+        => Changes
         -> Getter (EventRef expr) (Event' expr)
-changes diff = to $ \(EvtRef (_,aevt) (_,cevt)) -> create $ do 
-    indices .= ( aevt^.indices ) `diff` ( cevt^.indices )
-    coarse_sched .= ( aevt^.coarse_sched ) `diff` ( cevt^.coarse_sched )
-    fine_sched   .= ( aevt^.fine_sched )   `diff` ( cevt^.fine_sched ) 
-    params  .= ( aevt^.params )  `diff` ( cevt^.params ) 
-    raw_guards  .= ( aevt^.raw_guards )  `diff` ( cevt^.raw_guards ) 
-    actions .= ( aevt^.actions ) `diff` ( cevt^.actions )
+changes ch = to $ \(EvtRef (_,aevt) (_,cevt)) -> create $ do 
+        indices .= ( aevt^.indices ) `diff` ( cevt^.indices )
+        raw_coarse_sched .= combine ( aevt^.raw_coarse_sched ) ( cevt^.raw_coarse_sched )
+        fine_sched   .= ( aevt^.fine_sched )   `diff` ( cevt^.fine_sched ) 
+        params  .= ( aevt^.params )  `diff` ( cevt^.params ) 
+        raw_guards  .= ( aevt^.raw_guards )  `diff` ( cevt^.raw_guards ) 
+        actions .= ( aevt^.actions ) `diff` ( cevt^.actions )
+    where
+        diff :: IsKey Table k
+             => Table k a -> Table k a -> Table k a
+        diff = case ch of
+                    Old -> M.difference
+                    New -> flip M.difference
+                    Kept -> M.intersection
+                    All  -> M.union
+        combine asch csch = case ch of
+                    Old  -> liftA2 M.difference asch csch <|> asch <|> emp csch
+                    New  -> liftA2 (flip M.difference) asch csch <|> csch <|> emp asch
+                    Kept -> liftA2 M.intersection asch csch <|> (M.empty <$ asch) <|> (M.empty <$ csch)
+                    All  -> liftA2 M.union asch csch <|> asch <|> csch
+        emp Nothing = Just M.empty
+        emp (Just _)= Nothing
 
 schedules :: HasExpr expr => Getter (Event' expr) (Table Label expr)
 schedules = to $ \e -> view coarse_sched e `M.union` _fine_sched e
@@ -459,7 +476,7 @@ deleted' :: (EventRefinement evt expr,Ord a)
 deleted' = getItems deleted
 
 deleted :: HasExpr expr => Getter (EventRef expr) (Event' expr)
-deleted = changes M.difference
+deleted = changes Old
 
 added' :: (EventRefinement evt expr,Ord a)
        => Getter (Event' expr) (Table a b) 
@@ -467,7 +484,7 @@ added' :: (EventRefinement evt expr,Ord a)
 added' = getItems added
 
 added :: HasExpr expr => Getter (EventRef expr) (Event' expr)
-added = changes (flip M.difference)
+added = changes New
 
 kept' :: (EventRefinement evt expr,Ord a)
       => Getter (Event' expr) (Table a b) 
@@ -475,7 +492,7 @@ kept' :: (EventRefinement evt expr,Ord a)
 kept' = getItems kept
 
 kept :: HasExpr expr => Getter (EventRef expr) (Event' expr)
-kept = changes M.intersection
+kept = changes Kept
 
 total' :: (EventRefinement evt expr,Ord a)
        => Getter (Event' expr) (Table a b) 
@@ -483,7 +500,7 @@ total' :: (EventRefinement evt expr,Ord a)
 total' = getItems total
 
 total :: HasExpr expr => Getter (EventRef expr) (Event' expr)
-total = changes M.union
+total = changes All
 
 new' :: (EventRefinement evt expr,Ord a)
      => Getter (Event' expr) (Table a b) 

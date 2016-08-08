@@ -1,4 +1,5 @@
-{-# LANGUAGE BangPatterns, RecordWildCards, OverloadedStrings #-} 
+{-# LANGUAGE BangPatterns, RecordWildCards
+        , OverloadedStrings, LambdaCase #-} 
 module Z3.Z3 
     ( Sequent
     , Validity ( .. )
@@ -13,7 +14,7 @@ module Z3.Z3
     , z3_version
     , Tree ( .. )
     , Symbol ( .. )
-    , Command ( .. )
+    , Z3Command ( .. )
     , smoke_test
     , discharge_on
     , pretty_print'
@@ -35,7 +36,8 @@ import Logic.Proof
 import Z3.Version
 
     -- Libraries
-import Control.Arrow
+import Control.Applicative
+import Control.Arrow hiding (left)
 import Control.DeepSeq
 import Control.Lens hiding (Context,Context',List)
 
@@ -44,6 +46,7 @@ import Control.Concurrent.SSem
 
 import Control.Exception
 import Control.Monad
+import Control.Monad.Trans.Either
 import Control.Monad.Reader
 import Control.Precondition
 
@@ -56,6 +59,7 @@ import qualified Data.Set as S
 import           Data.Typeable 
 
 import GHC.Generics (Generic)
+import GHC.Word
 
 import System.Exit
 import System.IO.Unsafe
@@ -68,7 +72,7 @@ import qualified Data.Map.Class as M
 total_caps :: SSem
 total_caps = unsafePerformIO $ new $ z3c_capacity z3_config
 
-instance Tree Command where
+instance Tree Z3Command where
     as_tree' = return . as_tree
     as_tree (Push)        = List [Str "push"]
     as_tree (Pop)         = List [Str "pop"]
@@ -189,7 +193,7 @@ data Satisfiability = Sat | Unsat | SatUnknown
 data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable, Generic)
 
-data Command = Decl FODecl 
+data Z3Command = Decl FODecl 
         | Assert FOExpr (Maybe String)
         | SetOption String String
         | CheckSat 
@@ -200,29 +204,43 @@ data Command = Decl FODecl
     deriving (Generic)
 
 z3_code :: Sequent -> String
-z3_code = unlines . L.map pretty_print' . z3_commands
+z3_code = makePretty . z3_commands
 
-z3_commands :: Sequent -> [Command]
-z3_commands = fromMaybe [] . z3_commands' False
+makePretty :: Z3Code -> String
+makePretty (Z3Code cmds _) = unlines . L.map pretty_print' $ cmds
 
-z3_commands' :: Bool -> Sequent -> Maybe [Command]
-z3_commands' skip po 
-    | not skip || assert /= ztrue = Just $ D.toList
-    (      D.fromList [] 
-        <> D.fromList [SetOption "auto-config" "false"]
-        <> D.fromList [SetOption "smt.timeout" $ show tout]
-        -- ++ [SetOption "smt.mbqi" "false"]
-        <> D.fromList (map Decl (concatMap decl [maybe_sort,null_sort] ))
-        <> D.fromList (map Decl (decl d))
-        <> D.fromList (zipWith (\x y -> Assert x $ Just $ "s" ++ show y) 
-                assume [0..])
-        <> D.concat (map (D.fromList.f) (zip (M.toAscList hyps) [0..]))
-        <> D.fromList [Assert (znot assert) $ Just "goal"]
-        <> D.fromList [CheckSat]
-        <> D.fromList [] )
-    | otherwise = Nothing
+data Z3Code = Z3Code [Z3Command] String
+
+z3_commands :: Sequent -> Z3Code
+z3_commands po = timeoutPrefix (po^.timeout) $ fromJust' $ z3_commands' False po
+
+timeoutPrefix :: Word32 -> Z3Code -> Z3Code
+timeoutPrefix to = prefix cmds
     where
-        (Sequent tout _ d _ assume hyps assert) = firstOrderSequent po
+        cmds = 
+            [SetOption "auto-config" "false"
+            ,SetOption "smt.timeout" $ show to ]
+
+prefix :: [Z3Command] -> Z3Code -> Z3Code
+prefix cmds' (Z3Code cmds out) = Z3Code (cmds' ++ cmds) (out' ++ out)
+    where
+        out' = concatMap ((++ "\n") . pretty . as_tree) cmds'
+
+z3_commands' :: Bool -> Sequent -> Maybe Z3Code
+z3_commands' skip po 
+        | not skip || assert /= ztrue = Just $ makeZ3Code cmd
+        | otherwise = Nothing
+    where
+        cmd = D.toList
+                (      D.fromList (map Decl (concatMap decl [maybe_sort,null_sort] ))
+                    <> D.fromList (map Decl (decl d))
+                    <> D.fromList (zipWith (\x y -> Assert x $ Just $ "s" ++ show y) 
+                            assume [0..])
+                    <> D.concat (map (D.fromList.f) (zip (M.toAscList hyps) [0..]))
+                    <> D.fromList [Assert (znot assert) $ Just "goal"]
+                    <> D.fromList [CheckSat]
+                    <> D.fromList [] )
+        (Sequent _ _ d _ assume hyps assert) = firstOrderSequent po
         f ((lbl,xp),n) = [ Comment $ pretty lbl
                          , Assert xp $ Just $ "h" ++ show n]
 
@@ -296,6 +314,23 @@ map_failures po_name cmd = catch cmd $ \(Z3Exception i msg) -> do
 discharge :: Label -> Sequent -> IO Validity
 discharge lbl po = discharge' Nothing lbl po
 
+tryDischarge :: Int        -- Timeout in seconds
+             -> (Word32 -> Word32)
+             -> Label
+             -> Sequent    -- 
+             -> Z3Code
+             -> EitherT (Maybe String) IO Bool
+tryDischarge t fT lbl po code = do
+        let to    = fT $ po^.timeout
+            code' = timeoutPrefix to code
+        lift (verify' lbl code' t) >>= \case
+            Right Sat -> return False
+            Right Unsat -> return True
+            Right SatUnknown -> do
+                left Nothing
+            Left xs -> do
+                left $ Just $ "discharge: " ++ xs
+
 discharge' :: Maybe Int      -- Timeout in seconds
            -> Label
            -> Sequent        -- 
@@ -303,36 +338,44 @@ discharge' :: Maybe Int      -- Timeout in seconds
 discharge' n lbl po
     | (po^.goal) == ztrue = return Valid
     | otherwise = withSemN total_caps (fromIntegral $ po^.resource) $ do
-        let code  = z3_commands' True po
-            code' = z3_commands po'
-            po' = po & timeout %~ (`div` 4)
-            t = fromMaybe default_timeout n
+        let t = fromMaybe default_timeout n
+            code  = z3_commands' True po
         case code of
             Just code -> do
-                s  <- verify lbl code' 10
-                s' <- if s == Right SatUnknown 
-                    then verify lbl code t
-                    else return s
-                case s' of
-                    Right Sat -> return Invalid
-                    Right Unsat -> return Valid
-                    Right SatUnknown -> do
-                        return ValUnknown
-                    Left xs -> do
-                        fail $ "discharge: " ++ xs
+                x <- runEitherT 
+                      $ tryDischarge t (`div` 4) lbl po code
+                    <|> tryDischarge t id lbl po code
+                    <|> tryDischarge t (* 5) lbl po code
+                case x of
+                    Right True  -> return Valid
+                    Right False -> return Invalid
+                    Left (Just xs) -> fail xs
+                    Left Nothing   -> return ValUnknown
             Nothing -> return Valid
 
 log_count :: MVar Int
 log_count = unsafePerformIO $ newMVar 0
 
-verify :: Label -> [Command] -> Int -> IO (Either String Satisfiability)
+verify :: Label -> [Z3Command] -> Int -> IO (Either String Satisfiability)
 verify lbl xs n = do
-        let ys = concat $ map reverse $ groupBy eq xs
+        let code = makeZ3Code xs
+        verify' lbl code n
+
+renderZ3Code :: Z3Code -> String
+renderZ3Code (Z3Code _ code) = code
+
+makeZ3Code :: [Z3Command] -> Z3Code
+makeZ3Code xs = Z3Code xs code
+        where
+            ys = concatMap reverse $ groupBy eq xs
             code = unlines $ map (pretty . as_tree) ys
             eq x y = is_assert x && is_assert y
             is_assert (Assert _ _) = True
             is_assert _            = False
-        (_,out,_err) <- feed_z3 code n
+
+verify' :: Label -> Z3Code -> Int -> IO (Either String Satisfiability)
+verify' lbl code n = do
+        (_,out,_err) <- feed_z3 (renderZ3Code code) n
         let lns = lines out
             res = take 1 $ dropWhile ("WARNING" `isPrefixOf`) lns
         if length lns == 0 ||
@@ -344,7 +387,7 @@ verify lbl xs n = do
             let header = Comment $ pretty lbl
             n <- modifyMVar log_count $ 
                 return . ((1+) &&& id)
-            writeFile (printf "log%d-1.z3" n) (unlines $ map pretty_print' $ header : ys)
+            writeFile (printf "log%d-1.z3" n) (renderZ3Code . prefix [header] $ code)
             return $ Right SatUnknown
         else if res == ["sat"] then do
             return $ Right Sat
@@ -357,6 +400,6 @@ verify lbl xs n = do
         else
             fail "verify: incomplete conditional"
 
-instance NFData Command
+instance NFData Z3Command
 instance NFData Satisfiability
 instance NFData Validity
