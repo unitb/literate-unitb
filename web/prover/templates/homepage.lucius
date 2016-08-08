@@ -14,8 +14,12 @@ footer {
     margin-top: 15px;
 }
 
-.icon-margin {
+.icon-right-margin {
     margin-right: 3px;
+}
+
+.icon-left-margin {
+    margin-left: 3px;
 }
 
 .#{declPrefix}, .#{asmPrefix} {
@@ -35,4 +39,12 @@ footer {
 
 ##{resultBarId} samp {
     white-space: pre;
+}
+
+[data-toggle="collapse"] {
+    cursor: pointer;
+}
+
+.table > tbody > tr > td { 
+    vertical-align: middle;
 }

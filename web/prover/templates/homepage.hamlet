@@ -4,17 +4,11 @@
 
 <.page-header>
     <.btn-group .pull-right>
-      <button type="button" .btn .btn-primary .dropdown-toggle
-      data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        Presets
-        <span .caret>
-      <ul .dropdown-menu>
-        <li .dropdown-header>Theories
-        $forall (PresetMap _ name _) <- presetMaps presets
-          <li>
-            <a href="#" data-toggle="modal" data-target="##{name}Modal">
-              #{T.toTitle name}
-    <h2>Prover
+      <a href="#examples" .btn .btn-default>
+        Examples
+        <small>
+          <span .glyphicon .glyphicon-arrow-down .icon-left-margin>
+    <h2 #prover>Prover
 
 <noscript>
   <section.list-group>
@@ -74,62 +68,76 @@
       <.form-group>
       <button .btn .btn-primary type="submit">
         <small>
-          <span .glyphicon .glyphicon-refresh .icon-margin>
+          <span .glyphicon .glyphicon-refresh .icon-right-margin>
         Prove
       <button .btn .btn-default type="reset">
         Clear
 
   <.col-lg-6 .col-lg-offset-1 #output-area>
     <div ##{resultBarId} .alert .alert-info role="alert" style="display: none">
-      <span .glyphicon .glyphicon-info-sign .icon-margin aria-hidden="true">
+      <span .glyphicon .glyphicon-info-sign .icon-right-margin aria-hidden="true">
       <span .sr-only>Ready
       <samp>Ready
 
-<section.page-header.row>
+<section.page-header.row #examples>
   <.col-lg-10>
     <div class="panel panel-info">
-      <div class="panel-heading">Examples of syntax
+      <div class="panel-heading">
+        Examples
       <div class="panel-body">
         <p>
           Below are some examples of the syntax you can use
-          with the Literate Unit-B web prover.
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Syntax
-            <th>Rendered Version
-        <tbody>
-          <tr>
-            <td><code>x \subseteq \dom.f
-            <td><img src=@{StaticR img_ex1_png}>
-          <tr>
-            <td><code>\ran.f = \qset{x}{x \in \dom.f}{f.x}
-            <td><img src=@{StaticR img_ex2_png}>
-          <tr>
-            <td><code>x = \qsum{i}{ \between{p}{i}{q} }{ f.i }
-            <td><img src=@{StaticR img_ex3_png}>
-          <tr>
-            <td><code>\qforall{x}{ p.x }{ (f \1| x \fun 7).x = 7 }
-            <td><img src=@{StaticR img_ex4_png}>
-          <tr>
-            <td><code>3 \cdot x^3 + 17 \2\le x \cdot y
-            <td><img src=@{StaticR img_ex5_png}>
-          <tr>
-            <td><code>\dom.(x \fun y) = \{ x \} \3\land \ran.(x \fun y) = \{ y \}
-            <td><img src=@{StaticR img_ex6_png}>
+          with the Unit-B Web, categorized by theory.
 
-<!-- Modals -->
-$forall (PresetMap pmId name items) <- presetMaps presets
-  <.modal .fade ##{name}Modal tabindex="-1" role="dialog" aria-labelledby="#{name}Label">
-    <.modal-dialog role="document">
-      <.modal-content>
-        <.modal-header>
-          <button type="button" .close data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;
-          <h4 class="modal-title" id="myModalLabel">#{T.toTitle name}
-        <.modal-body>
-          <.list-group>
-            $forall (PresetItem piId desc _) <- items
-              <a href="#" .list-group-item .presetitem
-              data-presetId="#{pmId}" data-itemId="#{piId}">#{desc}
-
+        <div class="panel-group" id="accordion">
+          $forall (PresetMap pmId name items) <- presetMaps presets
+            <div class="panel panel-default">
+              <div class="panel-heading" data-toggle="collapse" data-parent="#accordion" data-target="#collapse#{pmId}">
+                #{T.toTitle name}
+              <div id="collapse#{pmId}" class="panel-collapse collapse">
+                <div class="panel-body">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Description
+                        <th>Syntax
+                        <th>Rendered Version
+                        <th>Options
+                    <tbody>
+                      $forall (PresetItem piId desc (ProofForm _ _ _ g)) <- items
+                        <tr>
+                          <td>#{desc}
+                          <td><code>#{g}
+                          <td><img src="https://placehold.it/260x21">
+                          <td>
+                            <a href="#" .presetitem
+                            data-presetId="#{pmId}" data-itemId="#{piId}">Try
+          <div class="panel panel-default">
+            <div class="panel-heading" data-toggle="collapse" data-parent="#accordion" data-target="#collapsemorex">
+              More…
+            <div id="collapsemorex" class="panel-collapse collapse">
+              <div class="panel-body">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Syntax
+                      <th>Rendered Version
+                  <tbody>
+                    <tr>
+                      <td><code>x \subseteq \dom.f
+                      <td><img src=@{StaticR img_ex1_png}>
+                    <tr>
+                      <td><code>\ran.f = \qset{x}{x \in \dom.f}{f.x}
+                      <td><img src=@{StaticR img_ex2_png}>
+                    <tr>
+                      <td><code>x = \qsum{i}{ \between{p}{i}{q} }{ f.i }
+                      <td><img src=@{StaticR img_ex3_png}>
+                    <tr>
+                      <td><code>\qforall{x}{ p.x }{ (f \1| x \fun 7).x = 7 }
+                      <td><img src=@{StaticR img_ex4_png}>
+                    <tr>
+                      <td><code>3 \cdot x^3 + 17 \2\le x \cdot y
+                      <td><img src=@{StaticR img_ex5_png}>
+                    <tr>
+                      <td><code>\dom.(x \fun y) = \{ x \} \3\land \ran.(x \fun y) = \{ y \}
+                      <td><img src=@{StaticR img_ex6_png}>

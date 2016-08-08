@@ -36,6 +36,7 @@ $(function() {
   // and also set the bar to "Ready" after clicking the reset button
   $(':reset').on('click', function(evt) {
     evt.preventDefault();
+
     $form = $(evt.target).closest('form');
     var classes = ["#{rawJS declPrefix}", "#{rawJS asmPrefix}"];
 
@@ -78,6 +79,8 @@ $(function() {
 
   $('.presetitem').on('click', function(evt) {
     evt.preventDefault();
+    $("#prover").scrollTop();
+
     // Make an AJAX request to the server to request a preset
     $.ajax({
       url: '@{PresetR}',
@@ -119,7 +122,6 @@ $(function() {
         // fill in the goal
         $("##{rawJS goalTextareaId}").val(data.form.goal);
 
-        $(".modal").modal("hide");
         $("##{rawJS goalTextareaId}").focus();
       },
       error: function (data) {
@@ -195,7 +197,7 @@ $(function() {
       bar.removeClass();
       bar.addClass("alert " + color_class);
       icon.removeClass();
-      icon.addClass("icon-margin glyphicon " + icon_class);
+      icon.addClass("icon-right-margin glyphicon " + icon_class);
       $(samp).text(text.trim());
       sr.text(sr_text);
 
@@ -358,9 +360,19 @@ $(function() {
     }
   }
 
-  $("##{rawJS resultBarId}").fadeIn();
-  $('.modal .list-group a').click(function(e) {
-    e.preventDefault();
+  $('a[href*="#"]:not([href="#"])').click(function() {
+    if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'') && location.hostname == this.hostname) {
+      var target = $(this.hash);
+      target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+      if (target.length) {
+        $('html, body').animate({
+          scrollTop: target.offset().top
+        }, 750);
+        return false;
+      }
+    }
   });
+
+  $("##{rawJS resultBarId}").fadeIn();
 
 });

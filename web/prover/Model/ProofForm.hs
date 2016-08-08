@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Model.ProofForm where
 
 import ClassyPrelude.Yesod
