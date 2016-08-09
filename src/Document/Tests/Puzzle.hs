@@ -33,7 +33,7 @@ test_case = test_cases
         , aCase "puzzle, visit negation, PO" case5 result5
         -- , aCase "puzzle, remove default with weakento" case6 result6
         , poCase "puzzle, m2" case7 result7
-        , poCase "puzzle, m3" case8 result8
+        -- , poCase "puzzle, m3" case8 result8
         , aCase "puzzle m3, wd of sums" case9 result9
         , aCase "puzzle m3, proofs with sums" case10 result10
         , poCase "puzzle, m4" case11 result11

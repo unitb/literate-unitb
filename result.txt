@@ -33,7 +33,10 @@
 |  |  |  +- test 29, weakening and splitting / disjunction
 |  |  |  +- test 30, weakening and splitting / safety
 |  |  |  +- test 31, INIT/fis
-|  |  +- [ Success: 31 / 31 ]
+|  |  |  +- test 32, inferring used record types
+|  |  |  +- test 33, verifying with inferred records
+|  |  |  +- test 34, using coarse schedules in proofs of safety of new events
+|  |  +- [ Success: 34 / 34 ]
 |  |  +- small machine example
 |  |  |  +- test 0
 |  |  |  +- test 1 (separate machine blocks)
@@ -57,10 +60,6 @@
 |  |  |  +- puzzle, visit enablement, PO
 |  |  |  +- puzzle, visit negation, PO
 |  |  |  +- puzzle, m2
-|  |  |  +- puzzle, m3
-|  |  |  *** FAILED ***
-src/Document/Tests/Puzzle.hs:36:11
-./Logic/UnitTest.hs:42:35
 |  |  |  +- puzzle m3, wd of sums
 |  |  |  +- puzzle m3, proofs with sums
 |  |  |  +- puzzle, m4
@@ -81,7 +80,7 @@ src/Document/Tests/Puzzle.hs:36:11
 |  |  |  +- test 27, old guards / new guards
 |  |  |  +- test 28, illegal type application
 |  |  |  +- test 29, theorem well-definedness
-|  |  +- [ Success: 27 / 28 ]
+|  |  +- [ Success: 27 / 27 ]
 |  |  +- Unless / except clause
 |  |  |  +- test 0, unless/except without indices
 |  |  |  +- test 1, unless/except with indices and free variables
@@ -218,11 +217,8 @@ src/Document/Tests/Puzzle.hs:36:11
 |  |  |  +- test1: verify m1
 |  |  |  +- test2: verify m2
 |  |  |  +- test3: verify m3
-|  |  |  *** FAILED ***
-src/Document/Tests/TerminationDetection.hs:13:7
-./Logic/UnitTest.hs:42:35
 |  |  |  +- test4: quantified union
-|  |  +- [ Success: 4 / 5 ]
+|  |  +- [ Success: 5 / 5 ]
 |  |  +- Parser
 |  |  |  +- test0: verify m0
 |  |  |  +- test1: verify m1
@@ -234,7 +230,7 @@ src/Document/Tests/TerminationDetection.hs:13:7
 |  |  +- conformance of instances to type class axioms
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
-|  +- [ Success: 176 / 178 ]
+|  +- [ Success: 180 / 180 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -348,17 +344,17 @@ src/Document/Tests/TerminationDetection.hs:13:7
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 271 / 273 ]
++- [ Success: 275 / 275 ]
 Data.Map.Base
 
 ***************
-*** FAILURE ***
+*** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38504 total
+   38597 total
     1130 src/UnitB/PO.hs
      928 src/Document/Phase/Expressions.hs
-     798 src/Document/Visitor.lhs
+     795 src/Document/Visitor.lhs
      779 logic/Logic/Expr/Expr.hs
      757 src/Document/Phase.hs
-Run time: 1m 54s
+Run time: 2m 25s

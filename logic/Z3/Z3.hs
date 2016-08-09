@@ -207,28 +207,32 @@ z3_code :: Sequent -> String
 z3_code = makePretty . z3_commands
 
 makePretty :: Z3Code -> String
-makePretty (Z3Code cmds _) = unlines . L.map pretty_print' $ cmds
+makePretty (Z3Code _ cmds _) = unlines . L.map pretty_print' $ cmds
 
-data Z3Code = Z3Code [Z3Command] String
+data Z3Code = Z3Code Word32 [Z3Command] String
+
+instance HasTimeout Z3Code Word32 where
+    timeout f (Z3Code to cmds xs) = (\to' -> Z3Code to' cmds xs) <$> f to
 
 z3_commands :: Sequent -> Z3Code
-z3_commands po = timeoutPrefix (po^.timeout) $ fromJust' $ z3_commands' False po
+z3_commands po = timeoutPrefix id $ fromJust' $ z3_commands' False po
 
-timeoutPrefix :: Word32 -> Z3Code -> Z3Code
-timeoutPrefix to = prefix cmds
+timeoutPrefix :: (Word32 -> Word32) -> Z3Code -> Z3Code
+timeoutPrefix f code = prefix cmds code'
     where
+        code' = code & timeout %~ f
         cmds = 
             [SetOption "auto-config" "false"
-            ,SetOption "smt.timeout" $ show to ]
+            ,SetOption "smt.timeout" $ show (code'^.timeout) ]
 
 prefix :: [Z3Command] -> Z3Code -> Z3Code
-prefix cmds' (Z3Code cmds out) = Z3Code (cmds' ++ cmds) (out' ++ out)
+prefix cmds' (Z3Code po cmds out) = Z3Code po (cmds' ++ cmds) (out' ++ out)
     where
         out' = concatMap ((++ "\n") . pretty . as_tree) cmds'
 
 z3_commands' :: Bool -> Sequent -> Maybe Z3Code
 z3_commands' skip po 
-        | not skip || assert /= ztrue = Just $ makeZ3Code cmd
+        | not skip || assert /= ztrue = Just $ makeZ3Code (po^.timeout) cmd
         | otherwise = Nothing
     where
         cmd = D.toList
@@ -317,14 +321,12 @@ discharge lbl po = discharge' Nothing lbl po
 tryDischarge :: Int        -- Timeout in seconds
              -> (Word32 -> Word32)
              -> Label
-             -> Sequent    -- 
              -> Z3Code
              -> EitherT (Maybe String) IO Bool
-tryDischarge t fT lbl po code = do
-        let to    = fT $ po^.timeout
-            code' = timeoutPrefix to code
+tryDischarge t fT lbl code = do
+        let code' = timeoutPrefix fT code
         lift (verify' lbl code' t) >>= \case
-            Right Sat -> return False
+            Right Sat   -> return False
             Right Unsat -> return True
             Right SatUnknown -> do
                 left Nothing
@@ -343,9 +345,9 @@ discharge' n lbl po
         case code of
             Just code -> do
                 x <- runEitherT 
-                      $ tryDischarge t (`div` 4) lbl po code
-                    <|> tryDischarge t id lbl po code
-                    <|> tryDischarge t (* 5) lbl po code
+                      $ tryDischarge 5 (`div` 4) lbl code
+                    <|> tryDischarge 10 id lbl code
+                    <|> tryDischarge t (* 5) lbl code
                 case x of
                     Right True  -> return Valid
                     Right False -> return Invalid
@@ -358,14 +360,15 @@ log_count = unsafePerformIO $ newMVar 0
 
 verify :: Label -> [Z3Command] -> Int -> IO (Either String Satisfiability)
 verify lbl xs n = do
-        let code = makeZ3Code xs
+        let code = makeZ3Code 3 xs
         verify' lbl code n
 
 renderZ3Code :: Z3Code -> String
-renderZ3Code (Z3Code _ code) = code
+renderZ3Code (Z3Code _ _ code) = code
 
-makeZ3Code :: [Z3Command] -> Z3Code
-makeZ3Code xs = Z3Code xs code
+makeZ3Code :: Integral n 
+           => n -> [Z3Command] -> Z3Code
+makeZ3Code to xs = Z3Code (fromIntegral to) xs code
         where
             ys = concatMap reverse $ groupBy eq xs
             code = unlines $ map (pretty . as_tree) ys
