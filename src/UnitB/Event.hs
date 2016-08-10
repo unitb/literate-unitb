@@ -150,9 +150,7 @@ type ScheduleChange = ScheduleChange' Expr
 type RawScheduleChange = ScheduleChange' RawExpr
 
 data ScheduleChange' expr = ScheduleChange 
-        { _remove :: Table Label ()
-        , _add    :: Table Label ()
-        , _keep   :: Table Label ()
+        { _add    :: Table Label ()
         , _sch_prog :: (Label,ProgressProp' expr) 
         }
     deriving (Show,Eq,Typeable,Functor,Foldable,Traversable,Generic)
@@ -170,12 +168,11 @@ mkCons ''Event'
 
 type OldNewPair expr = (Table Label expr,Table Label expr)
 
-oldNewPair :: ScheduleChange' expr 
+oldNewPair :: HasExpr expr
+           => AbstrEvent' expr
+           -> ScheduleChange' expr 
            -> OldNewPair ()
-oldNewPair sch = (old,new)
-    where
-        new = (sch^.keep) `M.union` (sch^.add)
-        old = (sch^.keep) `M.union` (sch^.remove)
+oldNewPair e sch = (() <$ e^.coarse_sched,sch^.add)
 
 unrefinedSched :: HasExpr expr
                => EventSplitting expr
@@ -542,7 +539,7 @@ compact = to $ \m -> EvtRef
         (Left SkipEvent, sconcat $ snd <$> m^.concrete_evts)
 
 replace :: (Label, ProgressProp) -> ScheduleChange
-replace prog = ScheduleChange def def def prog
+replace prog = ScheduleChange def prog
 
 instance NFData expr => NFData (Event' expr)
 instance NFData expr => NFData (AbstrEvent' expr)

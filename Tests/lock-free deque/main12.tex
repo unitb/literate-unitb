@@ -191,7 +191,7 @@
   \refiningevent{handle:popR}{handle:popR:empty}{handle\_popR\_empty}
   \refiningevent{handle:popR}{handle:popR:non:empty}{handle\_popR\_non\_empty}
   \[ \dummy{v : \Int} \]
-  \replace{handle:popL}{}{m3:sch0}{m1:sch1}{m3:prog0}
+  \replace{handle:popL}{m3:sch0}{m3:prog0}
   \begin{align*}
     & \progress{m3:prog0}{v = ver}{p = q \lor p < q}
     \refine{m3:prog0}{implication}{}{}
@@ -203,7 +203,7 @@
     \evbcmeq{handle:popL:non:empty}{m3:act1}{p}{p+1} \\
     \evbcmeq{handle:popL:non:empty}{m3:act2}{qe}{ \{p\} \domsub qe }
   \end{align}
-  \replace{handle:popR}{}{m3:sch0}{m1:sch1}{m3:prog0}
+  \replace{handle:popR}{m3:sch0}{m3:prog0}
   \begin{align}
     \cschedule{handle:popR:non:empty}{m3:sch0}{ p < q } \\
     \cschedule{handle:popR:empty}{m3:sch0}{ p = q } \\

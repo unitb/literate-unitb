@@ -313,6 +313,11 @@ evtSplits union eid ln = to $ \m -> readGraph (m^.pEventRef) $ do
             return $ r <$ eid
         return $ rights rs
 
+evtSplitConcrete :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase,Pre)
+                 => EventId
+                 -> Getting (Table Label a) (AEvtType phase) (Table Label a)
+                 -> Getter phase [Table Label a]
+evtSplitConcrete = evtSplits $ flip const
 evtSplitAdded :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase,Pre)
               => EventId
               -> Getting (Table Label a) (AEvtType phase) (Table Label a)

@@ -166,7 +166,7 @@ result2 = unlines
     , "  o  m2/m1:movein/C_SCH/delay/0/prog/m2:prog0/rhs/mi:c0"
     , "  o  m2/m1:movein/C_SCH/delay/0/saf/m0:enter/SAF/m1:movein"
     , "  o  m2/m1:movein/C_SCH/delay/0/saf/m0:leave/SAF/m1:movein"
-    , " xxx m2/m1:movein/C_SCH/delay/0/saf/m1:movein/SAF/m1:movein"
+    , "  o  m2/m1:movein/C_SCH/delay/0/saf/m1:movein/SAF/m1:movein"
     , "  o  m2/m1:movein/C_SCH/delay/0/saf/m1:moveout/SAF/m1:movein"
     , "  o  m2/m1:movein/FIS/loc@prime"
     , "  o  m2/m1:movein/INV/m2:inv0"
@@ -226,7 +226,7 @@ result2 = unlines
     , "  o  m2/m2:tr1/TR/leadsto/rhs"
     , "  o  m2/m2:tr1/TR/m1:moveout/EN"
     , "  o  m2/m2:tr1/TR/m1:moveout/NEG"
-    , "passed 99 / 100"
+    , "passed 100 / 100"
     ]
 
 path0 :: FilePath

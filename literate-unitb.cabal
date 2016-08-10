@@ -115,6 +115,7 @@ library
         -- Document.Tests.IndirectEq
         Document.Tests.Lambdas
         Document.Tests.LockFreeDeque
+        Document.Tests.LockFreeDeque.Stable
         Document.Tests.Parser
         Document.Tests.Phase
         Document.Tests.Puzzle

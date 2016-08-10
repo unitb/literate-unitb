@@ -75,7 +75,7 @@ data structure.
   & \witness{handle}{b}{b = ch} \\
   & \progress{m1:prog1}{ b = ch }{ b = ch }
 \end{align*}
-\replace{handle}{}{m1:sch0}{}{m1:prog1}
+\replace{handle}{m1:sch0}{m1:prog1}
   \begin{liveness}{m1:prog1}
     \progstep{\true}{req = \emptyset \1\lor \neg req \subseteq req_0}
       {induction}{}{ \var{req}{down}{\emptyset} }

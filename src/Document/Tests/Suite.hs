@@ -96,6 +96,9 @@ verifyFiles = verifyFilesWith (return ())
 verify :: FilePath -> Int -> IO POResult
 verify = verifyWith (return ())
 
+verifyOnly :: FilePath -> String -> Int -> IO POResult
+verifyOnly fp lbl = verifyFilesOnlyWith (return ()) (label lbl ==) (pure fp)
+
 verifyWith :: State Sequent a
            -> FilePath 
            -> Int 
@@ -106,13 +109,20 @@ verifyFilesWith :: State Sequent a
                 -> NonEmpty FilePath
                 -> Int 
                 -> IO POResult
-verifyFilesWith opt files i = makeReport' empty $ do
+verifyFilesWith opt = verifyFilesOnlyWith opt (const True)
+
+verifyFilesOnlyWith :: State Sequent a
+                    -> (Label -> Bool)
+                    -> NonEmpty FilePath
+                    -> Int 
+                    -> IO POResult
+verifyFilesOnlyWith opt keep files i = makeReport' empty $ do
     b <- liftIO $ mapM doesFileExist files
     if and b then do
         ms <- EitherT $ fst <$> many_file_obligations' files
         if i < size ms then do
             let (m,pos) = snd $ i `elemAt` ms
-            r <- lift $ trying id (str_verify_machine_with opt m)
+            r <- lift $ trying id (str_verify_machine_with (\lbl s -> guard (keep lbl) >> Just (execState opt s)) m)
             case r of
                 Right (s,_,_) -> return (s, pos)
                 Left e -> return (show (e :: SomeException),pos)

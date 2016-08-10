@@ -667,7 +667,7 @@ replace_csched_po m (lbl,evt') = do
                 prefix_label nb ) $ do
             with (do
                     prefix_label "saf") $
-                forM_ (csched_ref_safety (oldNewPair ref) evt') 
+                forM_ (csched_ref_safety (oldNewPair (evt'^.abstrEvent') ref) evt') 
                     $ prop_saf' m (Just lbl)
             with (do
                     _context $ assert_ctx m
@@ -705,7 +705,7 @@ replace_csched_po m (lbl,evt') = do
                                         cs -> singleton "split" $ zsome $ NE.map zall cs
                     forM_ (M.toList new_part') $ \(lbl,sch) -> do
                         emit_goal ["prog",plbl,"rhs",lbl] $ $typeCheck$
-                            Right q0 .=> Right sch
+                            Right q0 .=> Right sch \/ mznot (Right $ zall old_c)
 
 weaken_csched_po :: RawMachineAST -> (EventId,RawEventSplitting) -> M ()
 weaken_csched_po m (lbl,evt) = do

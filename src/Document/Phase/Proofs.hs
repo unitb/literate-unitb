@@ -243,11 +243,9 @@ refine_prog_prop = machineCmd "\\refine" $ \(goal, RuleName rule, hyps, PlainTex
         return [(goal,(r,dep),li)]
 
 ref_replace_csched :: MPipeline MachineP3 EventRefA
-ref_replace_csched = machineCmd "\\replace" $ \(Abs evt_lbl,del',added',kept',prog) m p3 -> do
-        -- let lbls  = (S.elems $ add `S.union` del `S.union` keep)
-        let del   = map (getCoarseSchLbl . getAbstract) del'
+ref_replace_csched = machineCmd "\\replace" $ \(Abs evt_lbl,added',prog) m p3 -> do
+        let 
             added = map (getCoarseSchLbl . getConcrete) added'
-            kept  = map (getCoarseSchLbl . getCommon) kept'
         (pprop,evt) <- toEither $ do
             pprop <- fromEither (error "replace_csched: prog") 
                         $ _unM $ get_progress_prop p3 m prog
@@ -255,20 +253,12 @@ ref_replace_csched = machineCmd "\\replace" $ \(Abs evt_lbl,del',added',kept',pr
                         $ _unM $ get_abstract_event p3 evt_lbl
             return (pprop,evt)
         toEither $ do
-            _ <- fromEither undefined $ _unM $ bind_all del 
-                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' deleted during refinement|] (pretty lbl) (pretty evt))
-                    (`M.lookup` (M.unions $ p3^.evtSplitDel evt eCoarseSched))
             _ <- fromEither undefined $ _unM $ bind_all added 
                     (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' added during refinement|] (pretty lbl) (pretty evt)) 
-                    (`M.lookup` (M.unions $ p3^.evtSplitAdded evt eCoarseSched))
-            _ <- fromEither undefined $ _unM $ bind_all kept 
-                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' kept during refinement|] (pretty lbl) (pretty evt)) 
-                    (`M.lookup` (M.unions $ p3^.evtSplitKept evt eCoarseSched))
+                    (`M.lookup` (M.unions $ p3^.evtSplitConcrete evt eCoarseSched))
             return ()
         let rule = replace (as_label prog,pprop)
-                        & remove .~ fromList' del
                         & add  .~ fromList' added
-                        & keep .~ fromList' kept
             po_lbl = composite_label ["SCH",as_label m]            
         li <- ask
         return $ EventRef [(evt,[((po_lbl,rule),li)])] []

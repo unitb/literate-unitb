@@ -29,7 +29,7 @@
 \removeguard{concrete event-name}{zero or more abstract guard-label}
 \removeinit{zero or more abstract initialization-label}
 \removevar{zero or more variable}
-\replace{abstract event-name}{zero or more abstract coarse-schedule-label}{zero or more concrete coarse-schedule-label}{zero or more preserved coarse-schedule-label}{progress-property-label}
+\replace{abstract event-name}{zero or more concrete coarse-schedule-label}{progress-property-label}
 \replacefine{abstract event-name}{progress-property-label}
 \safety{fresh-name}{expression}{expression}
 \safetyB{fresh-name}{abstract event-name}{expression}{expression}

@@ -25,7 +25,6 @@ import Control.DeepSeq
 import Control.Invariant
 import Control.Lens  hiding (indices,Context,Context',(.=))
 import Control.Monad hiding (guard)
-import Control.Monad.State
 import Control.Precondition
 
 import           Data.Default
@@ -242,14 +241,14 @@ verify_changes m old_pos = do
             | otherwise = Just p0
 
 str_verify_machine :: HasExpr expr => Machine' expr -> IO (String,Int,Int)
-str_verify_machine = str_verify_machine_with (return ())
+str_verify_machine = str_verify_machine_with (const Just)
 
 str_verify_machine_with :: HasExpr expr 
-                        => State Sequent a
+                        => (Label -> Sequent -> Maybe Sequent)
                         -> Machine' expr 
                         -> IO (String,Int,Int)
 str_verify_machine_with opt m = do
-        let pos = execState opt <$> proof_obligation m
+        let pos = mapMaybeWithKey opt $ proof_obligation m
         xs <- verify_all pos
         format_result xs
 

@@ -524,9 +524,7 @@ case6 = return $ do
         li = LI "file.ext" 1 1
         ms = M.fromList [("m0",()),("m1",())]
         ch = ScheduleChange 
-                (M.singleton "sch0" ()) 
                 (M.singleton "sch1" ()) 
-                (M.singleton "sch2" ()) 
                 ("prog1", prog1) 
         cSchRef = runMap' $ do
             "m0" ## M.empty
@@ -560,9 +558,7 @@ result6 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result5
             | mid == "m1" = makeMachineP4' m [PLiveRule "prog0" (makeRule' Monotonicity prog1 "prog1" prog1)]
             | otherwise   = makeMachineP4' m []
         ch = ScheduleChange 
-                (M.singleton "sch0" ()) 
                 (M.singleton "sch1" ()) 
-                (M.singleton "sch2" ()) 
                 ("prog1", prog1) 
         prog1 = LeadsTo [] (c [expr|x \le y|]) (c [expr|x = y|])
         c  = ctx $ do
@@ -580,7 +576,7 @@ case7 = return $ do
                   command "evguard" [text "ae0", text "grd0", text "x = 0"]
                   command "evbcmeq" [text "ae1a", text "act0", text "y", text "y+1"]
         ms1 = makeLatex "file.ext" $ do       
-                  command "replace" [text "ae0",text "sch0",text "sch1",text "sch2",text "prog1",text "saf0"]
+                  command "replace" [text "ae0",text "sch1",text "prog1",text "saf0"]
                   command "replacefine" [text "ae0",text "prog1"]
                   command "refine" [text "prog0",text "monotonicity",text "prog1",text ""]
                   --command "removeguard" [text "ce0b",text "grd0"]
@@ -648,9 +644,7 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
         ae0sched = create $ do
                         old .= ae0Evt
                         c_sched_ref .= [replace ("prog1",pprop)
-                                          & remove .~ singleton "sch0" ()
-                                          & add    .~ singleton "sch1" ()
-                                          & keep   .~ singleton "sch2" () ]
+                                          & add    .~ singleton "sch1" () ]
                         f_sched_ref .= Just ("prog1",pprop) 
         ae0Evt = create $ do
             coarse_sched .= M.fromList 

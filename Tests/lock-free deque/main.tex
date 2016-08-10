@@ -316,7 +316,7 @@ Schedulability:
 \\ \cschedule{m0:push:left}{m2:sch1}
 	{ pshL.r \in \ran.(node \domsub val) }
 \end{align*}
-\replace{m0:push:left}{}{m2:sch0,m2:sch1}{m1:sch0}{m2:prog0}{m2:saf0}
+\replace{m0:push:left}{m2:sch0,m2:sch1}{m2:prog0}{m2:saf0}
 \begin{align*}
 \progress{m2:prog0}
 	{ r \in \dom.pshL }
@@ -498,7 +498,7 @@ Schedulability:
 \begin{align*}
 % \cschedule{m0:pop:right}{m2:sch0}{ pshL.r \in \ran.val }
 \end{align*}
-% \replace{m0:pop:right}{}{m2:sch0}{m1:sch0}{m2:prog0}{m2:saf0}
+% \replace{m0:pop:right}{m2:sch0}{m2:prog0}{m2:saf0}
 \begin{align*}
 % \progress{m2:prog0}{ r \in \dom.pshL }{ r \in \dom.pshL \land pshL.r \in \ran.val }
 % \\ \safety{m2:saf0}{ r \in \dom.pshL \land pshL.r \in \ran.val }{ \neg r \in \dom.pshL }
