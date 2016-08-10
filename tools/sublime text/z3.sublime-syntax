@@ -1,0 +1,10 @@
+%YAML 1.2
+---
+# http://www.sublimetext.com/docs/3/syntax.html
+name: Z3
+file_extensions:
+  - z3
+  - z
+scope: source.z3
+contexts:
+  main: []

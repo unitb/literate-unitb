@@ -1,0 +1,4 @@
+{
+    "shell_cmd": "time z3 -T:60 \"$file\"",
+    "selector": "source.z3"
+}
