@@ -1,0 +1,378 @@
+// select the text in all contenteditable labels (.ce-lbl)
+// when each one is focused
+document.querySelector(".ce-lbl").onfocus = function(e) {
+  var el = this;
+  requestAnimationFrame(function() {
+      selectElementContents(el);
+  });
+};
+
+function selectElementContents(el) {
+  var range = document.createRange();
+  range.selectNodeContents(el);
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+$(function() {
+  $(".del-#{rawJS declPrefix}").click(function () {
+    delBtn(this, "#{rawJS declPrefix}");
+  });
+
+  $(".del-#{rawJS asmPrefix}").click(function () {
+    delBtn(this, "#{rawJS asmPrefix}");
+  });
+
+  $("#add-#{rawJS declPrefix}").click(function () {
+    addBtn(this, "#{rawJS declPrefix}", "#{rawJS declContainerPrefix}");
+  });
+
+  $("#add-#{rawJS asmPrefix}").click(function () {
+    addBtn(this, "#{rawJS asmPrefix}", "#{rawJS asmContainerPrefix}");
+  });
+
+  // re-render the select element (e.g. theories dropdown) of the form
+  // and also set the bar to "Ready" after clicking the reset button
+  $(':reset').on('click', function(evt) {
+    evt.preventDefault();
+
+    $form = $(evt.target).closest('form');
+    var classes = ["#{rawJS declPrefix}", "#{rawJS asmPrefix}"];
+
+    // form a string of the format ".add-decl:not(:first), .add-asm:not(:first)"
+    // to query all added input boxes, except the first one of each group,
+    // then remove them.
+    $form.find(
+      classes
+        .map(function(el) { return "." + el + ":not(:first)"; })
+        .join(", ")
+      ).remove();
+
+    // make sure the remaining one input box of each group is the "#1"
+    // of that group (e.g. asm1)
+    classes.forEach(function (item) {
+      var $item = $("." + item);
+
+      $item.find("input")               // get the input field of the new element
+        .attr("id", item + "1")         // assign new id to the input
+        .attr("name", item + "1");      // assign new name
+
+      var lbl = $item.find("label");    // get the label of the new element
+      lbl.text(item + "1");             // update the label text
+
+      // only set the for attribute if contenteditable attribute is not present
+      if (! lbl[0].hasAttribute("contenteditable")) {
+          lbl.attr("for", item + "1");  // assign new for
+      }
+
+      // reset the numeric part of the id of the container to 1
+      // e.g. div-asm1
+      $item.attr("id", $item.attr("id").replace(/\d+/g,'') + "1");
+    });
+
+    $form[0].reset();
+    $form.find('select').selectpicker('render');
+    update_bar("alert-info", "glyphicon-info-sign", "Ready", "Ready");
+    $form.find('.selectpicker').selectpicker().parent().find("button").focus();
+  });
+
+  $('.presetitem').on('click', function(evt) {
+    evt.preventDefault();
+    $("#prover").scrollTop();
+
+    // Make an AJAX request to the server to request a preset
+    $.ajax({
+      url: '@{PresetR}',
+      type: 'POST',
+      contentType: "application/json",
+      data: JSON.stringify([parseInt(this.getAttribute("data-presetId")),
+        parseInt(this.getAttribute("data-itemId"))]),
+      success: function (data) {
+        // reset the form
+        $(':reset').trigger('click');
+
+        // select the theories
+        $(".selectpicker").selectpicker("val", data.form.theories);
+
+        if (data.form.declarations.length > 0) {
+          // fill in the first declaration
+          $("##{rawJS declPrefix}1").val(data.form.declarations[0][1]);
+          // if there's more, click the + button and add them
+          for (var i = 1; i < data.form.declarations.length; i++) {
+            $("#add-#{rawJS declPrefix}").click();
+            $("##{rawJS declPrefix}" + (i+1)).val(data.form.declarations[i][1]);
+          }
+        }
+
+        if (data.form.assumptions.length > 0) {
+          // fill in the first assumption (and its label)
+          $("##{rawJS asmPrefix}1").val(data.form.assumptions[0][1][1]);
+          $("##{rawJS asmPrefix}1").prev().text(data.form.assumptions[0][1][0]);
+          // if there's more, click the + button and add them
+          for (var i = 1; i < data.form.assumptions.length; i++) {
+            $("#add-#{rawJS asmPrefix}").click();
+            // assumption
+            $("##{rawJS asmPrefix}" + (i+1)).val(data.form.assumptions[i][1][1]);
+            // its label
+            $("##{rawJS asmPrefix}" + (i+1)).prev().text(data.form.assumptions[i][1][0]);
+          }
+        }
+
+        // fill in the goal
+        $("##{rawJS goalTextareaId}").val(data.form.goal);
+
+        $("##{rawJS goalTextareaId}").focus();
+      },
+      error: function (data) {
+        console.log("Error getting preset: " + data);
+      },
+    });
+  });
+
+  $("##{rawJS goalFormId}").submit(function(event) {
+    event.preventDefault();
+
+    var goal = $("##{rawJS goalTextareaId}").val();
+    // (Browsers that enforce the "required" attribute on the textarea won't see this alert)
+    if (!goal) {
+      alert("Please fill out the goal form first.");
+      return;
+    }
+
+    // create an array of strings of theory values
+    var theories = get_values($("#theories").serializeArray());
+
+    // create an array of declarations
+    var decls = flatten_declarations($(".#{rawJS declPrefix} input")
+      .serializeArray());
+
+    // create an array of assumptions
+    var asms = flatten_assumptions($(".#{rawJS asmPrefix} input")
+      .serializeArray());
+
+    // Make an AJAX request to the server to submit a goal
+    $.ajax({
+      url: '@{GoalR}',
+      type: 'POST',
+      contentType: "application/json",
+      data: JSON.stringify({
+        theories: theories,
+        declarations: decls,
+        assumptions: asms,
+        goal: goal,
+      }),
+      beforeSend: function () {
+        $("body, .btn").css('cursor', 'wait');
+      },
+      success: function (data) {
+        $("body").css('cursor', 'auto');
+        $(".btn").css('cursor', 'pointer');
+        if (data.hasOwnProperty("result")) {
+          update_bar(data["colorClass"], data["iconClass"], data["result"], "Result:");
+        }
+        else {
+          update_bar(data["colorClass"], data["iconClass"], data["error"], "Error:");
+        }
+        update_img(data["goalPng"]);
+      },
+      error: function (data) {
+        $("body").css('cursor', 'auto');
+        $(".btn").css('cursor', 'pointer');
+        console.log("Error creating goal: " + data);
+      },
+    });
+
+  });
+
+  // helper function used for updating the output bar
+  // takes a color class, icon class (glyphicons), a text, and a screen-reader text
+  function update_bar(color_class, icon_class, text, sr_text) {
+    var bar  = $("##{rawJS resultBarId}"),
+        icon = $(bar).children(".glyphicon"),
+        sr   = $(bar).children(".sr-only"),
+        samp = $(bar).children("samp");
+
+    $(bar).fadeOut("fast", function() {
+      bar.removeClass();
+      bar.addClass("alert " + color_class);
+      icon.removeClass();
+      icon.addClass("icon-right-margin glyphicon " + icon_class);
+      $(samp).text(text.trim());
+      sr.text(sr_text);
+
+      $(bar).fadeIn("fast");
+    });
+  }
+
+  // helper function used for updating the rendered image of the goal
+  function update_img(path) {
+    var imgId = "goal-png";
+    var $out_area = $("#output-area");
+    if (!path || path == "") {
+      $("#" + imgId).remove();
+    }
+    else {
+      if ($out_area.children("#" + imgId).length != 0) {
+        $("#" + imgId).attr("src", path);
+      }
+      else {
+        var img = $("<img />", {
+          id:  imgId,
+          src: path,
+          alt: "Rendered goal"
+        });
+        img.appendTo($out_area);
+      }
+    }
+  }
+
+  // given an array of objects of the following form
+  // [{"name":"decl1","value":"hi"},{"name":"decl2","value":"there"}]
+  // returns an array of the 'value' fields, like this
+  // ["hi", "there"]
+  function get_values(arr_of_objs) {
+    var arr = [];
+    $(arr_of_objs).each(function(i, field) {
+      arr.push(field.value);
+    });
+    return arr;
+  }
+
+  // given an array of objects of the following form
+  // [{"name":"decl1","value":"hi"},{"name":"decl2","value":"there"}]
+  // returns an array of arrays, like this
+  // [["decl1", "hi"], ["decl2", "there"]]
+  function flatten_declarations(arr_of_objs) {
+    var decls = [];
+    $(arr_of_objs).each(function(i, field) {
+      if (field.value != "") {
+        var decl = [];
+        decl.push(field.name);
+        decl.push(field.value);
+        decls.push(decl);
+      }
+    });
+    return decls;
+  }
+
+  // given an array of objects of the following form
+  // [{"name":"asm1","value":"hi"},{"name":"asm2","value":"there"}]
+  // returns an array of array of arrays, like this
+  // [["asm1", ["lbl1", "hi"]], ["asm2", ["label2", "there"]]]
+  // (it looks up the labels by reading the text of the <label> tags)
+  function flatten_assumptions(arr_of_objs) {
+    var asms = [];
+    $(arr_of_objs).each(function(i, field) {
+      if (field.value != "") {
+        var asm_outer = [], asm_inner = [];
+        asm_outer.push(field.name);
+        asm_inner.push($("#" + field.name).prev().text());
+        asm_inner.push(field.value);
+        asm_outer.push(asm_inner);
+        asms.push(asm_outer);
+      }
+    });
+    return asms;
+  }
+
+  // handles each delete '-' button
+  function delBtn(el, cls) {
+    var dotCls = "." + cls;
+    $(el).parent().parent().parent().slideUp(function () {
+      // slide up the container
+
+      if ($(this).parent().children(dotCls).length > 1) {
+        // there's more than one container, so we can just
+        // delete this one.
+
+        var inp = $(this).prev().find(".form-control");
+        // if there's a container before (above) this one
+        if (inp.length > 0) {
+          $(inp).focus(); // focus it
+        }
+        else {
+          // otherwise, focus the next one
+          $(this).next().find(".form-control").focus();
+        }
+
+        $(this).remove();
+      }
+      else {
+        // there's only one container left;
+        // just clear it and focus the goal textarea
+        $("##{rawJS goalTextareaId}").focus();
+        $(this).find(".form-control")
+          .val("")
+          .attr("disabled", true);
+      }
+    });
+  }
+
+  // handles each add '+' button
+  function addBtn(el, cls, containerId) {
+    var dotCls = "." + cls;
+    var hashCls = "#" + cls;
+    var hashContainerId = "#" + containerId;
+    var btn = $(el);
+    var containers = btn.parent().children(dotCls);
+
+    if (containers.length == 1 && !$(containers[0]).is(":visible")) {
+      var input = $(containers[0]).find(".form-control");
+      input.attr("disabled", false);          // enable the input
+
+      $(containers[0]).fadeIn("slow", function() { // fade in the container
+        btn.attr("disabled", false);          // re-enable the '+' button after fading in
+        input.focus();
+      });
+    }
+    else {
+      btn.attr("disabled", true);             // disable the '+' button while adding the new field
+      var num     = parseInt(                 // numeric id of the last container
+                      $(dotCls).last()
+                        .attr("id")
+                        .match(/\d+/)[0],
+                      10),
+          newNum  = new Number(num + 1),      // numeric id of the new input field
+          newElem = $(hashContainerId + num)  // get the container
+            .clone(true, true)                // deep clone the container
+            .attr("id", containerId + newNum) // assign new id
+            .fadeIn("slow", function() {      // fade it in
+              btn.attr("disabled", false);    // re-enable the '+' button after fading in
+            });
+
+      newElem.find("input")                   // get the input field of the new element
+        .attr("id", cls + newNum)             // assign new id to the input
+        .attr("name", cls + newNum)           // assign new name
+        .val("");                             // clear the input text
+
+      var lbl = newElem.find("label");        // get the label of the new element
+      lbl.text(cls + newNum);                 // update the label text
+
+      // only set the for attribute if contenteditable attribute is not present
+      if (! lbl[0].hasAttribute("contenteditable")) {
+          lbl.attr("for", cls + newNum);      // assign new for
+      }
+
+      // insert the new container after the last one
+      $(hashContainerId + num).after(newElem);
+      $(hashCls + newNum).focus();
+    }
+  }
+
+  $('a[href*="#"]:not([href="#"])').click(function() {
+    if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'') && location.hostname == this.hostname) {
+      var target = $(this.hash);
+      target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+      if (target.length) {
+        $('html, body').animate({
+          scrollTop: target.offset().top
+        }, 750);
+        return false;
+      }
+    }
+  });
+
+  $("##{rawJS resultBarId}").fadeIn();
+
+});

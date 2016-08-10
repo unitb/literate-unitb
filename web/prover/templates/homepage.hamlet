@@ -1,0 +1,143 @@
+<h1.jumbotron>
+  Unit-B
+  <small> Web
+
+<.page-header>
+    <.btn-group .pull-right>
+      <a href="#examples" .btn .btn-default>
+        Examples
+        <small>
+          <span .glyphicon .glyphicon-arrow-down .icon-left-margin>
+    <h2 #prover>Prover
+
+<noscript>
+  <section.list-group>
+    <span .list-group-item .list-group-item-warning>
+      You need javascript enabled to be able to use the web prover.
+
+<section.page-header.row>
+  <.col-lg-4>
+    <form ##{goalFormId}>
+
+      <.form-group>
+        <label for="theories">
+          Theories
+        <select #theories name="theories" .form-control .selectpicker autofocus
+        multiple data-live-search="true">
+          $forall name <- theoryNames
+            <option value=#{name}>#{capitalize name}
+
+      <.form-group>
+        <label>
+          Declarations
+        <button #add-#{declPrefix} .btn .btn-sm .btn-default type="button">
+          <small>
+            <span .glyphicon .glyphicon-plus>
+        <div ##{declContainerPrefix}1 .#{declPrefix}>
+          <.input-group>
+            <label .input-group-addon for="#{declPrefix}1">#{declPrefix}1
+            <input ##{declPrefix}1 .form-control name="#{declPrefix}1" type="text"
+            placeholder="Declaration..." autocomplete="off">
+            <span .input-group-btn>
+              <button .del-#{declPrefix} .btn .btn-default type="button">
+                <small>
+                  <span .glyphicon .glyphicon-minus>
+
+      <.form-group>
+        <label>
+          Assumptions
+        <button #add-#{asmPrefix} .btn .btn-sm .btn-default type="button">
+          <small>
+            <span .glyphicon .glyphicon-plus>
+        <div ##{asmContainerPrefix}1 .#{asmPrefix}>
+          <.input-group>
+            <label .input-group-addon .ce-lbl contenteditable>#{asmPrefix}1
+            <input ##{asmPrefix}1 .form-control name="#{asmPrefix}1" type="text"
+            placeholder="Assumption..." autocomplete="off">
+            <span .input-group-btn>
+              <button .del-#{asmPrefix} .btn .btn-default type="button">
+                <small>
+                  <span .glyphicon .glyphicon-minus>
+      
+      <.form-group>
+        <label for="#{goalTextareaId}">
+          Goal
+        <textarea ##{goalTextareaId} name="goal" .form-control placeholder="Goal..."
+        rows="4" required>
+
+      <.form-group>
+      <button .btn .btn-primary type="submit">
+        <small>
+          <span .glyphicon .glyphicon-refresh .icon-right-margin>
+        Prove
+      <button .btn .btn-default type="reset">
+        Clear
+
+  <.col-lg-6 .col-lg-offset-1 #output-area>
+    <div ##{resultBarId} .alert .alert-info role="alert" style="display: none">
+      <span .glyphicon .glyphicon-info-sign .icon-right-margin aria-hidden="true">
+      <span .sr-only>Ready
+      <samp>Ready
+
+<section.page-header.row #examples>
+  <.col-lg-10>
+    <div class="panel panel-info">
+      <div class="panel-heading">
+        Examples
+      <div class="panel-body">
+        <p>
+          Below are some examples of the syntax you can use
+          with the Unit-B Web, categorized by theory.
+
+        <div class="panel-group" id="accordion">
+          $forall (PresetMap pmId name items) <- presetMaps presets
+            <div class="panel panel-default">
+              <div class="panel-heading" data-toggle="collapse" data-parent="#accordion" data-target="#collapse#{pmId}">
+                #{T.toTitle name}
+              <div id="collapse#{pmId}" class="panel-collapse collapse">
+                <div class="panel-body">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Description
+                        <th>Syntax
+                        <th>Rendered Version
+                        <th>Options
+                    <tbody>
+                      $forall (PresetItem piId desc (ProofForm _ _ _ g)) <- items
+                        <tr>
+                          <td>#{desc}
+                          <td><code>#{g}
+                          <td><img src="https://placehold.it/260x21">
+                          <td>
+                            <a href="#" .presetitem
+                            data-presetId="#{pmId}" data-itemId="#{piId}">Try
+          <div class="panel panel-default">
+            <div class="panel-heading" data-toggle="collapse" data-parent="#accordion" data-target="#collapsemorex">
+              More…
+            <div id="collapsemorex" class="panel-collapse collapse">
+              <div class="panel-body">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Syntax
+                      <th>Rendered Version
+                  <tbody>
+                    <tr>
+                      <td><code>x \subseteq \dom.f
+                      <td><img src=@{StaticR img_ex1_png}>
+                    <tr>
+                      <td><code>\ran.f = \qset{x}{x \in \dom.f}{f.x}
+                      <td><img src=@{StaticR img_ex2_png}>
+                    <tr>
+                      <td><code>x = \qsum{i}{ \between{p}{i}{q} }{ f.i }
+                      <td><img src=@{StaticR img_ex3_png}>
+                    <tr>
+                      <td><code>\qforall{x}{ p.x }{ (f \1| x \fun 7).x = 7 }
+                      <td><img src=@{StaticR img_ex4_png}>
+                    <tr>
+                      <td><code>3 \cdot x^3 + 17 \2\le x \cdot y
+                      <td><img src=@{StaticR img_ex5_png}>
+                    <tr>
+                      <td><code>\dom.(x \fun y) = \{ x \} \3\land \ran.(x \fun y) = \{ y \}
+                      <td><img src=@{StaticR img_ex6_png}>

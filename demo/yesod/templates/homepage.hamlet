@@ -1,0 +1,26 @@
+<h1.jumbotron>
+  Literate Unit-B
+  <small> Web (demo)
+
+<.page-header><h2>Web
+  <small> demo
+
+<section.list-group #notices>
+  <span .list-group-item .list-group-item-warning ##{jsReqWarning}>
+    You need javascript enabled to be able to use the web demo.
+
+<section.page-header>
+  <h2>JSON
+
+  <p>
+    Please enter some text in the textarea below, submit and see
+    what happens!
+
+    <.fluid-container>
+      <form ##{goalFormId}>
+        <.form-group>
+          <textarea ##{goalTextareaId} placeholder="Goal..." required></textarea>
+        <button .btn .btn-primary type="submit">
+          Submit <span class="glyphicon glyphicon-send">
+
+      <ul ##{goalListId}>

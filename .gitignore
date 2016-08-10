@@ -133,3 +133,7 @@ x86_64-osx-ghc-7.10.3-packages.conf.d/
 log*.z3
 literate-unitb.sublime-workspace
 
+!.ghci
+
+# don't ignore gitignore files in subdirectories
+!.gitignore

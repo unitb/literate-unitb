@@ -10,7 +10,7 @@
 #'
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-resolver: lts-6.0
+resolver: lts-6.4
 compiler: ghc-7.10.3
 
 ghc-options:
@@ -50,10 +50,12 @@ packages:
 - libs/reactive-banana-transformers
 - libs/show-with
 - libs/string-lenses
+- libs/tex2png-hs
 - libs/transformer-lenses
 - libs/typelist-functor
 - libs/unfoldable
 - libs/unitb-testing
+- web/prover
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
 - assert-0.0.1.2
@@ -65,6 +67,9 @@ extra-deps:
 - pseudomacros-0.0.2
 - reactive-banana-1.1.0.0
 - transformers-compat-0.5.1.4
+- cereal-text-0.1.0.2
+- cryptohash-sha256-0.11.100.1
+- optparse-text-0.1.1.0
 
 # Override default flag values for local packages and extra-deps
 flags: {}
