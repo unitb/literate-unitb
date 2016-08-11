@@ -16,11 +16,11 @@ spec = do
             decode pfStr `shouldBe` (Just pf)
 
     where
-        pf = ProofForm { 
-            theories     = fromList [],
-            declarations = fromList [],
-            assumptions  = fromList [],
-            goal         = ("2 = 2" :: String)
+        pf = ProofForm {
+            _theories     = fromList [],
+            _declarations = fromList [],
+            _assumptions  = fromList [],
+            _goal         = ("2 = 2" :: String)
         }
         pfStr = concat [
             "{\"theories\":[],\"declarations\":[],",

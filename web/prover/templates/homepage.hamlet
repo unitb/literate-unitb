@@ -29,7 +29,7 @@
 
       <.form-group>
         <label>
-          Declarations
+          Constants
         <button #add-#{declPrefix} .btn .btn-sm .btn-default type="button">
           <small>
             <span .glyphicon .glyphicon-plus>
@@ -37,7 +37,7 @@
           <.input-group>
             <label .input-group-addon for="#{declPrefix}1">#{declPrefix}1
             <input ##{declPrefix}1 .form-control name="#{declPrefix}1" type="text"
-            placeholder="Declaration..." autocomplete="off">
+            placeholder="Constant..." autocomplete="off">
             <span .input-group-btn>
               <button .del-#{declPrefix} .btn .btn-default type="button">
                 <small>

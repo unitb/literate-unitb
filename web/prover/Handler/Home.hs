@@ -2,18 +2,15 @@
 
 module Handler.Home where
 
-import Import
-import Text.Julius (RawJS (..))
+import           Import
+import           Text.Julius (RawJS (..))
 
 import qualified Data.Char as C
-import qualified Data.Map as M
 import qualified Data.Text as T
-import qualified Logic.Theories as Theories
-import Logic.Theories.IntervalTheory (interval_theory)
-import Logic.Names (render)
 
-import Model.Presets
-import Model.ProofForm
+import           Logic.Utilities
+import           Model.Presets
+import           Model.ProofForm
 
 -- This is a handler function for the GET request method on the HomeR
 -- resource pattern. All of your resource patterns are defined in
@@ -40,10 +37,6 @@ assumptionIds  = ("asm", "div-asm")
 resultBarId :: Text
 resultBarId = "resultBar"
 
-
-theoryNames :: [String]
-theoryNames = render <$> M.keys
-    (M.filter (/= interval_theory) Theories.supportedTheories)
 
 capitalize :: String -> String
 capitalize (h:rest) = C.toUpper h : (C.toLower <$> rest)

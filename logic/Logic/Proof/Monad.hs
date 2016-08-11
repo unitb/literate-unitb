@@ -77,6 +77,16 @@ runSequent' :: Pre
             => SequentM Expr -> SequentWithWD
 runSequent' = fromRight' . runSequent
 
+runSequent'' :: FromDispExpr expr
+             => SequentM' expr a
+             -> Either [Error] a
+runSequent'' (SequentM cmd) = fst <$> evalRWST
+    (unSequentM (mapM_ include preludeTheories) >> cmd)
+    ()
+    (undefined', [], M.empty)
+    where
+        unSequentM (SequentM m) = m
+
 mkSequent :: HasExpr expr => (expr, SeqDefinitions expr) -> SequentWithWD' expr
 mkSequent (g, (SeqDefinitions s vs asm thms ctx)) = SequentWithWD
     { _goal = empty_sequent
@@ -196,6 +206,16 @@ declareE str = do
     let ctx = contextOf setting
     vs <- hoistEither $ get_variables'' ctx str (line_info str)
     mapM_ declare' . fmap snd $ vs
+
+parseDeclarations :: [Theory] -> StringLi -> Either [Error] [(Name, Var)]
+parseDeclarations ts str = withExpr $ do
+    mapM_ include ts
+    setting <- SequentM $ use _1
+    let ctx = contextOf setting
+    vs <- hoistEither $ get_variables'' ctx str (line_info str)
+    return vs
+    where
+        withExpr = runSequent'' :: SequentM a -> Either [Error] a
 
 hoistEither :: Either [Error] a -> SequentM' expr a
 hoistEither = SequentM . lift

@@ -71,6 +71,7 @@ $(function() {
       $item.attr("id", $item.attr("id").replace(/\d+/g,'') + "1");
     });
 
+    update_img("");
     $form[0].reset();
     $form.find('select').selectpicker('render');
     update_bar("alert-info", "glyphicon-info-sign", "Ready", "Ready");
@@ -151,36 +152,49 @@ $(function() {
     var asms = flatten_assumptions($(".#{rawJS asmPrefix} input")
       .serializeArray());
 
-    // Make an AJAX request to the server to submit a goal
-    $.ajax({
-      url: '@{GoalR}',
-      type: 'POST',
-      contentType: "application/json",
-      data: JSON.stringify({
-        theories: theories,
-        declarations: decls,
-        assumptions: asms,
-        goal: goal,
+    json = JSON.stringify({
+      theories: theories,
+      declarations: decls,
+      assumptions: asms,
+      goal: goal,
+    });
+
+    $("body, .btn").css('cursor', 'wait');
+    update_bar("alert-info", "glyphicon-info-sign", "Working...", "Working");
+    $.when(
+      // Make an AJAX request to the server to submit form for proof checking
+      $.ajax({
+        url: '@{GoalR}',
+        type: 'POST',
+        contentType: "application/json",
+        data: json,
+        success: function (data) {
+          if (data.hasOwnProperty("result")) {
+            update_bar(data["colorClass"], data["iconClass"], data["result"], "Result:");
+          }
+          else {
+            update_bar(data["colorClass"], data["iconClass"], data["error"], "Error:");
+          }
+        },
+        error: function (data) {
+          console.log("Error creating goal: " + data);
+        },
       }),
-      beforeSend: function () {
-        $("body, .btn").css('cursor', 'wait');
-      },
-      success: function (data) {
-        $("body").css('cursor', 'auto');
-        $(".btn").css('cursor', 'pointer');
-        if (data.hasOwnProperty("result")) {
-          update_bar(data["colorClass"], data["iconClass"], data["result"], "Result:");
-        }
-        else {
-          update_bar(data["colorClass"], data["iconClass"], data["error"], "Error:");
-        }
-        update_img(data["goalPng"]);
-      },
-      error: function (data) {
-        $("body").css('cursor', 'auto');
-        $(".btn").css('cursor', 'pointer');
-        console.log("Error creating goal: " + data);
-      },
+
+      // Make an AJAX request to the server to submit form for rendering
+      $.ajax({
+        url: '@{RenderFormR}',
+        type: 'POST',
+        contentType: "application/json",
+        data: json,
+        complete: function (data) {
+          update_img(JSON.parse(data.responseText));
+        },
+      })
+
+    ).then(function () {
+      $("body").css('cursor', 'auto');
+      $(".btn").css('cursor', 'pointer');
     });
 
   });

@@ -27,7 +27,9 @@ library
                      Handler.Goal
                      Handler.Home
                      Handler.Preset
+                     Handler.Render
                      Logic.Prover
+                     Logic.Utilities
                      Model.Presets
                      Model.ProofForm
                      Model.ProofResult
@@ -94,6 +96,7 @@ library
                  , invariants
                  , tex2png-hs
                  , filepath
+                 , printf-th
 
 executable         web-prover
     if flag(library-only)

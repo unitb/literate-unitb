@@ -7,3 +7,5 @@
 
 /goal GoalR POST
 /preset PresetR POST
+/render RenderR POST
+/renderForm RenderFormR POST
