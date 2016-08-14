@@ -36,6 +36,8 @@ newtype RuleName = RuleName String
 
 newtype VarName = VarName { getVarName :: Name }
 
+newtype IndName = IndName { getIndName :: Name }
+
 newtype SetName = SetName { getSetName :: Name }
 
 newtype ExprText = Expr { getExprText :: StringLi }
@@ -141,6 +143,11 @@ instance LatexArg VarName where
 instance LatexArgFromString VarName where
     kind' Proxy = "variable"
     read_one' li = fmap VarName . readName li
+
+instance LatexArg IndName where
+instance LatexArgFromString IndName where
+    kind' Proxy = "index"
+    read_one' li = fmap IndName . readName li
 
 instance LatexArg SetName where
 instance LatexArgFromString SetName where

@@ -37,7 +37,8 @@
 |  |  |  +- test 33, verifying with inferred records
 |  |  |  +- test 34, using coarse schedules in proofs of safety of new events
 |  |  |  +- test 35, weakened coarse schedule replacement leads-to
-|  |  +- [ Success: 35 / 35 ]
+|  |  |  +- test 36, deleting indices - AST
+|  |  +- [ Success: 36 / 36 ]
 |  |  +- small machine example
 |  |  |  +- test 0
 |  |  |  +- test 1 (separate machine blocks)
@@ -231,7 +232,8 @@
 |  |  +- conformance of instances to type class axioms
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
-|  +- [ Success: 181 / 181 ]
+|  |  +- variable scope, properties
+|  +- [ Success: 183 / 183 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -345,17 +347,17 @@
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 276 / 276 ]
++- [ Success: 278 / 278 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38590 total
+   38642 total
     1130 src/UnitB/PO.hs
-     928 src/Document/Phase/Expressions.hs
+     934 src/Document/Phase/Expressions.hs
      795 src/Document/Visitor.lhs
      779 logic/Logic/Expr/Expr.hs
      762 src/Document/Phase.hs
-Run time: 2m 36s
+Run time: 2m 28s

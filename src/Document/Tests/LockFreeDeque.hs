@@ -21,7 +21,7 @@ import Data.List as L
 import Data.Map.Class as M
 import Data.Set  as S
 
-import Test.UnitTest
+import Test.UnitTest hiding (name)
 
 import Utilities.Table
 
@@ -110,6 +110,8 @@ test = test_cases
                 case34 result34
             , poCase "test 35, weakened coarse schedule replacement leads-to"
                 case35 result35
+            , aCase "test 36, deleting indices - AST"
+                case36 result36
             ]            
 
 path0 :: FilePath
@@ -291,3 +293,21 @@ path35 = [path|Tests/pop-left-t1.tex|]
 case35 :: IO POResult
 case35 = verifyOnly path35 "m1/hdl:popL:more/C_SCH/delay/0/prog/m1:prog0/rhs/m1:sch0" 1
             -- m1/hdl:popL:more/C_SCH/delay/0/prog/m1:prog0/rhs/m1:sch0
+
+path36 :: FilePath
+path36 = [path|Tests/pop-left-t2.tex|]
+
+case36 :: IO (Either [Error] [[Table Name Var]])
+case36 = runEitherT $ do 
+    rs <- parse' path36
+    let getIndices :: (HasEvent' event Expr)
+                   => Machine 
+                   -> (BiGraph' SkipOrEvent AbstrEvent SkipOrEvent ConcrEvent () -> Map SkipOrEvent event)
+                   -> [Table Name Var]
+        getIndices r get = r!.partsOf (events.to get.ix (Right "hdl:popL:one").event'.indices)
+    return $ concat [ [getIndices r leftMap,getIndices r rightMap] | r <- rs ]
+
+result36 :: Either [Error] [[Table Name Var]]
+result36 = Right [[],[v],[v],[M.empty]]
+    where
+        v = symbol_table [Var [smt|v|] int]

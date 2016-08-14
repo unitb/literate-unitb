@@ -66,8 +66,9 @@ run_phase2_vars = C.id &&& symbols >>> liftP wrapup
             , dummy_decl
             , index_decl
             , param_decl
-            , promote_param
             , arr $ Just . M.map (wrap . L.view pSetDecl)
+            , promote_param
+            , remove_ind
             , remove_var ]
         wrapup (SystemP r_ord p1,vs) = do
             let vs' = inherit2 p1 r_ord 
@@ -211,6 +212,13 @@ instance PrettyRecord MachineVar where
 instance PrettyPrintable MachineVar where
     pretty = prettyRecord
 
+remove_ind :: MPipeline MachineP1 [(Name,VarScope)]
+remove_ind = machineCmd "\\removeind" $ \(Conc evt,xs) _m _p1 -> do
+        li <- ask
+        return [ (x,makeCell $ Evt $ M.singleton (Just evt) 
+                $ EventDecl (Index $ InhDelete Nothing) (pure evt) Local li) 
+            | IndName x <- xs ]
+
 remove_var :: MPipeline MachineP1 [(Name,VarScope)]
 remove_var = machineCmd "\\removevar" $ \(Identity xs) _m _p1 -> do
         li <- ask
@@ -246,7 +254,7 @@ promote_param = machineCmd "\\promote" $ \(Conc lbl,VarName n) _m p1 -> do
                         (EventDecl (Promoted Nothing) (evt :| []) Local li))]
 
 index_decl :: MPipeline MachineP1 [(Name,VarScope)]
-index_decl = event_var_decl Index "\\indices"
+index_decl = event_var_decl (Index . InhAdd) "\\indices"
 
 param_decl :: MPipeline MachineP1 [(Name,VarScope)]
 param_decl = event_var_decl Param "\\param"
@@ -260,18 +268,32 @@ toEventDecl ref s (Evt m) = concatMap (concatMap fromValidation . uncurry f)
             fromValidation (Success x) = [Right x]
             fromValidation (Failure xs) = Left <$> xs
             f :: EventId -> EventDecl -> [Validation [Error] (EventId, [EventP2Field])]
-            f eid x = case (ref,x^.declSource) of
-                        (Old,Inherited) -> [ (_2.traverse) id (e,[g x]) | e <- NE.toList $ x^.source ]
-                        (Old,Local) -> []
-                        (New,_) -> [ (_2.traverse) id (eid,[g x])]
-            g :: EventDecl -> Validation [Error] EventP2Field
+            f eid x = case ref of
+                        Old -> [ _2 id (e,g x) | e <- NE.toList $ x^.source ]
+                        New -> [ _2 id (eid,g x)]
+            g :: EventDecl -> Validation [Error] [EventP2Field]
             g x = case x^.scope of 
-                        Index v  -> Success $ EIndices s v
-                        Param v  -> Success $ EParams s v
-                        Promoted Nothing -> Failure [Error "Promoting a non-existing parameter" $ x^.lineInfo]
+                        Index (InhAdd v) -> case (ref,x^.declSource) of
+                            (Old,Local) -> Success []
+                            _           -> Success [EIndices s v]
+                        Param v -> case (ref,x^.declSource) of
+                            (Old,Local) -> Success []
+                            _           -> Success [EParams s v]
+                        Promoted Nothing  -> case (ref,x^.declSource) of
+                            (Old,Local) -> Success []
+                            _           -> Failure [Error "Promoting a non-existing parameter" $ x^.lineInfo]
+                        Index (InhDelete Nothing)  -> case (ref,x^.declSource) of
+                            (Old,Local) -> Success []
+                            _           -> Failure [Error "Deleting a non-existing index" $ x^.lineInfo]
+                        Index (InhDelete (Just v)) -> case (ref,x^.declSource) of
+                                                (Old,_)         -> Success [EIndices s v]
+                                                (New,Local)     -> Success [EDelIndices s (v,x^.lineInfo)]
+                                                (New,Inherited) -> Success []
                         Promoted (Just v) -> case ref of
-                                                Old -> Success $ EParams s v
-                                                New -> Success $ EIndices s v
+                                                Old -> case x^.declSource of 
+                                                        Inherited -> Success [EIndices s v]
+                                                        Local     -> Success [EParams s v]
+                                                New -> Success [EIndices s v]
 
 instance IsVarScope EvtDecls where
     toOldEventDecl = toEventDecl Old

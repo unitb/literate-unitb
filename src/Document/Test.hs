@@ -21,6 +21,7 @@ import qualified Document.Tests.UnlessExcept as UE
 -- import qualified Document.Tests.Suite as Suite
 import qualified Document.Scope (Scope)
 import qualified Document.ExprScope as ESc 
+import qualified Document.VarScope as VSc 
 import qualified Document.MachineSpec as MSpec 
 import qualified Document.Tests.GarbageCollector as Gar
 import qualified Document.Tests.Parser as Parser
@@ -76,6 +77,8 @@ test = test_cases
             PExp.check_props
         , QuickCheckProps "expression scope, properties" 
             ESc.run_tests
+        , QuickCheckProps "variable scope, properties" 
+            VSc.run_tests
         ]
 
 result1 :: String

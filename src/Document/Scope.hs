@@ -102,7 +102,7 @@ class (Ord a,Show a,ZoomEq a) => Scope a where
     axiom_Scope_clashesIsSymmetric x y = (x `clash` y) == (y `clash` x)
     axiom_Scope_clashesOverMerge :: a -> a -> a -> Property
     axiom_Scope_clashesOverMerge x y z = 
-            counterexample (show $ x <+> y) $
+            counterexample ("x <+> y: " ++ show (x <+> y)) $
             counterexample ("x clash z: " ++ show (x `clash` z)) $
             counterexample ("y clash z: " ++ show (y `clash` z)) $
             clash x y .||. ((x <+> y) `clash` z === (x `clash` z || y `clash` z))
@@ -250,6 +250,7 @@ instance Ord a => Wrapped (NonEmptyListSet a) where
 type EventInhStatus a = InhStatus (NonEmptyListSet EventId,a)
 
 data RefScope = Old | New
+    deriving (Eq,Ord)
 
 contents :: HasInhStatus a (InhStatus b) => a -> Maybe b
 contents x = case x ^. inhStatus of

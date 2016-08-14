@@ -135,6 +135,7 @@ data EventP1 = EventP1
 data EventP2 = EventP2 
     { _e1 :: EventP1 
     , _eIndices :: Table Name Var
+    , _eDelIndices :: Table Name (Var,LineInfo)
     , _eParams  :: Table Name Var
     , _eSchSynt :: ParserSetting
     , _eEvtSynt :: ParserSetting

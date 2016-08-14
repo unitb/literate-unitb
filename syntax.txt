@@ -27,6 +27,7 @@
 \removecoarse{concrete event-name}{zero or more abstract coarse-schedule-label}
 \removefine{concrete event-name}{zero or more abstract fine-schedule-label}
 \removeguard{concrete event-name}{zero or more abstract guard-label}
+\removeind{concrete event-name}{zero or more index}
 \removeinit{zero or more abstract initialization-label}
 \removevar{zero or more variable}
 \replace{abstract event-name}{zero or more concrete coarse-schedule-label}{progress-property-label}

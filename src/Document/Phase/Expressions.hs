@@ -246,7 +246,7 @@ instance IsExprScope Initially where
                 where
                     lis = L.map (first $ view name) $ M.ascElems $ vs `M.intersection` used_var' x
                     lis' = L.map (first ([printf|deleted variable %s|] . render)) lis
-                    msg  = [printf|In '%s', initialization predicate '%s' refers to deleted variables|] 
+                    msg  = [printf|In '%s', initialization predicate '%s' refers to deleted symbols|] 
                                     (pretty mid) (pretty lbl)
             (InhDelete (Just x),Local) -> [Right $ PDelInits lbl x]
             (InhDelete (Just _),Inherited) -> []
@@ -319,16 +319,22 @@ checkLocalExpr' :: ( HasInhStatus decl (InhStatus expr)
                -> EventId -> Label -> decl
                -> Reader MachineP2 [Either Error a]
 checkLocalExpr' expKind free eid lbl sch = do
-            vs  <- view pDelVars 
+            vs  <- view pDelVars
+            is  <- view $ getEvent eid.eDelIndices
             mid <- view $ pMachineId.to pretty
             return $ case sch^.inhStatus of
                 InhAdd expr -> 
-                    let msg = [printf|In '%s', event '%s', %s '%s' refers to deleted variables|] 
+                    let msg = [printf|In '%s', event '%s', %s '%s' refers to deleted symbols|] 
                                     mid (pretty eid) expKind (pretty lbl)
-                        errs   = vs `M.intersection` free expr
+                        fv = symbKind "variable"
+                        fi = symbKind "index"
+                        symbKind sym = M.map $ first $ [printf|deleted %s '%s'|] sym . render . view name
+                        fvars  = free expr
+                        errs   = fv (vs `M.intersection` fvars) `M.union` fi (is `M.intersection` fvars)
                         schLI  = ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
-                        varsLI = L.map (first $ [printf|deleted variable '%s'|] . render . view name) (M.ascElems errs)
-                    in if M.null errs then []
+                        varsLI = M.ascElems errs
+                    in if M.null errs 
+                       then []
                        else [Left $ MLError msg $ setToList schLI ++ varsLI]
                 InhDelete Nothing -> 
                     let msg = [printf|event '%s', %s '%s' was deleted but does not exist|] (pretty eid) expKind (pretty lbl)

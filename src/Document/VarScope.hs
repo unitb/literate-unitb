@@ -10,6 +10,8 @@ module Document.VarScope where
 import Document.Phase.Types
 import Document.Scope
 
+import Latex.Parser (uncurry3)
+
 import Logic.Expr
 
 import UnitB.Syntax
@@ -26,6 +28,8 @@ import           Data.Typeable
 import GHC.Generics.Instances
 
 import Test.QuickCheck
+import Test.QuickCheck.Regression
+import Test.QuickCheck.Report
 import Test.QuickCheck.ZoomEq
 
 import Text.Printf
@@ -109,7 +113,7 @@ data EventDecl = EventDecl
     , _eventDeclLineInfo   :: LineInfo 
     } deriving (Show,Eq,Ord,Generic)
 
-data EvtScope a = Param a | Index a | Promoted (Maybe a)
+data EvtScope a = Param a | Index (InhStatus a) | Promoted (Maybe a)
     deriving (Eq,Ord,Generic,Functor,Show)
 
 instance Eq VarScope where
@@ -130,14 +134,12 @@ makeFields ''MachineDef
 makeFields ''EvtDecls
 
 varDecl :: Getter EventDecl (Maybe Var)
-varDecl = scope.to (\case 
-            Index v -> Just v
-            Param v -> Just v
-            Promoted v -> v)
+varDecl = scope.to declOf
 
 declOf :: EvtScope var -> Maybe var
-declOf (Index v) = Just v
-declOf (Param v) = Just v
+declOf (Index (InhAdd v))    = Just v
+declOf (Index (InhDelete v)) = v
+declOf (Param v)    = Just v
 declOf (Promoted v) = v
 
 instance ZoomEq TheoryConst where
@@ -174,20 +176,18 @@ instance Scope EventDecl where
                   | otherwise            = Nothing
     make_inherited = Just . (declSource .~ Inherited)
     merge_scopes' s0 s1 = case (s0^.scope,s1^.scope) of
-            (Param v,Promoted Nothing) -> case s1^.declSource of
-                    Inherited -> Just $ s1 
-                        & scope .~ Index v
-                        & declSource .~ Inherited
-                    Local -> Just $ s1 
+            (Index (InhAdd v),Index (InhDelete Nothing)) -> 
+                    Just $ s1 
+                        & scope .~ Index (InhDelete (Just v))
+                        -- & declSource %~ declUnion (s0^.declSource)
+            (Index (InhDelete Nothing),Index (InhAdd v)) -> 
+                    Just $ s0
+                        & scope .~ Index (InhDelete (Just v))
+                        -- & declSource %~ declUnion (s1^.declSource)
+            (Param v,Promoted Nothing) -> Just $ s1 
+                        & scope .~ Promoted (Just v)
+            (Promoted Nothing,Param v) -> Just $ s0 
                         & scope .~ Promoted (Just v) 
-                        & declSource .~ Inherited
-            (Promoted Nothing,Param v) -> case s0^.declSource of
-                    Inherited -> Just $ s0 
-                        & scope .~ Index v 
-                        & declSource .~ Inherited
-                    Local -> Just $ s0 
-                        & scope .~ Promoted (Just v) 
-                        & declSource .~ Inherited
             _ -> Nothing
     rename_events' _ e = [e]
 
@@ -248,3 +248,18 @@ instance ZoomEq a => ZoomEq (EvtScope a) where
 instance Arbitrary a => Arbitrary (EvtScope a) where
     arbitrary = genericArbitrary
     shrink = genericShrink
+
+prop_axiom_Scope_clashesOverMerge :: Property
+prop_axiom_Scope_clashesOverMerge = regression (uncurry3 axiom_Scope_clashesOverMerge) 
+        [ (x,y,z) ]
+    where
+        x = Evt (fromList [(Nothing,EventDecl {_scope = Param (Var (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (Gen (DefSort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") [] (Gen (Sort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") 0) [])) [])), _source = EventId (Lbl "m") :| [], _eventDeclDeclSource = Local, _eventDeclLineInfo = (LI "file" 0 0)})])
+        y = Evt (fromList [(Nothing,EventDecl {_scope = Promoted Nothing, _source = EventId (Lbl "c") :| [], _eventDeclDeclSource = Inherited, _eventDeclLineInfo = (LI "file" 0 0)})])
+        z = Evt (fromList [(Nothing,EventDecl {_scope = Index (InhDelete Nothing), _source = EventId (Lbl "c") :| [], _eventDeclDeclSource = Local, _eventDeclLineInfo = (LI "file" 0 10)})])
+
+return []
+
+run_tests :: (PropName -> Property -> IO (a, Result))
+          -> IO ([a], Bool)
+run_tests = $forAllProperties'
+
