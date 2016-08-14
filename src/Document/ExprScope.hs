@@ -59,12 +59,20 @@ data IndexWitness = IndexWitness
         , _indexWitnessDeclSource :: DeclSource
         , _indexWitnessLineInfo :: NonEmptyListSet LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
+data ParamWitness = ParamWitness 
+        { _paramWitnessVar :: Var
+        , _paramWitnessEvtExpr :: Expr 
+        , _paramWitnessDeclSource :: DeclSource
+        , _paramWitnessLineInfo :: NonEmptyListSet LineInfo
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 data ActionDecl = Action 
         { _actionDeclInhStatus :: EventInhStatus Action
         , _actionDeclDeclSource :: DeclSource
         , _actionDeclLineInfo :: NonEmptyListSet LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 
+data WitnessType = DeletedVar | AddedIndex | DeletedParam
+    deriving (Eq,Ord)
 
 makeFields ''CoarseSchedule
 makePrisms ''CoarseSchedule
@@ -73,6 +81,7 @@ makeFields ''Guard
 makeFields ''ActionDecl
 makeFields ''Witness
 makeFields ''IndexWitness
+makeFields ''ParamWitness
 
 newtype ExprScope = ExprScope { _exprScopeCell :: Cell IsExprScope }
     deriving (Typeable,Generic)
@@ -270,6 +279,11 @@ instance Scope IndexWitness where
     kind _ = "witness (index)"
     rename_events' _ e = [e]
 
+instance ZoomEq ParamWitness where
+instance Scope ParamWitness where
+    kind _ = "witness (parameter)"
+    rename_events' _ e = [e]
+
 instance ZoomEq ActionDecl where
 instance Scope ActionDecl where
     type Impl ActionDecl = Redundant Action (WithDelete ActionDecl)
@@ -322,6 +336,10 @@ instance Arbitrary Witness where
     shrink = genericShrink
 
 instance Arbitrary IndexWitness where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary ParamWitness where
     arbitrary = genericArbitrary
     shrink = genericShrink
 

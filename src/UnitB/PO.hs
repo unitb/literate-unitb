@@ -568,6 +568,7 @@ inv_po m (pname, xp) =
                         assume_old_guard evt
                         named_hyps $ act
                         named_hyps $ M.map ba_pred $ evt^.abs_actions
+                        POG.variables $ old_indices evt
                         POG.variables $ evt^.new.indices
                         POG.variables $ evt^.new.params)
                     (emit_goal [as_label evt_lbl,inv_lbl,pname] 
@@ -586,10 +587,16 @@ wit_wd_po m (lbl, evt) =
                  prefix_label $ as_label lbl
                  named_hyps $ evt^.new.guards
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
-            (emit_goal ["WWD"] $ well_definedness $ zall 
-                $ M.ascElems $ witnessDef <$> evt^.witness)
+        (do
+            emit_goal ["WWD"] $ well_definedness $ zall 
+                $ M.ascElems $ witnessDef <$> evt^.witness
+            emit_goal ["WWD"] $ well_definedness $ zall 
+                $ M.ascElems $ witnessDef <$> evt^.param_witness)
 
-wit_fis_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
+old_indices :: RawEventMerging -> Map Name Var
+old_indices evt = M.unions $ evt^.partsOf (abstract_evts.traverse._2.old.indices)
+
+wit_fis_po :: Pre => RawMachineAST -> (EventId, RawEventMerging) -> M ()
 wit_fis_po m (lbl, evt) = 
         with (do _context $ step_ctx m
                  POG.variables $ m!.del_vars
@@ -599,8 +606,13 @@ wit_fis_po m (lbl, evt) =
                  prefix_label $ as_label lbl
                  named_hyps $ evt^.new.guards
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
-            (emit_exist_goal ["WFIS"] pvar 
-                $ M.ascElems $ witnessDef <$> evt^.witness)
+        (do 
+            let old_ind = old_indices evt
+                new_ind = evt^.new.params
+            emit_exist_goal ["WFIS"] pvar 
+                $ M.ascElems $ witnessDef <$> evt^.witness
+            emit_exist_goal ["WFIS"] (M.elems $ old_ind `M.difference` new_ind)
+                $ M.ascElems $ witnessDef <$> evt^.param_witness)
     where
         pvar = L.map prime $ M.ascElems $ view' abs_vars m `M.difference` view' variables m
 
@@ -804,22 +816,25 @@ intersections []  = assertFalse' "intersection of empty list is undefined"
 intersections [x] = x
 intersections (x:xs) = x `intersection` intersections xs                                
 
-strengthen_guard_po :: RawMachineAST -> (EventId,RawEventMerging) -> M ()
+strengthen_guard_po :: Pre => RawMachineAST -> (EventId,RawEventMerging) -> M ()
 strengthen_guard_po m (lbl,evt) = 
         with (do
             prefix_label $ as_label lbl
             prefix_label "GRD/str"
             _context $ assert_ctx m
             _context $ step_ctx m
+            POG.variables $ M.unions $ evt^.partsOf (abstract_evts.traverse._2.old.indices)
             POG.variables $ evt^.new.indices
             POG.variables $ evt^.new.params 
+            named_hyps $ M.mapKeys as_label $ witnessDef <$> evt^.param_witness
             named_hyps $ invariants m 
             named_hyps $ evt^.new.guards ) $ do
         case evt^.evt_pairs of
-          evt :| [] -> do
+          evt :| [] -> 
             forM_ (M.toList $ evt^.deleted.guards) $ \(lbl,grd) -> do
                 emit_goal [lbl] grd
-          es -> emit_goal [] $ zsome $ NE.map (zall . M.ascElems . view (deleted.guards)) es
+          es -> 
+            emit_goal [] $ zsome $ NE.map (zall . M.ascElems . view (deleted.guards)) es
 
 sim_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
 sim_po m (lbl, evt) = 

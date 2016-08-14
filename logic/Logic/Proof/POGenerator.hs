@@ -106,11 +106,11 @@ existential vs (POGen cmd) = do
         with (_context st) 
             $ emit_exist_goal [] vs ss'
 
-emit_goal' :: (Functor m, Monad m, HasExpr expr) 
+emit_goal' :: (Functor m, Monad m, HasExpr expr, Pre) 
            => [Label] -> expr -> POGenT m ()
 emit_goal' lbl g = emit_goal lbl $ getExpr g
 
-emit_goal :: (Functor m, Monad m) 
+emit_goal :: (Functor m, Monad m, Pre) 
           => [Label] -> Expr -> POGenT m ()
 emit_goal lbl g = POGen $ do
     tag   <- asks tag 

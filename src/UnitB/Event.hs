@@ -115,6 +115,7 @@ type ConcrEvent = ConcrEvent' Expr
 data ConcrEvent' expr = CEvent 
         { _new   :: Event' expr
         , _witness   :: Table Name (Witness' expr)
+        , _param_witness :: Table Name (Witness' expr)
         , _eql_vars  :: Table Name Var
         , _abs_actions :: Table Label (Action' expr)
         } deriving (Eq,Show,Functor,Foldable,Traversable,Generic)

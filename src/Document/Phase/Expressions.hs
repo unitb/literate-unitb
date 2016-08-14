@@ -279,15 +279,19 @@ witness_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 witness_decl = machineCmd "\\witness" $ \(Conc evt, VarName var, Expr xp) _m p2 -> do
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- ask
-            let disappear  = (True,) <$> (p2^.pAbstractVars) `M.difference` (p2^.pStateVars)
-                newIndices = (False,) <$> p2^.evtMergeAdded ev eIndices
-            p  <- parse_expr'' (event_parser p2 ev & is_step .~ True) xp
+            let disappear  = (DeletedVar,  ) <$> (p2^.pAbstractVars) `M.difference` (p2^.pStateVars)
+                newIndices = (AddedIndex,  ) <$> p2^.evtMergeAdded ev eIndices
+                delParams  = (DeletedParam,) <$> p2^.evtMergeDel ev eIndices
             (isVar,v)  <- bind 
                 ([printf|'%s' is not a disappearing variable or a new index|] (render var))
-                (var `M.lookup` (disappear `M.union` newIndices))
-            return $ if isVar
-                then [(label $ render var,evtScope ev (Witness v p Local $ pure li))]
-                else [(label $ render var,evtScope ev (IndexWitness v p Local $ pure li))]
+                (var `M.lookup` (disappear `M.union` newIndices `M.union` delParams))
+            p  <- parse_expr'' (event_parser p2 ev &~ do 
+                        is_step .= True
+                        decls %= insert_symbol v ) xp
+            return $ case isVar of
+                DeletedVar   -> [(label $ render var,evtScope ev (Witness v p Local $ pure li))]
+                AddedIndex   -> [(label $ render var,evtScope ev (IndexWitness v p Local $ pure li))]
+                DeletedParam -> [(label $ render var,evtScope ev (ParamWitness v p Local $ pure li))]
 
 instance ZoomEq EventExpr where
 instance Scope EventExpr where
@@ -792,6 +796,20 @@ instance IsEvtExpr IndexWitness where
         | otherwise              = return []
         where v = w^.ES.var
     toEvtScopeExpr New _ _ _ = return []
+    setSource _ x = x
+    inheritedFrom _ = []
+
+instance PrettyPrintable ParamWitness where
+    pretty = kind
+
+instance IsEvtExpr ParamWitness where
+    defaultEvtWitness _ _ = return []
+    toMchScopeExpr _ _ = return []
+    toEvtScopeExpr New evt _ w
+        | w^.declSource == Local = return [Right (evt,[EParamWitness (v^.name) (WitSuch v $ w^.evtExpr)])]
+        | otherwise              = return []
+        where v = w^.ES.var
+    toEvtScopeExpr Old _ _ _ = return []
     setSource _ x = x
     inheritedFrom _ = []
 

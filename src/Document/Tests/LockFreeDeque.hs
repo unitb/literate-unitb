@@ -112,6 +112,16 @@ test = test_cases
                 case35 result35
             , aCase "test 36, deleting indices - AST"
                 case36 result36
+            , stringCase "test 37, deleting indices - PO"
+                case37 result37
+            , poCase "test 38, deleting indices - verify"
+                case38 result38
+            , stringCase "test 39, deleting indices - Wit FIS"
+                case39 result39
+            , poCase "test 40, deleting indices - Wit FIS - verify"
+                case40 result40
+            , poCase "test 41, deleting indices - verify all"
+                case41 result41
             ]            
 
 path0 :: FilePath
@@ -311,3 +321,36 @@ result36 :: Either [Error] [[Table Name Var]]
 result36 = Right [[],[v],[v],[M.empty]]
     where
         v = symbol_table [Var [smt|v|] int]
+
+case37 :: IO String
+case37 = proof_obligation path36 "m1/hdl:popL:more/GRD/str/m0:sch0" 1
+
+case38 :: IO POResult
+case38 = verifyOnly path36 "m1/hdl:popL:more/GRD/str/m0:sch0" 1
+
+result38 :: String
+result38 = unlines
+    [ "  o  m1/hdl:popL:more/GRD/str/m0:sch0"
+    , "passed 1 / 1"
+    ]
+
+case39 :: IO String
+case39 = proof_obligation path36 "m1/hdl:popL:more/WFIS/v" 1
+
+case40 :: IO POResult
+case40 = verifyOnly path36 "m1/hdl:popL:more/WFIS/v" 1
+
+result40 :: String
+result40 = unlines
+    [ "  o  m1/hdl:popL:more/WFIS/v"
+    , "passed 1 / 1"
+    ]
+
+case41 :: IO POResult
+case41 = verifyOnly path36 "m1/ext:popL:more/INV/m1:inv7" 1
+
+result41 :: String
+result41 = unlines
+    [ "  o  m1/ext:popL:more/INV/m1:inv7"
+    , "passed 1 / 1"
+    ]

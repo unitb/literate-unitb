@@ -38,7 +38,12 @@
 |  |  |  +- test 34, using coarse schedules in proofs of safety of new events
 |  |  |  +- test 35, weakened coarse schedule replacement leads-to
 |  |  |  +- test 36, deleting indices - AST
-|  |  +- [ Success: 36 / 36 ]
+|  |  |  +- test 37, deleting indices - PO
+|  |  |  +- test 38, deleting indices - verify
+|  |  |  +- test 39, deleting indices - Wit FIS
+|  |  |  +- test 40, deleting indices - Wit FIS - verify
+|  |  |  +- test 41, deleting indices - verify all
+|  |  +- [ Success: 41 / 41 ]
 |  |  +- small machine example
 |  |  |  +- test 0
 |  |  |  +- test 1 (separate machine blocks)
@@ -233,7 +238,7 @@
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
 |  |  +- variable scope, properties
-|  +- [ Success: 183 / 183 ]
+|  +- [ Success: 188 / 188 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -347,17 +352,17 @@
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 278 / 278 ]
++- [ Success: 283 / 283 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38642 total
-    1130 src/UnitB/PO.hs
-     934 src/Document/Phase/Expressions.hs
+   38697 total
+    1145 src/UnitB/PO.hs
+     952 src/Document/Phase/Expressions.hs
      795 src/Document/Visitor.lhs
      779 logic/Logic/Expr/Expr.hs
-     762 src/Document/Phase.hs
-Run time: 2m 28s
+     763 src/Document/Phase.hs
+Run time: 2m 29s

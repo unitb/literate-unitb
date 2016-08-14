@@ -288,11 +288,12 @@ evtMergeAdded :: (HasMachineP1 phase, M.IsKey Table label,AEvtType phase ~ CEvtT
               -> Getting (Table label a) (AEvtType phase) (Table label a)
               -> Getter phase (Table label a)
 evtMergeAdded = eventDifference $ \old new -> new `M.difference` M.unions (NE.toList old)
-evtMergeDel :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
+evtMergeDel :: (HasMachineP1 phase, M.IsKey Table label,AEvtType phase ~ CEvtType phase)
             => EventId
-            -> Getting (Table Label a) (AEvtType phase) (Table Label a)
-            -> Getter phase (Table Label (a,NonEmpty SkipOrEvent))
-evtMergeDel = eventDifferenceWithId M.difference 
+            -> Getting (Table label a) (AEvtType phase) (Table label a)
+            -- -> Getter phase (Table label (a,NonEmpty SkipOrEvent))
+            -> Getter phase (Table label a)
+evtMergeDel eid ln = eventDifferenceWithId M.difference eid ln . to (fmap fst)
 evtMergeKept :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
              => EventId
              -> Getting (Table Label a) (AEvtType phase) (Table Label a)

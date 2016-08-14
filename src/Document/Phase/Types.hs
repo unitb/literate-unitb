@@ -147,8 +147,9 @@ data EventP3 = EventP3
     , _eFineSched   :: Table Label Expr
     , _eGuards   :: Table Label Expr       
     , _eActions  :: Table Label Action
-    , _eWitness     :: Table Name Witness
-    , _eIndWitness  :: Table Name Witness
+    , _eWitness  :: Table Name Witness
+    , _eParamWitness :: Table Name Witness
+    , _eIndWitness   :: Table Name Witness
     } deriving (Show,Typeable,Generic,Eq)
 
 data EventP4 = EventP4 
