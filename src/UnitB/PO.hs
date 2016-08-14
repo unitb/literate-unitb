@@ -721,10 +721,13 @@ replace_csched_po m (lbl,evt') = do
 
 weaken_csched_po :: RawMachineAST -> (EventId,RawEventSplitting) -> M ()
 weaken_csched_po m (lbl,evt) = do
-            let weaken_sch :: NonEmpty (Map Label RawExpr)
+            let weaken_sch :: NonEmpty (Map Label RawExpr, Map Label RawExpr)
                 weaken_sch = do
                         e <- evt^.evt_pairs
-                        return $ (e^.added.coarse_sched) `M.difference` M.unions (L.map (view add) $ e^.c_sched_ref)
+                        let addRule = M.unions (L.map (view add) $ e^.c_sched_ref)
+                            new     = e^.added.coarse_sched
+                        return ( new `M.difference` addRule
+                               , new `M.intersection` addRule )
                 old_c = evt^.old.coarse_sched
             with (do
                     prefix_label $ as_label lbl
@@ -747,11 +750,12 @@ weaken_csched_po m (lbl,evt) = do
                         forM_ (F.concat $ csched_ref_safety <$> ref <*> pure evt) 
                             $ prop_saf' m (Just lbl)
                 case weaken_sch of
-                    m :| [] -> 
-                        forM_ (M.toList m) $ \(lbl,sch) -> do
+                    (m0,m1) :| [] -> 
+                        with (named_hyps m1)
+                        $ forM_ (M.toList $ m0) $ \(lbl,sch) -> do
                             emit_goal [lbl] sch
                     ms -> 
-                        emit_goal [] $ zsome $ NE.map zall ms
+                        emit_goal [] $ zsome $ NE.map zall (fst <$> ms)
 
 replace_fsched_po :: RawMachineAST -> (EventId,RawEventSplitting) -> M ()
 replace_fsched_po m (lbl,aevt) = do

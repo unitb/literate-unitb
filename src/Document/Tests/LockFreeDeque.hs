@@ -122,6 +122,10 @@ test = test_cases
                 case40 result40
             , poCase "test 41, deleting indices - verify all"
                 case41 result41
+            , poCase "test 42, use new schedules in proofs of weakening"
+                case42 result42
+            , stringCase "test 43, use new schedules in proofs of weakening, PO"
+                case43 result43
             ]            
 
 path0 :: FilePath
@@ -354,3 +358,18 @@ result41 = unlines
     [ "  o  m1/ext:popL:more/INV/m1:inv7"
     , "passed 1 / 1"
     ]
+
+path42 :: FilePath
+path42 = [path|Tests/pop-left-t3.tex|]
+
+case42 :: IO POResult
+case42 = verifyOnly path42 "m1/hdl:popL:more/C_SCH/weaken/m1:sch2" 1
+
+result42 :: String
+result42 = unlines
+    [ "  o  m1/hdl:popL:more/C_SCH/weaken/m1:sch2"
+    , "passed 1 / 1"
+    ]
+
+case43 :: IO String
+case43 = proof_obligation path42 "m1/hdl:popL:more/C_SCH/weaken/m1:sch2" 1

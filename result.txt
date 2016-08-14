@@ -43,7 +43,9 @@
 |  |  |  +- test 39, deleting indices - Wit FIS
 |  |  |  +- test 40, deleting indices - Wit FIS - verify
 |  |  |  +- test 41, deleting indices - verify all
-|  |  +- [ Success: 41 / 41 ]
+|  |  |  +- test 42, use new schedules in proofs of weakening
+|  |  |  +- test 43, use new schedules in proofs of weakening, PO
+|  |  +- [ Success: 43 / 43 ]
 |  |  +- small machine example
 |  |  |  +- test 0
 |  |  |  +- test 1 (separate machine blocks)
@@ -238,7 +240,7 @@
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
 |  |  +- variable scope, properties
-|  +- [ Success: 188 / 188 ]
+|  +- [ Success: 190 / 190 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -352,17 +354,17 @@
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 283 / 283 ]
++- [ Success: 285 / 285 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38697 total
-    1145 src/UnitB/PO.hs
+   38701 total
+    1149 src/UnitB/PO.hs
      952 src/Document/Phase/Expressions.hs
      795 src/Document/Visitor.lhs
      779 logic/Logic/Expr/Expr.hs
      763 src/Document/Phase.hs
-Run time: 2m 29s
+Run time: 2m 38s
