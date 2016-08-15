@@ -1,7 +1,7 @@
 module Handler.Render where
 
 import           Control.Lens
-import           Data.Text (stripEnd)
+import           Data.Maybe (fromJust)
 import qualified Data.Vector as V
 import           Logic.Expr hiding ((</>),Value)
 import           Logic.Proof.Monad
@@ -66,7 +66,8 @@ postRenderFormR = do
         declarations' = intercalate " \\\\\n\\quad " $
                         intercalate "\n" <$>
                         decls (form^.theories) (form^.declarations)
-        assumptions' = stripEnd . assums $ form^.assumptions
+        assumptions' = fromJust . stripSuffix asmsep . assums $
+                        form^.assumptions
         goal' = form^.goal
 
     decls :: Vector String -> Vector (String, Text) -> [[Text]]
@@ -81,5 +82,6 @@ postRenderFormR = do
 
     assums :: Vector (String, (String, Text)) -> Text
     assums as = foldr (\(_, (lbl, asm)) accum -> concat
-                        [ "& ", asm, " & \\textsf{(", pack lbl, ")} \\\\\n", accum ])
+                        [ "& ", asm, " & \\textsf{(", pack lbl, ")}", asmsep, accum ])
                 "" . toList $ as
+    asmsep = " \\\\\n"
