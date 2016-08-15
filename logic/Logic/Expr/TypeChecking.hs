@@ -81,7 +81,7 @@ checkTypes c ue li = do
 checkTypes' :: Context -> UntypedExpr -> Either [String] Expr
 checkTypes' c (Word (Var n ())) = do
     v <- bind (n `M.lookup` (c^.constants))
-        ([printf|%s is undeclared|] $ render n)
+        ([printf|%s is undeclared|] $ pretty n)
     return $ Word v
 checkTypes' _ (Lit n ()) = do
     let t = case n of 
@@ -89,24 +89,21 @@ checkTypes' _ (Lit n ()) = do
              IntVal _  -> int
     return (Lit n t)
 checkTypes' c (FunApp f args) = do
-    let Fun _ n _ _ _ _ = f ;
-        targs = map (checkTypes' c) args
-    tfun <- bind (n `M.lookup` (c^.functions))
-        ([printf|%s is undeclared|] $ render n ) ;
-    check_type tfun targs
-checkTypes' c r@(Record (FieldLookup e field)) = do
+    let targs = map (checkTypes' c) args
+    check_type f targs
+checkTypes' c (Record (FieldLookup e field)) = do
     e' <- checkTypes' c e
     let t = type_of e'
     trecs <- bind (t^?_FromSort._1._RecordSort)
-        ([printf|Record %s has no field %s|] (show r) (render field))
+        ([printf|While looking up field %s: %s is not a record|] (pretty field) (pretty e))
     _ <- bind (field `M.lookup` trecs)
-        ([printf|Type error when type checking field %s|] $ render field)
+        ([printf|Record %s of type %s has no field %s|] (pretty e) (pretty t) (pretty field))
     return (Record (FieldLookup e' field))
 checkTypes' c (Record (RecUpdate e table)) = do
     e' <- checkTypes' c e
     let t = type_of e'
     _ <- bind (t^?_FromSort._1._RecordSort)
-        ([printf|Expression %s is not a record|] (show e))
+        ([printf|Expression %s is not a record|] (pretty e))
     Record . RecUpdate e' <$> traverseValidation (checkTypes' c) table
 checkTypes' c (Record (RecLit table)) =
     Record . RecLit <$> traverseValidation (checkTypes' c) table
@@ -136,7 +133,7 @@ checkTypes' c' (Binder q vs' r t _) = do
         let ys = map var_type $ S.toList xs
         t' <- maybe 
             (fail $ [printf|Inconsistent type for %s: %s|] 
-                    (render x)
+                    (pretty x)
                     $ intercalate "," $ map pretty ys)
             return
             $ foldM common gA ys

@@ -225,6 +225,8 @@ type ExprP' = Either [String] Expr'
 
 type ExprPG n t q = Either [String] (AbsExpr n t q)
 
+type GenExprPG n t a q = Either [String] (GenExpr n t a q)
+
 type ExprPC e = Either [String] e
 
 class ( TypeSystem (TypeT expr)
@@ -438,7 +440,8 @@ z3Def :: Pre
 z3Def ts n = Def ts (z3Name n)
 
 lookupFields :: ( IsName n,TypeSystem t,TypeSystem a
-                , TypeAnnotationPair t a,IsQuantifier q) 
+                , TypeAnnotationPair t a,IsQuantifier q
+                , Pre ) 
              => GenExpr n t a q -> Table Name (GenExpr n t a q)
 lookupFields e = fromJust' $ type_of e^?fieldTypes.to (imap $ \f _ -> Record $ FieldLookup e f)
 

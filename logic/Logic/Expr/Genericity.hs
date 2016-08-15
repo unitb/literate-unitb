@@ -98,6 +98,13 @@ class TypeSystem t => TypeSystem2 t where
           => t -> ExprPG n t q
           -> ExprPG n t q
 
+instance TypeSystem2 () where
+    check_args' f fun xp = do
+            let ts = fun^.arguments
+            guard (length xp == length ts)
+            return $ f fun xp ts
+    zcast _ = id
+
 instance TypeSystem2 FOType where
     check_args' f fun xp = do
             let ts = fun^.arguments

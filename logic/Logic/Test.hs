@@ -777,13 +777,20 @@ case17 = do
                 decls %= M.union (symbol_table 
                     [Var r t
                     ,Var intV $ set_type int])
+                free_dummies .= True
+                dum_ctx %= insert_symbol (Var r t')
         t = record_type $ runMap' $ do
                 x ## int
                 bar ## bool
+        t' = record_type $ runMap' $ do
+                x ## int
+                foo ## int
+                bar ## set_type int
         r = [smt|r|]
         x = [smt|x|]
         intV = [tex|\Int|]
         bar = [smt|bar|]
+        foo = [smt|foo|]
 
 
 result17 :: Expr
@@ -874,7 +881,12 @@ case23 = return $ either show_error id $ untypedExpression
         show_error = \x -> error ("couldn't parse expression:\n" ++ show_err x)
 
 result23 :: UntypedExpr
-result23 = zfalse
+result23 = zforall [x',y'] ztrue (fun2 (zeq_fun gA) x y)
+    where
+        x' = z3Var "x" ()
+        y' = z3Var "y" ()
+        x = Word x'
+        y = Word y'
 
 case24 :: IO UntypedExpr
 case24 = return $ either show_error id $ untypedExpression
@@ -886,4 +898,4 @@ case24 = return $ either show_error id $ untypedExpression
         show_error = \x -> error ("couldn't parse expression:\n" ++ show_err x)
 
 result24 :: UntypedExpr
-result24 = ztrue
+result24 = znot (fun2 (zeq_fun gA) (zopp $ zint 2) (zint 2))
