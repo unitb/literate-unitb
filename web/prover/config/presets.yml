@@ -66,6 +66,20 @@
             - "x,y,z : \\set[\\Int]"
         assumptions: []
         goal: "x \\subset y \\bunion z \\equiv x \\setminus z \\subset y"
+    - desc: Type Error example
+      form:
+        theories:
+          - "sets"
+        declarations:
+          - - "decl1"
+            - "x : \\set[ \\set[ \\Int ]]"
+          - - "decl2"
+            - "i : \\Int"
+        assumptions:
+          - - "asm1"
+            - - "asm1"
+              - "x = \\{ \\{ 7 \\} \\}"
+        goal: "\\{ \\{ 3 \\}, x \\} \\subseteq \\{ \\{ 3, 7 \\} \\}\n\\2\\land \\qforall{j}{j \\le i}{i \\ge j-2}"
 
 - name: functions
   items:
