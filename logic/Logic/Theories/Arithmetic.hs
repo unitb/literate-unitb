@@ -168,7 +168,9 @@ arith = create $ do
           , ((geq,greater),greater)
           , ((greater,geq),greater)
           , ((greater,greater),greater) ] 
-   commands .= [make Command "\\card" "card" 1 card_fun]
+   commands .= [ make Command "\\card" "card" 1 card_fun
+               , make Command "\\Int" "Int" 0 (zset_all_fun' int)
+               ]
    quantifiers .= 
         [ ([tex|\qsum|], qsum) ]
           

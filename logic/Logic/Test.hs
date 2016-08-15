@@ -1009,10 +1009,8 @@ case17 = do
 result17 :: Expr
 result17 = fromRight' $ rec `zelem` set
     where
-        zint_set = Right $ Word $ Var intV $ set_type int
-        intV = [tex|\Int|]
         rec = zrec_update r (foo ## 7 >> bar ## zset_enum [1,2])
-        set = zrecord_set' (do foo ## zint_set; x ## zint_set; bar ## zpow_set zint_set)
+        set = zrecord_set' (do foo ## zset_all' int; x ## zset_all' int; bar ## zpow_set (zset_all' int))
         r' = [smt|r|]
         r  = Right $ Word $ Var r' $ record_type $ M.fromList 
                     [ (bar,bool)

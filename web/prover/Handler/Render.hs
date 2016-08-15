@@ -45,24 +45,25 @@ postRenderFormR = do
     packages = Just $ pack <$> ["bsymb", "eventB", "unitb", "calculational"]
     getLatex :: ProofForm Text -> Text
     getLatex form = intercalate "\n"
-                    [ "& \\ \\boxed{"
-                    , "\\begin{array}{ll}"
+                    [ "\\begin{array}{r@{~}lr}"
+                    , "& \\boxed{"
+                    , "\\begin{array}{l}"
                     , "\\textsf{using} \\\\"
                     , "\\quad " <> "\\textit{" <> theories' <> "} \\\\"
-                    , "\\textsf{variables} \\\\"
+                    , "\\textsf{constants} \\\\"
                     , "\\quad " <> declarations'
                     , "\\end{array}"
-                    , "}\\\\[0.75em]"
-                    , "& \\begin{array}{l@{\\quad}l}"
+                    , "} \\\\"
+                    , "\\\\"
                     , assumptions'
+                    , "\\\\[-2.5pt]"
+                    , "\\vdash & \\\\[-2.5pt]"
+                    , "& " <> goal'
                     , "\\end{array}"
-                    , "\\\\[-0.5em]"
-                    , "\\vdash & \\\\[-0.5em]"
-                    , "& \\ " <> goal'
                     ]
       where
         theories' = intercalate ", " $ pack <$> form^.theories
-        declarations' = intercalate " & \\\\\n\\quad " $
+        declarations' = intercalate " \\\\\n\\quad " $
                         intercalate "\n" <$>
                         decls (form^.theories) (form^.declarations)
         assumptions' = stripEnd . assums $ form^.assumptions
@@ -80,5 +81,5 @@ postRenderFormR = do
 
     assums :: Vector (String, (String, Text)) -> Text
     assums as = foldr (\(_, (lbl, asm)) accum -> concat
-                        [ "\\textsf{" , pack lbl, "}: & ", asm, " \\\\\n", accum ])
+                        [ "& ", asm, " & \\textsf{(", pack lbl, ")} \\\\\n", accum ])
                 "" . toList $ as
