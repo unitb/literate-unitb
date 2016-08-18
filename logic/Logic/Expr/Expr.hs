@@ -21,6 +21,7 @@ import Logic.Names
     -- Library
 import Control.Applicative hiding (Const)
 import Control.DeepSeq
+import qualified Control.Invariant as I
 import Control.Monad.Identity
 import Control.Monad.Reader
 import Control.Monad.State
@@ -86,7 +87,7 @@ instance PrettyPrintable Value where
     pretty (IntVal v)  = show v
 
 instance ZoomEq Value where
-    (.==) = (===)
+    (.==) = (I.===)
 
 instance (ZoomEq n,ZoomEq t,ZoomEq a,ZoomEq q) => ZoomEq (GenExpr n t a q) where
 instance (Arbitrary t,Arbitrary n,Arbitrary a,Arbitrary q,TypeSystem t,IsQuantifier q) 

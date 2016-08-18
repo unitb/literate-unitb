@@ -17,6 +17,7 @@ import UnitB.UnitB
 
 
     -- Libraries
+import Control.Invariant hiding ((===))
 import Control.Lens hiding (Context,elements)
 import Control.Monad
 import Control.Monad.Reader
@@ -42,7 +43,7 @@ import           Utilities.Table
 prop_parseOk :: Property
 prop_parseOk = forAll correct_machine $ f_prop_parseOk
 
-f_prop_parseOk :: (Pretty RawMachine, Tex) -> Property
+f_prop_parseOk :: (Pretty RawMachine, Tex) -> Invariant
 f_prop_parseOk (Pretty mch,Tex tex) =
         (M.elems . M.map (fmap asExpr) . view' machines) `liftM` (all_machines tex) .== Right [mch]
  

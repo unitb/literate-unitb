@@ -28,6 +28,8 @@ import Data.Serialize
 
 import GHC.Generics.Instances
 
+import Test.QuickCheck.ZoomEq
+
 import Text.Printf
 
 import Utilities.Table
@@ -47,7 +49,7 @@ makeLenses ''SystemBase
 
 instance NFData mch => NFData (SystemBase mch) where
 
-instance (Show mch,HasMachine mch expr,HasExpr expr) 
+instance (Show mch,HasMachine mch expr,HasExpr expr,ZoomEq expr) 
         => HasInvariant (SystemBase mch) where
     invariant s = do 
         "inv4" ## M.keys (s^.ref_struct) === M.keys (s^.machines)
@@ -61,8 +63,8 @@ instance (Show mch,HasMachine mch expr,HasExpr expr)
             match m0 m1   = do
                             "inv0" ## ((m0!.abs_vars) === (m1!.variables))
                                 -- del vars is cummulative
-                            "inv1" ## ((m0!.del_vars) === (m1!.del_vars) `M.union` ((m0!.abs_vars) `M.difference` (m0!.variables)))
-                            "inv2" ## ((m0!.events.to (M.map (view old) . leftMap)) === (m1!.events.to (M.map (view new) . rightMap)))
+                            "inv1" ## ((m0!.del_vars) .== (m1!.del_vars) `M.union` ((m0!.abs_vars) `M.difference` (m0!.variables)))
+                            "inv2" ## (M.mapKeys Pretty (m0!.events.to (M.map (view old) . leftMap)) .== M.mapKeys Pretty (m1!.events.to (M.map (view new) . rightMap)))
                             "inv3" ## (m0!.inh_props) === (m1!.inh_props) `mappend` (m1!.props)
                             
 instance Controls (SystemBase mch) (SystemBase mch) where
@@ -81,10 +83,10 @@ instance Default (SystemBase mch) where
             , ("arithmetic",arithmetic)
             , ("basic",basic_theory)]
 
-instance (HasMachine mch expr,Show mch) => Default (System' mch) where
+instance (HasMachine mch expr,Show mch,ZoomEq expr) => Default (System' mch) where
     def = empty_system
 
-empty_system :: (HasExpr expr,HasMachine mch expr,Show mch) 
+empty_system :: (HasExpr expr,HasMachine mch expr,Show mch,ZoomEq expr) 
              => System' mch
 empty_system = check def
 

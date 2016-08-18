@@ -5,6 +5,7 @@ module Text.Pretty where
 import Control.Applicative
 import Control.Arrow
 import Control.DeepSeq
+import Control.Invariant ((##))
 import Control.Lens hiding (List,cons,uncons)
 import Control.Monad.Reader
 
@@ -29,6 +30,8 @@ import Language.Haskell.TH hiding (Name,report)
 import Language.Haskell.TH.Quote
 
 import Prelude hiding (unlines)
+
+import Test.QuickCheck.ZoomEq
 
 newtype Pretty a = Pretty { unPretty :: a }
     deriving (Eq,Ord,Functor,Foldable,Traversable,Hashable,Generic)
@@ -74,6 +77,10 @@ instance (PrettyPrintable a,PrettyPrintable b)
     pretty = show . (Pretty *** Pretty)
 
 instance NFData a => NFData (Pretty a) where
+
+instance (ZoomEq a,PrettyPrintable a) => ZoomEq (Pretty a) where
+    Pretty x .== Pretty y | x == y = return ()
+                          | otherwise = (pretty x ++ " /= " ++ pretty y) ## False
 
 withMargin :: String -> String -> String -> String
 withMargin first other = asLines %~ NE.zipWith (++) (first :| repeat other) 

@@ -39,6 +39,7 @@ import Logic.Expr
 
     -- Libraries
 import Control.DeepSeq
+import qualified Control.Invariant as I
 import Control.Lens
 import Control.Monad
 import Control.Precondition
@@ -99,7 +100,7 @@ data Notation = Notation
     } deriving (Eq,Generic,Show)
 
 instance ZoomEq Notation where
-    (.==) = (===)
+    (.==) = (I.===)
 instance PrettyPrintable Notation where
     pretty _ = "<notation>" 
 
@@ -221,7 +222,7 @@ data BinOperator = BinOperator InternalName Name Flipping Fun
     deriving (Typeable,Generic,Eq,Ord,Show)
 
 instance ZoomEq BinOperator where
-    (.==) = (===)
+    (.==) = (I.===)
 
 instance PrettyPrintable BinOperator where
     pretty (BinOperator x y _ _) = pretty (x,y) -- format str x y

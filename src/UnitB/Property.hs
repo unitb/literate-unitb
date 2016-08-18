@@ -10,7 +10,7 @@ import UnitB.Expr
 
     -- Libraries
 import Control.DeepSeq
-import Control.Invariant
+import Control.Invariant as I
 import Control.Lens hiding (Const,elements)
 
 import Data.Default
@@ -70,7 +70,7 @@ newtype EventId = EventId Label
     deriving (Eq,Show,Ord,Typeable,Generic,Hashable,PrettyPrintable)
 
 instance ZoomEq EventId where
-    (.==) = (QC.===)
+    (.==) = (I.===)
 instance Arbitrary EventId where
     arbitrary = EventId . label <$> elements ((:[]) <$> take 13 ['a' ..])
     shrink = genericShrink
@@ -277,7 +277,7 @@ instance Arbitrary expr => Arbitrary (Transient' expr) where
                    <*> (NE.nub <$> arbitrary) 
                    <*> arbitrary
 instance ZoomEq ProgId where
-    (.==) = (QC.===)
+    (.==) = (I.===)
 instance Arbitrary ProgId where
     arbitrary = genericArbitrary
 instance ZoomEq expr => ZoomEq (TrHint' expr) where

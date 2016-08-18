@@ -7,6 +7,7 @@ where
 
     -- Libraries
 import Control.DeepSeq
+import qualified Control.Invariant as I
 import Control.Lens
 import Control.Monad
 import Control.Monad.State
@@ -32,7 +33,7 @@ import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax hiding (Name,lift)
 import qualified Language.Haskell.TH.Syntax as TH 
 
-import Test.QuickCheck as QC
+import Test.QuickCheck as QC 
 import Test.QuickCheck.Regression as QC
 import Test.QuickCheck.Report as QC
 import Test.QuickCheck.ZoomEq
@@ -426,10 +427,10 @@ insertAt n xs ne@(y :| ys)
     | otherwise = y :| (L.take (n-1) ys ++ xs ++ L.drop (n-1) ys)
 
 instance ZoomEq Name where
-    (.==) = (===)
+    (.==) = (I.===)
 
 instance ZoomEq InternalName where
-    (.==) = (===)
+    (.==) = (I.===)
 
 instance Arbitrary Name where
     arbitrary = do

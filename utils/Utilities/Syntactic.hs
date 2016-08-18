@@ -1,6 +1,7 @@
 module Utilities.Syntactic where
 
 import Control.DeepSeq
+import qualified Control.Invariant as I
 import Control.Lens
 
 import Control.Monad
@@ -117,7 +118,7 @@ instance Syntactic LineInfo where
     traverseLineInfo = id
 
 instance ZoomEq Error where
-    (.==) = (===)
+    (.==) = (I.===)
 instance Syntactic Error where
     line_info (Error _ li) = li
     line_info (MLError _ ls) = minimum $ map snd ls
@@ -126,7 +127,7 @@ instance Syntactic Error where
     traverseLineInfo f (MLError x lis) = MLError x <$> (traverse._2) f lis
 
 instance ZoomEq LineInfo where
-    (.==) = (===)
+    (.==) = (I.===)
 instance Arbitrary LineInfo where
     arbitrary = LI "file" <$> QC.elements [0,5,10] <*> QC.elements [0,5,10]
 

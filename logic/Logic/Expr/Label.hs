@@ -6,6 +6,7 @@ import Logic.Names
 
     -- Libraries
 import Control.DeepSeq
+import qualified Control.Invariant as I
 
 import Data.Hashable
 import Data.List as L
@@ -43,7 +44,7 @@ instance (IsLabel l,IsLabel r) => IsLabel (Either l r) where
     as_label = either as_label as_label
 
 instance ZoomEq Label where
-    (.==) = (===)
+    (.==) = (I.===)
 instance Arbitrary Label where
     arbitrary = Lbl <$> elements [ [x,y] | x <- ['a'..'z'], y <- ['0'..'9'] ]
 

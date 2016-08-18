@@ -286,9 +286,9 @@ toEventDecl ref s (Evt m) = concatMap (concatMap fromValidation . uncurry f)
                             (Old,Local) -> Success []
                             _           -> Failure [Error "Deleting a non-existing index" $ x^.lineInfo]
                         Index (InhDelete (Just v)) -> case (ref,x^.declSource) of
-                                                (Old,_)         -> Success [EIndices s v]
+                                                (Old,Local)     -> Success [EIndices s v]
                                                 (New,Local)     -> Success [EDelIndices s (v,x^.lineInfo)]
-                                                (New,Inherited) -> Success []
+                                                (_,Inherited)   -> Success []
                         Promoted (Just v) -> case ref of
                                                 Old -> case x^.declSource of 
                                                         Inherited -> Success [EIndices s v]

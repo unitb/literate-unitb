@@ -17,6 +17,7 @@ import Logic.Expr
 import UnitB.Syntax
 
     -- Libraries
+import qualified Control.Invariant as I
 import Control.Lens
 import Control.Precondition
 
@@ -52,7 +53,7 @@ instance Show VarScope where
     show = readCell' show
 
 instance ZoomEq VarScope where
-    x .== y = read2CellsWith' (.==) (x === y) x y
+    x .== y = read2CellsWith' (.==) (x I.=== y) x y
 
 instance Scope VarScope where
     keep_from s = traverseCell' (keep_from s)
