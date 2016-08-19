@@ -1,7 +1,6 @@
 module Handler.Render where
 
 import           Control.Lens
-import           Data.Maybe (fromJust)
 import qualified Data.Vector as V
 import           Logic.Expr hiding ((</>),Value)
 import           Logic.Proof.Monad
@@ -66,8 +65,7 @@ postRenderFormR = do
         declarations' = intercalate " \\\\\n\\quad " $
                         intercalate "\n" <$>
                         decls (form^.theories) (form^.declarations)
-        assumptions' = fromJust . stripSuffix asmsep . assums $
-                        form^.assumptions
+        assumptions' = assums $ form^.assumptions
         goal' = form^.goal
 
     decls :: Vector String -> Vector (String, Text) -> [[Text]]
@@ -81,7 +79,7 @@ postRenderFormR = do
         runDecl = either (\errs -> [pack $ show_err errs]) (fmap (pack . varDecl . snd))
 
     assums :: Vector (String, (String, Text)) -> Text
-    assums as = foldr (\(_, (lbl, asm)) accum -> concat
-                        [ "& ", asm, " & \\textsf{(", pack lbl, ")}", asmsep, accum ])
-                "" . toList $ as
+    assums = intercalate asmsep . map oneLine . toList
+    oneLine (_, (lbl, asm)) = concat
+                              ["& ", asm, " & \\textsf{(", pack lbl, ")}"]
     asmsep = " \\\\\n"
