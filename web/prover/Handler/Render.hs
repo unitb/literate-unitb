@@ -7,7 +7,7 @@ import           Logic.Proof.Monad
 import           System.Directory
 import           System.FilePath
 import           TeX2PNG
-import           Utilities.Syntactic
+import           Utilities.Syntactic (Error, show_err)
 
 import           Import
 import           Logic.Prover
@@ -44,28 +44,53 @@ postRenderFormR = do
     packages = Just $ pack <$> ["bsymb", "eventB", "unitb", "calculational"]
     getLatex :: ProofForm Text -> Text
     getLatex form = intercalate "\n"
-                    [ "\\begin{array}{r@{~}lr}"
-                    , "& \\boxed{"
-                    , "\\begin{array}{l}"
-                    , "\\textsf{using} \\\\"
-                    , "\\quad " <> "\\textit{" <> theories' <> "} \\\\"
-                    , "\\textsf{constants} \\\\"
-                    , "\\quad " <> declarations'
-                    , "\\end{array}"
-                    , "} \\\\"
-                    , "\\\\"
-                    , assumptions'
+                    [ begin
                     , "\\\\[-2.5pt]"
                     , "\\vdash & \\\\[-2.5pt]"
                     , "& " <> goal'
-                    , "\\end{array}"
+                    , end
                     ]
       where
-        theories' = intercalate ", " $ pack <$> form^.theories
-        declarations' = intercalate " \\\\\n\\quad " $
-                        intercalate "\n" <$>
-                        decls (form^.theories) (form^.declarations)
-        assumptions' = assums $ form^.assumptions
+        begin,end,theoriesDeclsBox :: Text
+        begin = concat [ "\\begin{array}{r@{~}lr}"
+                       , theoriesDeclsBox
+                       , assumptions'
+                       ]
+        end = "\\end{array}"
+        theoriesDeclsBox = if (null theories') && (null declarations')
+              then ""
+              else intercalate "\n"
+                   [ "& \\boxed{"
+                   , "\\begin{array}{l}"
+                   , concat
+                     [ theories'
+                     , declarations'
+                     ]
+                   , "\\end{array}"
+                   , "} \\\\"
+                   ]
+        theories',declarations',assumptions',goal' :: Text
+        theories' = if null ts
+                    then ""
+                    else intercalate "\n"
+                         [ "\\textsf{using} \\\\"
+                         , "\\quad " <> "\\textit{" <> ts <> "} \\\\"
+                         ]
+          where ts = intercalate ", " $ pack <$> form^.theories
+        declarations' = if null ds
+                        then ""
+                        else intercalate "\n"
+                             [ "\\textsf{constants} \\\\"
+                             , "\\quad " <> ds]
+          where
+            ds = intercalate " \\\\\n\\quad " $
+                 intercalate "\n" <$>
+                 decls (form^.theories) (form^.declarations)
+        assumptions' = if null as
+                       then ""
+                       else "\\\\" <> as
+          where
+            as = assums $ form^.assumptions
         goal' = form^.goal
 
     decls :: Vector String -> Vector (String, Text) -> [[Text]]
@@ -80,6 +105,6 @@ postRenderFormR = do
 
     assums :: Vector (String, (String, Text)) -> Text
     assums = intercalate asmsep . map oneLine . toList
+    asmsep = " \\\\\n"
     oneLine (_, (lbl, asm)) = concat
                               ["& ", asm, " & \\textsf{(", pack lbl, ")}"]
-    asmsep = " \\\\\n"
