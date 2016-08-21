@@ -137,3 +137,6 @@ literate-unitb.sublime-workspace
 
 # don't ignore gitignore files in subdirectories
 !.gitignore
+
+# don't ignore gitkeep files
+!.gitkeep

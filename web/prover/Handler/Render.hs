@@ -2,7 +2,7 @@ module Handler.Render where
 
 import           Control.Lens
 import qualified Data.Vector as V
-import           Logic.Expr hiding ((</>),Value)
+import           Logic.Expr hiding ((</>),Value,render)
 import           Logic.Proof.Monad
 import           System.Directory
 import           System.FilePath
@@ -17,30 +17,41 @@ import           Model.ProofForm
 postRenderR :: Handler Value
 postRenderR = do
   cur <- lift getCurrentDirectory  -- project root
-  let imgPath = "static" </> "img"
-      imgDir = cur </> imgPath
+  let staticSubDir = "img"
+      imgDir = cur </> "static" </> staticSubDir
   content <- requireJsonBody :: Handler (Text)
-  p <- lift $ mkPNG $ args content imgDir
-  let pngFullPath = either unpack id p
-      pngPath = imgPath </> (snd . splitFileName $ pngFullPath)
-  returnJson pngPath
+  path <- lift $ render (args content imgDir) mkPNG staticSubDir
+  returnJson path
   where
     args c d = Args "transparent" c (Just d) 150 False True Nothing 1 packages Nothing True
     packages = Just $ pack <$> ["bsymb", "eventB", "unitb", "calculational"]
 
 
-postRenderFormR :: Handler Value
-postRenderFormR = do
-  cur <- lift getCurrentDirectory  -- project root
-  let imgPath = "static" </> "img"
-      imgDir = cur </> imgPath
+postFormPngR :: Handler Value
+postFormPngR = do
   form <- requireJsonBody :: Handler (ProofForm Text)
-  p <- lift $ mkPNG $ args (getLatex form) imgDir
-  let pngFullPath = either unpack id p
-      pngPath = imgPath </> (snd . splitFileName $ pngFullPath)
-  returnJson pngPath
+  path <- lift $ renderForm form mkPNG True "img"
+  returnJson path
+
+postFormPdfR :: Handler Value
+postFormPdfR = do
+  form <- requireJsonBody :: Handler (ProofForm Text)
+  path <- lift $ renderForm form mkPDF False "pdf"
+  returnJson path
+
+
+renderForm :: ProofForm Text
+           -> (Args -> IO (Either Text FilePath))
+           -> Bool
+           -> FilePath
+           -> IO FilePath
+renderForm proofForm fun tightness staticSubDir = do
+  cur <- getCurrentDirectory  -- project root
+  let imgDir = cur </> "static" </> staticSubDir
+  path <- render (args (getLatex proofForm) imgDir tightness) fun staticSubDir
+  return path
   where
-    args c d = Args "transparent" c (Just d) 150 False True Nothing 1 packages Nothing True
+    args c d t = Args "transparent" c (Just d) 150 False True Nothing 1 packages Nothing t
     packages = Just $ pack <$> ["bsymb", "eventB", "unitb", "calculational"]
     getLatex :: ProofForm Text -> Text
     getLatex form = intercalate "\n"
@@ -108,3 +119,14 @@ postRenderFormR = do
     asmsep = " \\\\\n"
     oneLine (_, (lbl, asm)) = concat
                               ["& ", asm, " & \\textsf{(", pack lbl, ")}"]
+
+
+render :: Args
+       -> (Args -> IO (Either Text FilePath))
+       -> FilePath
+       -> IO FilePath
+render args f outputDir = do
+  let outPath = "static" </> outputDir
+  file <- f args
+  let fileFullPath = either unpack id file
+  return $ outPath </> (takeFileName fileFullPath)

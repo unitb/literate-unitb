@@ -72,6 +72,7 @@ $(function() {
     });
 
     update_img("");
+    update_pdf_link("");
     $form[0].reset();
     $form.find('select').selectpicker('render');
     update_bar("alert-info", "glyphicon-info-sign", "Ready", "Ready");
@@ -181,14 +182,25 @@ $(function() {
         },
       }),
 
-      // Make an AJAX request to the server to submit form for rendering
+      // Make an AJAX request to the server to submit form for rendering (png)
       $.ajax({
-        url: '@{RenderFormR}',
+        url: '@{FormPngR}',
         type: 'POST',
         contentType: "application/json",
         data: json,
         complete: function (data) {
           update_img(JSON.parse(data.responseText));
+        },
+      }),
+
+      // Make an AJAX request to the server to submit form for rendering (pdf)
+      $.ajax({
+        url: '@{FormPdfR}',
+        type: 'POST',
+        contentType: "application/json",
+        data: json,
+        complete: function (data) {
+          update_pdf_link(JSON.parse(data.responseText));
         },
       })
 
@@ -219,7 +231,7 @@ $(function() {
     });
   }
 
-  // helper function used for updating the rendered image of the goal
+  // helper function used for updating the rendered image of the form
   function update_img(path) {
     var imgId = "goal-png";
     var $out_area = $("#output-area");
@@ -237,6 +249,34 @@ $(function() {
           alt: "Rendered goal"
         });
         img.appendTo($out_area);
+      }
+    }
+  }
+
+  // helper function used for updating the link to rendered pdf of the form
+  function update_pdf_link(path) {
+    var pdfId = "form-pdf";
+    var $out_right = $("#out-right");
+    if (!path || path == "") {
+      $("#" + pdfId).remove();
+    }
+    else {
+      if ($out_right.children("#" + pdfId).length != 0) {
+        $("#" + pdfId).attr("href", path);
+      }
+      else {
+        var a = $("<a />", {
+          class: "btn btn-default",
+          id:  pdfId,
+          href: path,
+          style: "position:absolute;right:15px"
+        });
+        var small = $("<small />", {
+          class: "glyphicon glyphicon-download-alt icon-left-margin",
+        });
+        a.append("PDF");
+        a.append(small);
+        a.appendTo($out_right);
       }
     }
   }

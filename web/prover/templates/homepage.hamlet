@@ -3,7 +3,7 @@
   <small> Web
 
 <.page-header>
-    <.btn-group .pull-right>
+    <.pull-right>
       <a href="#examples" .btn .btn-default>
         Examples
         <small>
@@ -78,6 +78,7 @@
       <span .glyphicon .glyphicon-info-sign .icon-right-margin aria-hidden="true">
       <span .sr-only>Ready
       <samp>Ready
+    <#out-right>
 
 <section.page-header.row #examples>
   <.col-lg-10>

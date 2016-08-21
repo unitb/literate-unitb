@@ -8,4 +8,5 @@
 /goal GoalR POST
 /preset PresetR POST
 /render RenderR POST
-/renderForm RenderFormR POST
+/formPng FormPngR POST
+/formPdf FormPdfR POST
