@@ -10,6 +10,7 @@
 
 \newcommand{\REQ}{\text{REQ}}
 \newcommand{\OBJ}{\mathcal{O}bj}
+\newcommand{\Node}{\mathcal{N}ode}
 \newcommand{\Addr}{\mathcal{P}tr}
 \newcommand{\link}{\textit{LINK}}
 \newcommand{\trash}{\textit{TRASH}}
@@ -37,6 +38,8 @@
         {\Addr}{ \Addr_0 \setminus \{ dummy \} } \]
     \[ \definition
         {\OBJ}{ \OBJ_0 \setminus \{ \bot \} } \]
+    \[ \definition
+        {\Node}{ [ 'item : \OBJ_0 \setminus \{ \bot \} ] } \]
     \[\newset{\OBJ_0}\]
 
 shared:
@@ -446,9 +449,9 @@ external:
   \invariant{m1:inv5}
     { remL &\3\equiv state \in \{ \cPopped, \cEmpty \} } \\
   \invariant{m1:inv7}
-    { \qforall{p}{p \in \dom.\link}{\link.p.'item \in \OBJ} }
+    { \qforall{p}{p \in \dom.\link}{\link.p.'item \in \OBJ} } \\
   \invariant{m1:inv6}
-    { state = \cEmpty & \3\equiv remL \land resL = \bot }
+    { state = \cEmpty & \3\equiv remL \land resL = \bot } \\
 \end{align*}
 
 \subsection{State}
@@ -480,18 +483,27 @@ external:
 \removeact{hdl:popL:more}{m0:act3}
 \removecoarse{hdl:popL:more}{m0:sch0}{popL}
 \removecoarse{hdl:popL:more}{m0:sch1}{popL}
+\removecoarse{hdl:popL:more}{m0:sch2}{popL}
+\removecoarse{hdl:popL:more}{m0:sch3}{popL}
+\removeind{hdl:popL:more}{v}
 \begin{align*}
+  &\witness{hdl:popL:more}{v}{v = ver} \\
   &\cschedule{hdl:popL:more}{m1:sch0}
     { state = \cNonEmpty } \\
   &\cschedule{hdl:popL:more}{m1:sch1}
     { lh = LH } \\
+  &\cschedule{hdl:popL:more}{m1:sch2}
+    { \neg lh = RH } \\
+  &\cschedule{hdl:popL:more}{m1:sch3}
+    { \neg lh = dummy } \\
   &\evbcmeq{hdl:popL:more}{m1:act0}
     { state }{ \cPopped } \\
   % &\evbcmeq{hdl:popL:more}{m1:act0}
   %   { remL }{ \true } \\
 \end{align*}
 
-\replace{hdl:popL:more}{m1:sch0,m0:sch2}{m1:prog0}
+\replace{hdl:popL:more}{m1:sch0,m1:sch1}{m1:prog0}
+\replace{hdl:popL:one}{m1:sch0,m1:sch1}{m1:prog0}
 \begin{align*}
   \progress{m1:prog0}
     {v = ver \1\land \neg LH = dummy 
@@ -499,14 +511,23 @@ external:
     { (LH = lh \1\land \neg LH = dummy \1\land state = \cNonEmpty)
       \1\lor \neg v = ver}
   \refine{m1:prog0}{ensure}{read:LH}{}
+  % \progress{m1:prog0}
+  %   {v = ver \1\land \neg LH = dummy 
+  %       \1\land state \in \{ \cInit, \cNonEmpty \} }
+  %   { (LH = lh \1\land \neg LH = dummy \1\land state = \cNonEmpty)
+  %     \1\lor \neg v = ver}
+  % \refine{m1:prog1}{ensure}{read:LH}{}
 \end{align*}
 \[ \dummy{v : \Int} \]
 
 \removeact{hdl:popL:one}{m0:act1}
 \removeact{hdl:popL:one}{m0:act2}
 \removeact{hdl:popL:one}{m0:act3}
+\removecoarse{hdl:popL:one}{m0:sch0}
 \removecoarse{hdl:popL:one}{m0:sch1}
+\removeind{hdl:popL:one}{v}
 \begin{align*}
+  &\witness{hdl:popL:one}{v}{v = ver} \\
   &\cschedule{hdl:popL:one}{m1:sch0}
     { state = \cNonEmpty } \\
   &\cschedule{hdl:popL:one}{m1:sch1}
@@ -527,7 +548,7 @@ external:
 \removeact{returnL:non:empty}{m0:act0}
 \removeact{returnL:non:empty}{m0:act1}
 \removecoarse{returnL:non:empty}{m0:sch0}}
-% \replace{returnL}{m1:sch}{}
+% \replace{returnL}{m0:sch0}{m1:sch}{}{}
 \begin{align*}
   \cschedule{returnL:empty}{m1:sch0}{state = \cEmpty} \\
   \evbcmeq{returnL:empty}{m1:act0}{state}{\cBot} \\
@@ -548,6 +569,14 @@ external:
 
 \subsection{Delete ver}
 
+\end{machine}
+
+\section{m2}
+\input{pop-left/machine_m1}
+
+\begin{machine}{m2}
+  \refines{m1}
+  \mergeevents{foo}{bar}
 \end{machine}
 
 \end{document}
