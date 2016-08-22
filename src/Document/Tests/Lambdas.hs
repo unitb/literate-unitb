@@ -728,7 +728,6 @@ result10 = unlines
     , "error 347:1:"
     , "\tProgress property prog3 (refined in m0)"
     , ""
-    , ""
     ]
 
 case11 :: IO String

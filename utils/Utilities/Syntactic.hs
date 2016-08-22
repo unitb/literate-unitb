@@ -137,7 +137,7 @@ showLiLong (LI fn ln col) = [printf|%s:%d:%d|] fn ln col
 report :: Error -> String
 report (Error msg li) = [printf|%s:\n    %s|] (showLiLong li) msg
 report (MLError msg ys) = [printf|%s\n%s|] msg
-                (unlines 
+                (intercalate "\n" 
                     $ map (\(msg,li) -> [printf|%s:\n\t%s\n|] (showLiLong li) msg) 
                     $ sortOn snd ys)
 

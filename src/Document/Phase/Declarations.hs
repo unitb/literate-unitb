@@ -302,16 +302,6 @@ instance IsVarScope EvtDecls where
     toThyDecl n (Evt m) = L.map (Right . PDummyVars n . fromJust' . view varDecl) $ M.ascElems 
                                 $ M.filterWithKey (const.MM.isNothing) m
 
-instance PrettyRecord EvtDecls where
-    recordFields = genericRecordFields []
-instance PrettyPrintable EvtDecls where
-    pretty = prettyRecord
-
-instance PrettyRecord EventDecl where
-    recordFields = genericRecordFields []
-instance PrettyPrintable EventDecl where
-    pretty = prettyRecord
-
 event_var_decl :: (Var -> EvtScope Var)
                -> String
                -> MPipeline MachineP1

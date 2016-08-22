@@ -252,7 +252,6 @@ result4 = unlines
     , "Perhaps you meant:"
     , "ent (variable)"
     , "ext (variable)"
-    , ""
     ]
 
 result5 :: String

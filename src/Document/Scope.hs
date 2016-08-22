@@ -27,6 +27,8 @@ module Document.Scope
     , nonEmptyListSet
     , setToList, setToNeList
     , setToList', setToNeList'
+    , listSet
+    , declUnion
     , RefScope(..)
     )
 where
@@ -44,6 +46,7 @@ import Control.Arrow (second)
 import Control.DeepSeq
 
 import Control.Lens as L 
+import Control.Lens.Extras
 import Control.Monad.Identity
 import Control.Monad.RWS (tell)
 import Control.Parallel.Strategies
@@ -67,6 +70,14 @@ import Test.QuickCheck.ZoomEq
 
 import Utilities.Table
 import Utilities.Syntactic
+
+data DeclSource = Inherited | Local
+    deriving (Eq,Ord,Show,Generic)
+
+data InhStatus a = InhAdd a | InhDelete (Maybe a)
+    deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
+
+makePrisms ''InhStatus
 
     -- clashes is a symmetric, reflexive relation
 class (Ord a,Show a,ZoomEq a) => Scope a where
@@ -100,9 +111,9 @@ class (Ord a,Show a,ZoomEq a) => Scope a where
 
     axiom_Scope_clashesIsSymmetric :: a -> a -> Bool
     axiom_Scope_clashesIsSymmetric x y = (x `clash` y) == (y `clash` x)
-    axiom_Scope_clashesOverMerge :: a -> a -> a -> Property
+    axiom_Scope_clashesOverMerge :: PrettyPrintable a => a -> a -> a -> Property
     axiom_Scope_clashesOverMerge x y z = 
-            counterexample ("x <+> y: " ++ show (x <+> y)) $
+            counterexample ("x <+> y: " ++ pretty (x <+> y)) $
             counterexample ("x clash z: " ++ show (x `clash` z)) $
             counterexample ("y clash z: " ++ show (y `clash` z)) $
             clash x y .||. ((x <+> y) `clash` z === (x `clash` z || y `clash` z))
@@ -190,12 +201,6 @@ is_inherited = keep_from Inherited
 is_local :: Scope s => s -> Maybe s
 is_local = keep_from Local
 
-data DeclSource = Inherited | Local
-    deriving (Eq,Ord,Show,Generic)
-
-data InhStatus a = InhAdd a | InhDelete (Maybe a)
-    deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
-
 newtype NonEmptyListSet a = NonEmptyListSet 
         { unNonEmptyListSet :: DList a } 
     deriving (Generic,Functor,Applicative,Semigroup)
@@ -203,13 +208,11 @@ newtype NonEmptyListSet a = NonEmptyListSet
 _listSet' :: Ord a => DList a -> NonEmptyListSet a
 _listSet' x = NonEmptyListSet x 
 
-listSet :: Ord a => [a] -> NonEmptyListSet a
-listSet x = NonEmptyListSet 
-        (D.fromList x) 
-        -- (Ord.nubSort x)
+listSet :: (Ord a,Pre) => [a] -> NonEmptyListSet a
+listSet x = nonEmptyListSet $ NE.fromList x
 
 nonEmptyListSet :: Ord a => NonEmpty a -> NonEmptyListSet a
-nonEmptyListSet x = listSet $ NE.toList x
+nonEmptyListSet x = NonEmptyListSet (D.fromList $ NE.toList x) 
 
 setToList :: Ord a => NonEmptyListSet a -> [a]
 setToList = Ord.nubSort . D.toList . unNonEmptyListSet
@@ -230,6 +233,7 @@ instance Ord a => Ord (NonEmptyListSet a) where
 
 instance (Show a,Ord a) => Show (NonEmptyListSet a) where
     show x = "listSet " ++ show (setToList x)
+instance (PrettyPrintable a,Ord a) => PrettyPrintable (NonEmptyListSet a) where
 
 instance (ZoomEq a,Ord a) => ZoomEq (NonEmptyListSet a) where
     x .== y = setToList x .== setToList y
@@ -251,6 +255,8 @@ type EventInhStatus a = InhStatus (NonEmptyListSet EventId,a)
 
 data RefScope = Old | New
     deriving (Eq,Ord)
+
+instance PrettyPrintable a => PrettyPrintable (InhStatus a) where
 
 contents :: HasInhStatus a (InhStatus b) => a -> Maybe b
 contents x = case x ^. inhStatus of
@@ -367,13 +373,13 @@ instance ( HasInhStatus a (InhStatus expr)
     mergeScopesImpl (WithDelete x) (WithDelete y) = WithDelete <$> z
         where
             z = case (x^.inhStatus, y^.inhStatus) of
-                    (InhDelete Nothing, InhAdd e) -> Just $ x & inhStatus .~ InhDelete (Just e)
-                                                              & declSource %~ (declUnion $ y^.declSource)
-                    (InhAdd e, InhDelete Nothing) -> Just $ y & inhStatus .~ InhDelete (Just e)
-                                                              & declSource %~ (declUnion $ x^.declSource)
+                    (InhDelete Nothing, InhAdd e) 
+                        | y^.declSource == Inherited -> Just $ x & inhStatus .~ InhDelete (Just e)
+                                                                 & declSource %~ (declUnion $ y^.declSource)
+                    (InhAdd e, InhDelete Nothing) 
+                        | x^.declSource == Inherited -> Just $ y & inhStatus .~ InhDelete (Just e)
+                                                                 & declSource %~ (declUnion $ x^.declSource)
                     _ -> Nothing
-            declUnion Inherited Inherited = Inherited
-            declUnion _ _                 = Local
 
 instance ( Eq expr, ClashImpl a, Show a
          , HasLineInfo a (NonEmptyListSet LineInfo)
@@ -389,14 +395,27 @@ instance ( Eq expr, ClashImpl a, Show a
             g x y = guard' x y >> Just (x & inhStatus %~ (flip f $ y^.inhStatus) 
                                           & declSource %~ (declUnion $ y^.declSource)
                                           & lineInfo %~ (<> (y^.lineInfo)))
+                                          -- & declSource %~ (declUnion $ y^.declSource)
+                                          -- & lineInfo %~ (<> (y^.lineInfo)))
             guard' :: a -> a -> Maybe ()
-            guard' x y = guard $ (fromMaybe True $ liftA2 (==) (snd <$> contents x) (snd <$> contents y))
+            guard' x y = guard $ oneInherited x y && sameContents x y
+            sameContents x y = fromMaybe True $ liftA2 (==) (snd <$> contents x) (snd <$> contents y)
             f :: EventInhStatus expr -> EventInhStatus expr -> EventInhStatus expr
             f (InhAdd x) (InhAdd y) = InhAdd $ x & _1 %~ (<> y^._1)
             f (InhAdd x) (InhDelete y) = InhDelete $ y & traverse._1 %~ (x^._1 <>)
             f (InhDelete x) (InhAdd y) = InhDelete $ x & traverse._1 %~ (<> y^._1)
             f (InhDelete x) (InhDelete y) = InhDelete $ second getFirst <$> (second First <$> x) <> (second First <$> y)
-            declUnion Inherited Inherited = Inherited
-            declUnion _ _                 = Local
+
+oneInherited :: ( HasDeclSource s DeclSource
+                , HasInhStatus s (InhStatus a))
+             => s -> s -> Bool
+oneInherited x y = 
+           (x^.declSource == Inherited && y^.declSource == Inherited)
+        || (x^.declSource == Inherited && _InhAdd `is` (x^.inhStatus))
+        || (y^.declSource == Inherited && _InhAdd `is` (y^.inhStatus))
+
+declUnion :: DeclSource -> DeclSource -> DeclSource
+declUnion Inherited Inherited = Inherited
+declUnion _ _                 = Local
 
 instance NFData DeclSource

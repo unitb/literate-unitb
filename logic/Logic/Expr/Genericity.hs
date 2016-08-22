@@ -98,7 +98,7 @@ instance TypeSystem2 FOType where
             return $! funApp f xp
     zcast t me = do
             e <- me
-            let { err_msg = unlines
+            let { err_msg = intercalate "\n"
                             [ [printf|expression has type incompatible with its expected type:|]
                             , [printf|  expression: %s|]        (pretty e)
                             , [printf|  actual type: %s|]       (pretty $ type_of e)
@@ -129,7 +129,7 @@ instance TypeSystem2 GenericType where
             return expr
     zcast t me = do
             e <- me
-            let { err_msg = unlines
+            let { err_msg = intercalate "\n"
                             [ [printf|expression has type incompatible with its expected type:|]
                             , [printf|  expression: %s|]        (pretty e)
                             , [printf|  actual type: %s|]       (pretty $ type_of e)

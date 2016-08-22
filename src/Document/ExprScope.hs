@@ -261,6 +261,9 @@ instance Scope FineSchedule where
                 InhAdd _ -> "fine schedule"
     rename_events' _ e = [e]
 
+instance PrettyRecord Guard where
+instance PrettyPrintable Guard where
+    pretty = prettyRecord
 instance ZoomEq Guard where
 instance Scope Guard where
     type Impl Guard = Redundant Expr (WithDelete Guard)
@@ -319,6 +322,9 @@ instance Arbitrary CoarseSchedule where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
+instance PrettyRecord FineSchedule where
+instance PrettyPrintable FineSchedule where
+    pretty = prettyRecord
 instance Arbitrary FineSchedule where
     arbitrary = genericArbitrary
     shrink = genericShrink
@@ -365,6 +371,9 @@ instance Arbitrary ProgressDecl where
 instance Arbitrary Initially where
     arbitrary = genericArbitrary
     shrink = genericShrink
+instance PrettyRecord Axiom where
+instance PrettyPrintable Axiom where
+    pretty = prettyRecord
 instance Arbitrary Axiom where
     arbitrary = genericArbitrary
     shrink = genericShrink
@@ -460,6 +469,24 @@ prop_axiom_mergeAssociative_Action = regression
         y = Action {_actionDeclInhStatus = InhDelete Nothing, _actionDeclDeclSource = Local, _actionDeclLineInfo = nonEmptyListSet $ (LI "file" 10 0) :| [(LI "file" 10 5),(LI "file" 5 10),(LI "file" 0 10),(LI "file" 5 10),(LI "file" 10 10)]}
         z = Action {_actionDeclInhStatus = InhDelete Nothing, _actionDeclDeclSource = Local, _actionDeclLineInfo = nonEmptyListSet $ (LI "file" 5 5) :| [(LI "file" 0 5),(LI "file" 5 0),(LI "file" 10 5),(LI "file" 5 10)]}
         -- Action {_actionDeclInhStatus = InhDelete (Just (EventId "j" :| [EventId "e",EventId "i",EventId "f",EventId "m"],BcmIn (Var (Name {_backslash = False, _base = 'p' :| "rimeprimesl", _primes = 0, _suffix = ""}) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen IntSort []])) funApp (Fun {_annotation = [], _funName = Name {_backslash = True, _base = 'p' :| "rimesl", _primes = 3, _suffix = ""}, lifted = Lifted, _arguments = [GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "")]], _result = Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")], _finite = InfiniteWD}) [Word (Var (Name {_backslash = False, _base = 'p' :| "rimesl------", _primes = 2, _suffix = ""}) (GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""))),Word (Var (Name {_backslash = False, _base = 's' :| "lOprime", _primes = 1, _suffix = ""}) (Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []]))])), _actionDeclDeclSource = Local, _actionDeclLineInfo = (LI "file" 0 5) :| [(LI "file" 0 10),(LI "file" 5 0),(LI "file" 5 5),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 10 5),(LI "file" 10 10)]} /= Action {_actionDeclInhStatus = InhDelete (Just (EventId e :| [EventId f,EventId i,EventId j,EventId m],BcmIn (Var (Name {_backslash = False, _base = 'p' :| "rimeprimesl", _primes = 0, _suffix = ""}) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen IntSort []])) funApp (Fun {_annotation = [], _funName = Name {_backslash = True, _base = 'p' :| "rimesl", _primes = 3, _suffix = ""}, lifted = Lifted, _arguments = [GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "")]], _result = Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")], _finite = InfiniteWD}) [Word (Var (Name {_backslash = False, _base = 'p' :| "rimesl------", _primes = 2, _suffix = ""}) (GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""))),Word (Var (Name {_backslash = False, _base = 's' :| "lOprime", _primes = 1, _suffix = ""}) (Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []]))])), _actionDeclDeclSource = Local, _actionDeclLineInfo = (LI "file" 0 5) :| [(LI "file" 0 10),(LI "file" 5 0),(LI "file" 5 5),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 10 5),(LI "file" 10 10)]}
+
+prop_axiom_Scope_mergeAssociative_Guard :: Property
+prop_axiom_Scope_mergeAssociative_Guard = regression
+        ((axiom_Scope_mergeAssociative^.uncurried') . unPretty)
+        [Pretty (x,y,z)]
+    where
+        x = Guard {_guardInhStatus = InhAdd (listSet [EventId (Lbl "l")],DispExpr "" (FunApp (Fun {_annotation = [], _funName = Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}, lifted = Lifted, _arguments = [], _result = Gen (DefSort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") [] (Gen (Sort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") 0) [])) [], _finite = FiniteWD}) [])), _guardDeclSource = Local, _guardLineInfo = listSet [(LI "file" 0 0),(LI "file" 0 5),(LI "file" 0 10)]}
+        y = Guard {_guardInhStatus = InhDelete Nothing, _guardDeclSource = Inherited, _guardLineInfo = listSet [(LI "file" 5 0),(LI "file" 5 5),(LI "file" 10 0)]}
+        z = Guard {_guardInhStatus = InhDelete Nothing, _guardDeclSource = Inherited, _guardLineInfo = listSet [(LI "file" 5 0),(LI "file" 10 5)]}
+
+prop_axiom_Scope_clashesOverMerge_FineSchedule :: Property
+prop_axiom_Scope_clashesOverMerge_FineSchedule = regression
+        ((axiom_Scope_clashesOverMerge^.uncurried') . unPretty)
+        [Pretty (x,y,z)]
+    where
+        x = FineSchedule {_fineScheduleInhStatus = InhAdd (listSet [EventId (Lbl "a"),EventId (Lbl "b"),EventId (Lbl "c"),EventId (Lbl "d"),EventId (Lbl "e"),EventId (Lbl "g"),EventId (Lbl "h"),EventId (Lbl "i"),EventId (Lbl "j"),EventId (Lbl "k"),EventId (Lbl "l"),EventId (Lbl "m")],DispExpr "" (Word (Var (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (Gen RealSort [])))), _fineScheduleDeclSource = Local, _fineScheduleLineInfo = listSet [(LI "file" 0 0),(LI "file" 0 5),(LI "file" 0 10),(LI "file" 5 0),(LI "file" 5 5),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 10 10)]}
+        y = FineSchedule {_fineScheduleInhStatus = InhDelete Nothing, _fineScheduleDeclSource = Inherited, _fineScheduleLineInfo = listSet [(LI "file" 0 10),(LI "file" 5 5),(LI "file" 10 5)]}
+        z = FineSchedule {_fineScheduleInhStatus = InhDelete Nothing, _fineScheduleDeclSource = Inherited, _fineScheduleLineInfo = listSet [(LI "file" 0 0),(LI "file" 0 5),(LI "file" 0 10),(LI "file" 5 0),(LI "file" 5 5),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 10 10)]}
 
 return []
 

@@ -250,7 +250,6 @@ result3 = unlines
     , "error 51:1:"
     , "\tEvent evt (refined in m1)"
     , ""
-    , ""
     ]
 
 path4 :: FilePath
@@ -294,7 +293,6 @@ result5 = unlines
     , ""
     , "error 446:1:"
     , "\tfunctions"
-    , ""
     , ""
     ]
 

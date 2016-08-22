@@ -441,5 +441,4 @@ result12 = unlines
     , "error 46:1:"
     , "\tco property"
     , ""
-    , ""
     ]

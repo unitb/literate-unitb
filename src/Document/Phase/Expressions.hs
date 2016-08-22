@@ -390,7 +390,7 @@ parseEvtExpr' expKind fvars field scope evt lbl decl =
             New -> \(_,e) -> [Right (evt,[field lbl e])]
 
 instance IsEvtExpr CoarseSchedule where
-    toMchScopeExpr _ _  = return []
+    toMchScopeExpr _ _    = return []
     defaultEvtWitness _ _ = return []
     toEvtScopeExpr = parseEvtExpr "coarse schedule" ECoarseSched
 
@@ -398,20 +398,14 @@ instance PrettyPrintable CoarseSchedule where
     pretty = kind
 
 instance IsEvtExpr FineSchedule where
-    toMchScopeExpr _ _  = return []
+    toMchScopeExpr _ _    = return []
     defaultEvtWitness _ _ = return []
     toEvtScopeExpr = parseEvtExpr "fine schedule" EFineSched
-
-instance PrettyPrintable FineSchedule where
-    pretty = kind
 
 instance IsEvtExpr Guard where
     toMchScopeExpr _ _  = return []
     defaultEvtWitness _ _ = return []
     toEvtScopeExpr = parseEvtExpr "guard" EGuards
-
-instance PrettyPrintable Guard where
-    pretty = kind
 
 guard_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -480,9 +474,6 @@ instance IsExprScope Axiom where
     toOldPropSet _ _ = return []
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
-
-instance PrettyPrintable Axiom where
-    pretty = kind
 
 assumption :: MPipeline MachineP2
                     [(Label,ExprScope)]

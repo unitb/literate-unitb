@@ -3,7 +3,6 @@ module Text.Pretty where
 
     -- Libraries
 import Control.Applicative
-import Control.Arrow
 import Control.DeepSeq
 import Control.Invariant ((##))
 import Control.Lens hiding (List,cons,uncons)
@@ -11,7 +10,6 @@ import Control.Monad.Reader
 
 import Data.Either.Combinators
 import Data.Existential
-import Data.Functor.Classes
 import Data.Functor.Compose
 import Data.Hashable as H
 import qualified Data.HashMap.Lazy as H
@@ -23,7 +21,6 @@ import qualified Data.Map as M
 import Data.String.Lines
 
 import GHC.Generics
-import GHC.Generics.Instances
 import GHC.Generics.Lens
 
 import Language.Haskell.TH hiding (Name,report)
@@ -38,8 +35,8 @@ newtype Pretty a = Pretty { unPretty :: a }
 
 class PrettyPrintable a where
     pretty :: a -> String
-    default pretty :: (Functor f, Show1 f) => f a -> String
-    pretty = show1 . fmap Pretty
+    default pretty :: (Functor f, Show (f (Pretty a))) => f a -> String
+    pretty = show . fmap Pretty
 
 instance PrettyPrintable a => Show (Pretty a) where
     show = pretty . unPretty
@@ -62,6 +59,33 @@ instance PrettyPrintable Char where
 instance PrettyPrintable () where
     pretty = show
 
+instance (PrettyPrintable a,PrettyPrintable b) 
+        => PrettyPrintable (a,b) where
+    pretty = show . (_1 %~ Pretty) . (_2 %~ Pretty)
+
+instance (PrettyPrintable a,PrettyPrintable b,PrettyPrintable c) 
+        => PrettyPrintable (a,b,c) where
+    pretty = show . (_1 %~ Pretty) . (_2 %~ Pretty) . (_3 %~ Pretty)
+
+instance (PrettyPrintable a,PrettyPrintable b,PrettyPrintable c,PrettyPrintable d) 
+        => PrettyPrintable (a,b,c,d) where
+    pretty = show . (_1 %~ Pretty) 
+                  . (_2 %~ Pretty) 
+                  . (_3 %~ Pretty)
+                  . (_4 %~ Pretty)
+
+instance (PrettyPrintable a
+            ,PrettyPrintable b
+            ,PrettyPrintable c
+            ,PrettyPrintable d
+            ,PrettyPrintable e) 
+        => PrettyPrintable (a,b,c,d,e) where
+    pretty = show . (_1 %~ Pretty) 
+                  . (_2 %~ Pretty) 
+                  . (_3 %~ Pretty)
+                  . (_4 %~ Pretty)
+                  . (_5 %~ Pretty)
+
 instance PrettyPrintable (f (g a)) => PrettyPrintable (Compose f g a) where
     pretty = pretty . getCompose
 
@@ -71,10 +95,6 @@ instance (PrettyPrintable a) => PrettyPrintable (NonEmpty a) where
     pretty xs = "|" ++ pretty (NE.toList xs) ++ "|"
 instance (PrettyPrintable a) => PrettyPrintable (Maybe a) where
     pretty = show . fmap Pretty
-
-instance (PrettyPrintable a,PrettyPrintable b)
-        => PrettyPrintable (a,b) where
-    pretty = show . (Pretty *** Pretty)
 
 instance NFData a => NFData (Pretty a) where
 

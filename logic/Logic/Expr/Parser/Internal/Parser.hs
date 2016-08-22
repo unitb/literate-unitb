@@ -346,7 +346,7 @@ term = do
                 fail (   "unrecognized term: "
                       ++ render xs ++ if not $ L.null sug then
                             "\nPerhaps you meant:\n"
-                      ++ unlines sug else "")
+                      ++ intercalate "\n" sug else "")
         , do    xs <- attempt number
                 return $ E $ zint $ read xs
         , do    Field <$> nameLit

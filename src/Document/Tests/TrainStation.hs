@@ -5362,7 +5362,6 @@ result13 = unlines
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
-    , ""
     ]
 
 case13 :: IO String
@@ -5637,7 +5636,9 @@ path17 = [path|Tests/train-station-err8.tex|]
 result17 :: String
 result17 = unlines 
         [  "error 75:4:\n    type of empty-fun is ill-defined: \\pfun [\\TRAIN,_a]"
+        ,  ""
         ,  "error 75:4:\n    type of empty-fun is ill-defined: \\pfun [\\TRAIN,_b]"
+        ,  ""
         ,  "error 77:3:\n    type of empty-fun is ill-defined: \\pfun [\\TRAIN,_a]"
         ]
 
@@ -5679,7 +5680,6 @@ result18 = unlines
         ,  "  expression: empty-set"
         ,  "  actual type: \\set [_a]"
         ,  "  expected type: \\Bool "
-        ,  ""
         ]
 
 case18 :: IO String
@@ -5702,6 +5702,5 @@ result21 = unlines
     , ""
     , "error 132:1:"
     , "\tsets"
-    , ""
     , ""
     ]

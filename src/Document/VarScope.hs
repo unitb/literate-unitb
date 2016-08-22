@@ -167,6 +167,9 @@ instance Scope MachineVar where
     kind (MchVar _ _ _)  = "state variable"
     rename_events' _ e = [e]
 
+instance PrettyRecord EventDecl where
+instance PrettyPrintable EventDecl where
+    pretty = prettyRecord
 instance ZoomEq EventDecl where
 instance Scope EventDecl where
     kind x = case x^.scope of 
@@ -195,6 +198,8 @@ instance Scope EventDecl where
 instance PrettyPrintable a => PrettyPrintable (EvtScope a) where
     pretty = show . fmap Pretty
 
+instance PrettyPrintable EvtDecls where
+    pretty (Evt e) = "Evt " ++ pretty e
 instance ZoomEq EvtDecls where
 instance Scope EvtDecls where
     kind (Evt m) = show $ M.map (view scope) m

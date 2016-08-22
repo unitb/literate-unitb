@@ -226,7 +226,7 @@ find_errors path = do
                 | hide_error_path = L.replace (p ++ ":") "error "
                 | otherwise       = id
         return $ either 
-            (hide . unlines . L.map report)
+            (hide . intercalate "\n" . L.map ((++ "\n") . report))
             (const $ "no errors")
             m
     else return $ [printf|file does not exist: %s|] path

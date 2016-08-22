@@ -126,6 +126,10 @@ test = test_cases
                 case42 result42
             , stringCase "test 43, use new schedules in proofs of weakening, PO"
                 case43 result43
+            -- , stringCase "test 44, weird error with merging"
+            --     case44 result44
+            , stringCase "test 45, weird error with merging"
+                case45 result45
             ]            
 
 path0 :: FilePath
@@ -373,3 +377,37 @@ result42 = unlines
 
 case43 :: IO String
 case43 = proof_obligation path42 "m1/hdl:popL:more/C_SCH/weaken/m1:sch2" 1
+
+path44 :: FilePath
+path44 = [path|Tests/pop-left-t5.tex|]
+
+case44 :: IO String
+case44 = fmap (either id id) . runEitherT $ unlines . concatMap (L.map pretty.M.keys) <$> all_proof_obligations' path44 
+
+result44 :: String
+result44 = ""
+
+path45 :: FilePath
+path45 = [path|Tests/pop-left-t6.tex|]
+
+case45 :: IO String
+case45 = find_errors path45 
+
+result45 :: String
+result45 = unlines
+    [ "Multiple expressions with the label m0:sch0"
+    , "error 484:1:"
+    , "\tdeleted coarse schedule (event 'hdl:popL:more')"
+    , ""
+    , "error 599:5:"
+    , "\tdeleted coarse schedule (event 'hdl:popL:more')"
+    , ""
+    , ""
+    , "Multiple expressions with the label m0:sch0"
+    , "error 526:1:"
+    , "\tdeleted coarse schedule (event 'hdl:popL:one')"
+    , ""
+    , "error 600:5:"
+    , "\tdeleted coarse schedule (event 'hdl:popL:one')"
+    , ""
+    ]

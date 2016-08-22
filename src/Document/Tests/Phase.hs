@@ -30,7 +30,6 @@ result0 = unlines
     , "error 180:1:"
     , "\tm1"
     , ""
-    , ""
     ]
 
 path1 :: FilePath

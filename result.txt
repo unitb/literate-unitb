@@ -45,7 +45,8 @@
 |  |  |  +- test 41, deleting indices - verify all
 |  |  |  +- test 42, use new schedules in proofs of weakening
 |  |  |  +- test 43, use new schedules in proofs of weakening, PO
-|  |  +- [ Success: 43 / 43 ]
+|  |  |  +- test 45, weird error with merging
+|  |  +- [ Success: 44 / 44 ]
 |  |  +- small machine example
 |  |  |  +- test 0
 |  |  |  +- test 1 (separate machine blocks)
@@ -82,6 +83,7 @@
 |  |  |  +- test 19, simulation proof obligation (init)
 |  |  |  +- test 20, crashing proof obligation of invariant with witness
 |  |  |  +- test 21, deleting non-existant action
+|  |  |  +- test 30, duplicate declarations
 |  |  |  +- test 22, error providing a witness for non-deleted variable
 |  |  |  +- test 23, error deleting non-existant variable
 |  |  |  +- test 24, inherited vs local invariants
@@ -89,7 +91,7 @@
 |  |  |  +- test 27, old guards / new guards
 |  |  |  +- test 28, illegal type application
 |  |  |  +- test 29, theorem well-definedness
-|  |  +- [ Success: 27 / 27 ]
+|  |  +- [ Success: 28 / 28 ]
 |  |  +- Unless / except clause
 |  |  |  +- test 0, unless/except without indices
 |  |  |  +- test 1, unless/except with indices and free variables
@@ -240,7 +242,7 @@
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
 |  |  +- variable scope, properties
-|  +- [ Success: 190 / 190 ]
+|  +- [ Success: 192 / 192 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -354,17 +356,17 @@
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 285 / 285 ]
++- [ Success: 287 / 287 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38723 total
+   38777 total
     1149 src/UnitB/PO.hs
-     952 src/Document/Phase/Expressions.hs
+     943 src/Document/Phase/Expressions.hs
      795 src/Document/Visitor.lhs
      780 logic/Logic/Expr/Expr.hs
      763 src/Document/Phase.hs
-Run time: 2m 1s
+Run time: 2m 44s

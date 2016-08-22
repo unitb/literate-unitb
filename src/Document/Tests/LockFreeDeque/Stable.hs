@@ -63,7 +63,6 @@ result2 = unlines
     , "error 87:4:"
     , "\tguard (event 'm0:pop:right')"
     , ""
-    , ""
     ]
 
 result3 :: String
@@ -4167,13 +4166,13 @@ result10 = unlines
     , "error 255:1:"
     , "\tm1:prog3"
     , ""
-    , ""
     ]
 
 result11 :: String
 result11 = unlines
     [ "error 223:5:"
     , "    A witness is needed for r in event 'm0:pop:left:empty'"
+    , ""
     , "error 223:5:"
     , "    A witness is needed for r in event 'm0:pop:left:non:empty'"
     ]
