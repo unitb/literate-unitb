@@ -427,6 +427,27 @@ $(function() {
     }
   });
 
+  $(".panel-examples").on("shown.bs.collapse", function(e) {
+    $(e.currentTarget).find("tbody").children().each(function (i, elem) {
+      var goal = $(elem).find("td code")[0].innerText;
+      var img = $(elem).find("td img")[0];
+
+      if (!img.hasAttribute("rendered")) {
+        // Make an AJAX request to server to submit preset goal for rendering
+        $.ajax({
+          url: '@{RenderR}',
+          type: 'POST',
+          contentType: "application/json",
+          data: JSON.stringify(goal),
+          complete: function (data) {
+            img.setAttribute("src", JSON.parse(data.responseText));
+          },
+        });
+        img.setAttribute("rendered", "");
+      }
+    });
+  });
+
   $("##{rawJS resultBarId}").fadeIn();
 
 });

@@ -33,7 +33,7 @@
         <button #add-#{declPrefix} .btn .btn-sm .btn-default type="button">
           <small>
             <span .glyphicon .glyphicon-plus>
-        <div ##{declContainerPrefix}1 .#{declPrefix}>
+        <##{declContainerPrefix}1 .#{declPrefix}>
           <.input-group>
             <label .input-group-addon for="#{declPrefix}1">#{declPrefix}1
             <input ##{declPrefix}1 .form-control name="#{declPrefix}1" type="text"
@@ -49,7 +49,7 @@
         <button #add-#{asmPrefix} .btn .btn-sm .btn-default type="button">
           <small>
             <span .glyphicon .glyphicon-plus>
-        <div ##{asmContainerPrefix}1 .#{asmPrefix}>
+        <##{asmContainerPrefix}1 .#{asmPrefix}>
           <.input-group>
             <label .input-group-addon .ce-lbl contenteditable>#{asmPrefix}1
             <input ##{asmPrefix}1 .form-control name="#{asmPrefix}1" type="text"
@@ -73,31 +73,31 @@
       <button .btn .btn-default type="reset">
         Clear
 
-  <.col-lg-6 .col-lg-offset-1 #output-area>
-    <div ##{resultBarId} .alert .alert-info role="alert" style="display: none">
+  <#output-area .col-lg-6 .col-lg-offset-1>
+    <##{resultBarId} .alert .alert-info role="alert" style="display: none">
       <span .glyphicon .glyphicon-info-sign .icon-right-margin aria-hidden="true">
       <span .sr-only>Ready
       <samp>Ready
     <#out-right>
 
-<section.page-header.row #examples>
+<section #examples .page-header .row>
   <.col-lg-10>
-    <div class="panel panel-info">
-      <div class="panel-heading">
+    <.panel .panel-info>
+      <.panel-heading>
         Examples
-      <div class="panel-body">
+      <.panel-body>
         <p>
           Below are some examples of the syntax you can use
           with the Unit-B Web, categorized by theory.
 
-        <div class="panel-group" id="accordion">
+        <#accordion .panel-group>
           $forall (PresetMap pmId name items) <- presetMaps presets
-            <div class="panel panel-default">
-              <div class="panel-heading" data-toggle="collapse" data-parent="#accordion" data-target="#collapse#{pmId}">
+            <.panel .panel-default .panel-examples>
+              <.panel-heading data-toggle="collapse" data-parent="#accordion" data-target="#collapse#{pmId}">
                 #{T.toTitle name}
-              <div id="collapse#{pmId}" class="panel-collapse collapse">
-                <div class="panel-body">
-                  <table class="table">
+              <#collapse#{pmId} .panel-collapse .collapse>
+                <.panel-body>
+                  <table .table>
                     <thead>
                       <tr>
                         <th>Description
@@ -109,16 +109,16 @@
                         <tr>
                           <td>#{desc}
                           <td><code>#{g}
-                          <td><img src="https://placehold.it/260x21">
+                          <td><img src="https://placehold.it/150x40?text=Loading...">
                           <td>
                             <a href="#" .presetitem
                             data-presetId="#{pmId}" data-itemId="#{piId}">Try
-          <div class="panel panel-default">
-            <div class="panel-heading" data-toggle="collapse" data-parent="#accordion" data-target="#collapsemorex">
+          <#more-examples .panel .panel-default .panel-examples>
+            <.panel-heading data-toggle="collapse" data-parent="#accordion" data-target="#collapsemorex">
               More…
-            <div id="collapsemorex" class="panel-collapse collapse">
-              <div class="panel-body">
-                <table class="table">
+            <#collapsemorex .panel-collapse .collapse>
+              <.panel-body>
+                <table .table>
                   <thead>
                     <tr>
                       <th>Syntax
