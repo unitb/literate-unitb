@@ -238,9 +238,7 @@ errorTrace fs stack msg = [MLError msg $ nonEmpty' $ loc & mapped._2 %~ locToLI]
     where
         loc = getSrcLocs fs stack
 
-instance NFData Error where
-    rnf (Error x li) = x `deepseq` rnf li
-    rnf (MLError x lis) = x `deepseq` rnf lis
+instance NFData Error 
 instance NFData LineInfo
 instance NFData a => NFData (TokenStream a)
 instance Serialize LineInfo where
