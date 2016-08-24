@@ -30,7 +30,6 @@ import           Data.Char
 import           Data.Either
 import           Data.Either.Combinators
 import           Data.List as L
-import qualified Data.List.NonEmpty as NE
 import           Data.Map.Class as M hiding ( map )
 import qualified Data.Map.Class as M
 import           Data.Semigroup hiding (option)
@@ -383,7 +382,7 @@ validateFields xs = raiseErrors $ traverseWithKey f xs'
     where
         xs' = fromListWith (<>) $ xs & mapped._2 %~ pure
         f _ ((x,_):|[]) = Success x
-        f k xs = Failure [MLError (msg $ render k) $ NE.toList xs & mapped._1 .~ " - "]
+        f k xs = Failure [MLError (msg $ render k) $ xs & mapped._1 .~ " - "]
         msg = [printf|Multiple record entry with label '%s'|]
         raiseErrors :: Validation [Error] a -> Parser a
         raiseErrors = either (liftP . Scanner . const . Left) 

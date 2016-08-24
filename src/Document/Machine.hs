@@ -1,7 +1,8 @@
 {-# LANGUAGE RecursiveDo, LambdaCase #-}
-{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE Arrows            #-}
+{-# LANGUAGE Arrows              #-}
+{-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE TypeOperators, TypeFamilies        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
@@ -19,6 +20,7 @@ import Document.Scope
 import Logic.Expr
 
 import UnitB.UnitB
+import UnitB.Expr
 
     --
     -- Libraries
@@ -29,13 +31,17 @@ import           Control.Monad
 import           Control.Monad.Trans.RWS as RWS ( RWS )
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
+import Control.Lens.Misc 
 
 import qualified Data.Graph.Bipartite as G
-import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
 import           Data.Map.Class   as M hiding ( map, (\\) )
 import qualified Data.Map.Class   as M
+import qualified Data.Maybe as MM
+import           Data.Semigroup
+
+import Text.Printf.TH
 
 import Utilities.Syntactic
 import Utilities.Table
@@ -59,7 +65,9 @@ make_machine (MId m) p4 = mch'
             , _thm_depend = []
             , _theory'Dummies = p4^.pDummyVars
             , _fact = p4^.pAssumptions }
-        mch = newMachine m $ do
+        mch = do
+          es <- evts
+          return $ newMachine m $ do
             theory .= ctx
             oldDefs .= p4^.pMchOldDef
             defs .= p4^.pMchDef
@@ -75,7 +83,7 @@ make_machine (MId m) p4 = mch'
             inh_props .= p4^.pOldPropSet
             comments  .= p4^.pComments
             timeout   .= p4^.pVerTimeOut
-            event_table .= EventTable evts
+            event_table .= es
                 -- adep: in a abstract machine, prog_a <- evt_a
                 -- live: in a concrete machine, prog_c <- prog_c
                 -- cdep:                        prog_c <- evt_c
@@ -88,10 +96,12 @@ make_machine (MId m) p4 = mch'
                 -- = (live;adep \/ adep) ; eref \/ cdep
         mch' :: MM' c Machine
         mch' = do
-            liftEither $ withPOs proofs mch
+            liftEither $ withPOs proofs =<< mch
         events = p4^.pEventRef
-        evts = events & G.traverseLeft %~ abstrEvt
-                      & G.traverseRightWithEdgeInfo %~ uncurry concrEvt
+        evts :: Either [Error] (EventTable DispExpr)
+        evts = fmap EventTable $
+               events & ( G.traverseLeft (pure . abstrEvt)
+                      <=< G.traverseRightWithEdgeInfo (Indexed $ uncurry . concrEvt))
         abstrEvt :: EventP4 -> AbstrEvent
         abstrEvt evt = AbsEvent
                 { _old = g $ evt^.eventP3
@@ -99,23 +109,50 @@ make_machine (MId m) p4 = mch'
                 , _c_sched_ref = map snd (evt^.eCoarseRef)
                 , _f_sched_ref = (first as_label) <$> evt^.eFineRef
                 }
-        concrEvt :: EventP3 -> NonEmpty (SkipOrEvent, AbstrEvent) -> ConcrEvent
-        concrEvt evt olds = CEvent
+        concrEvt :: SkipOrEvent
+                 -> EventP3 
+                 -> NonEmpty (SkipOrEvent, EventP4) 
+                 -> Either [Error] ConcrEvent
+        concrEvt eid evt olds = do
+            let n = length olds
+                absEvents = intercalate "," $ (traverse %~ prettyEvent.fst) $ NE.toList olds
+                missingErr e = [printf|The events merged into %s (%s) do not all have an action labelled %s|] e absEvents
+                oneActErr    = [printf|Event %s, action %s|]
+                diffActsErr  = [printf|The action %s of the events merged into %s differ|]
+                collapseActions :: Label
+                                -> NonEmpty (SkipOrEvent, (NonEmpty LineInfo, Action))
+                                -> Either [Error] Action
+                collapseActions lbl acts 
+                    | length acts == n && length (group $ (traverse %~ view (_2._2)) . NE.toList $ acts) == 1 
+                        = Right . snd . snd $ NE.head acts
+                    | length acts /= n = Left . pure
+                        $ MLError ( missingErr (prettyEvent eid) (pretty lbl) ) 
+                          [ (oneActErr (prettyEvent e) (pretty lbl),li)
+                            | (e,(lis,_act)) <- acts, li <- lis ]
+                    | otherwise        = Left . pure
+                        $ MLError ( diffActsErr (pretty lbl) (prettyEvent eid) ) 
+                          [ (oneActErr (prettyEvent e) (pretty lbl),li)
+                              | (e,(lis,_act)) <- acts, li <- lis ]
+            oldAction <- itraverseValidation collapseActions
+                        $ M.unionsWith (<>) . NE.toList 
+                        $ olds & mapped %~ fmap pure . uncurry (fmap . (,)) . (_2 %~ view eActions)
+            let _ = oldAction :: Map Label Action
+            Right $ CEvent
                 { _new = g evt
                 , _witness   = evt^.eWitness
                 , _param_witness   = evt^.eParamWitness
                 , _eql_vars  = keep' (p4^.pAbstractVars) oldAction
-                                `M.intersection` frame (evt^.eActions)
+                                `M.intersection` frame (evt^.eActions & traverse %~ snd)
                 , _abs_actions = oldAction
                 }
-            where oldAction = snd (NE.head olds)^.actions
+            -- where oldAction = snd (NE.head olds)^.actions
         g :: EventP3 -> Event
         g evt
             = Event
                 { _indices   = evt^.eIndices
                 , _params    = evt^.eParams
                 , _raw_guards    = evt^.eGuards
-                , _actions  = evt^.eActions
+                , _actions  = evt^.eActions & traverse %~ snd
                 , _raw_coarse_sched = Nothing
                 , _fine_sched = evt^.eFineSched
                 } & coarse_sched .~ evt^.eCoarseSched

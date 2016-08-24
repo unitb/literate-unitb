@@ -146,7 +146,7 @@ data EventP3 = EventP3
     , _eCoarseSched :: Table Label Expr     
     , _eFineSched   :: Table Label Expr
     , _eGuards   :: Table Label Expr       
-    , _eActions  :: Table Label Action
+    , _eActions  :: Table Label (NonEmpty LineInfo,Action)
     , _eWitness  :: Table Name Witness
     , _eParamWitness :: Table Name Witness
     , _eIndWitness   :: Table Name Witness

@@ -130,6 +130,8 @@ test = test_cases
             --     case44 result44
             , stringCase "test 45, weird error with merging"
                 case45 result45
+            , stringCase "test 46, inconsistent merge event"
+                case46 result46
             ]            
 
 path0 :: FilePath
@@ -409,5 +411,24 @@ result45 = unlines
     , ""
     , "error 600:5:"
     , "\tdeleted coarse schedule (event 'hdl:popL:one')"
+    , ""
+    ]
+
+path46 :: FilePath
+path46 = [path|Tests/pop-left-t7.tex|]
+
+case46 :: IO String
+case46 = find_errors path46
+
+result46 :: String
+result46 = unlines
+    [ "The events merged into read:LH (hdl:popL:empty,read:LH) do not all have an action labelled m0:act0"
+    , "error 111:3:"
+    , "\tEvent hdl:popL:empty, action m0:act0"
+    , ""
+    , ""
+    , "The events merged into read:LH (hdl:popL:empty,read:LH) do not all have an action labelled m1:act2"
+    , "error 427:3:"
+    , "\tEvent read:LH, action m1:act2"
     , ""
     ]

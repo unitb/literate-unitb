@@ -65,6 +65,9 @@ instance ZoomEq SkipEventId where
 instance PrettyPrintable SkipEventId where
     pretty = show
 
+prettyEvent :: SkipOrEvent -> String
+prettyEvent = either (const "[skip]") pretty
+
 type SkipOrEvent = Either SkipEventId EventId
 
 instance IsString SkipOrEvent where

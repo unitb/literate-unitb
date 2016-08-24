@@ -47,6 +47,7 @@ import Control.DeepSeq
 
 import Control.Lens as L 
 import Control.Lens.Extras
+import Control.Lens.Misc
 import Control.Monad.Identity
 import Control.Monad.RWS (tell)
 import Control.Parallel.Strategies
@@ -251,7 +252,7 @@ instance Ord a => Wrapped (NonEmptyListSet a) where
     type Unwrapped (NonEmptyListSet a) = NonEmpty a
     _Wrapped' = iso setToNeList' nonEmptyListSet
 
-type EventInhStatus a = InhStatus (NonEmptyListSet EventId,a)
+type EventInhStatus a = InhStatus (NonEmptyListSet (EventId,LineInfo),a)
 
 data RefScope = Old | New
     deriving (Eq,Ord)
@@ -280,8 +281,8 @@ make_table f xs = validationToEither $ M.traverseWithKey failIf' $ M.fromListWit
     where
         mkCell' (x,y,z) = (x,(y,z) :| [])
         failIf' _ (x :| []) = pure x
-        failIf' k (NE.toList -> xs) = Failure $ err k (L.map snd xs)
-        err x li = [MLError (f x) (L.map (pretty x,) li)]
+        failIf' k xs = Failure $ err k (snd <$> xs)
+        err x li = [MLError (f x) (fmap (pretty x,) li)]
 
 make_all_tables' :: (Scope b, Show a, IsKey Table a, Ord k) 
                  => (a -> String) 
@@ -304,17 +305,18 @@ make_table' f items = all_errors $ M.mapWithKey g conflicts
         -- | PROBLEM: given x,y,z, it's possible that none conflict with each other but
         -- | x `merge` y conflicts with z
     where
-        g k ws
-                | all (\xs -> length xs <= 1) ws 
-                            = Right $ L.foldl' merge_scopes (L.head xs) (L.tail xs)
-                | otherwise = Left $ L.map (\xs -> MLError (f k) $ concatMap (NE.toList.error_item) xs) 
-                                    $ L.filter (\xs -> length xs > 1) ws
+        g k ws = case traverseValidation onlyOne ws of
+                    Right xs -> Right $ L.foldl' merge_scopes (NE.head xs) (NE.tail xs)
+                    Left xs  -> Left $ [ MLError (f k) $ sconcat $ fmap error_item err | err <- xs ]
             where
-                xs = L.concat ws             
+                onlyOne (x :| []) = Right x
+                onlyOne xs = Left [xs]
         items' :: Map a [b]
         items' = M.map D.toList . fromListWith (<>) $ L.map (\(x,y) -> (x,pure y)) items
-        conflicts :: Table a [[b]]
-        conflicts = M.map (flip u_scc clash) items' 
+        conflicts :: Table a (NonEmpty (NonEmpty b))
+        conflicts = M.mapMaybe (nonEm . flip u_scc clash) items' 
+        nonEm :: [[d]] -> Maybe (NonEmpty (NonEmpty d))
+        nonEm = nonEmpty . catMaybes . (traverse %~ nonEmpty)
 
 newtype WithDelete a = WithDelete { getDelete :: a }
     deriving Show

@@ -2,6 +2,7 @@ module Utilities.Syntactic where
 
 import Control.DeepSeq
 import qualified Control.Invariant as I
+import Control.Precondition
 import Control.Lens
 
 import Control.Monad
@@ -20,8 +21,6 @@ import GHC.Read
 import GHC.SrcLoc
 import GHC.Stack.Utils
 
-import Language.Haskell.TH (Loc(..))
-
 import Safe
 
 import Test.QuickCheck as QC
@@ -32,7 +31,7 @@ import Text.Pretty
 import Text.Printf.TH
 
 
-data Error = Error String LineInfo | MLError String [(String,LineInfo)]
+data Error = Error String LineInfo | MLError String (NonEmpty (String,LineInfo))
     deriving (Eq,Typeable,Show,Ord,Read,Generic)
 
 data LineInfo = LI 
@@ -121,7 +120,7 @@ instance ZoomEq Error where
     (.==) = (I.===)
 instance Syntactic Error where
     line_info (Error _ li) = li
-    line_info (MLError _ ls) = minimum $ map snd ls
+    line_info (MLError _ ls) = minimum $ snd <$> ls
     after = line_info
     traverseLineInfo f (Error x li) = Error x <$> f li
     traverseLineInfo f (MLError x lis) = MLError x <$> (traverse._2) f lis
@@ -139,7 +138,7 @@ report (Error msg li) = [printf|%s:\n    %s|] (showLiLong li) msg
 report (MLError msg ys) = [printf|%s\n%s|] msg
                 (intercalate "\n" 
                     $ map (\(msg,li) -> [printf|%s:\n\t%s\n|] (showLiLong li) msg) 
-                    $ sortOn snd ys)
+                    $ sortOn snd $ NE.toList ys)
 
 makeReport :: Monad m => EitherT [Error] m String -> m String
 makeReport = liftM fst . makeReport' () . liftM (,())
@@ -165,8 +164,8 @@ shrink_error_list es' = do
         less_specific e0@(Error _ _) e1@(Error _ _) = e0 == e1
         less_specific (MLError m0 ls0) (MLError m1 ls1) = m0 == m1 && ls0' `subset` ls1'
             where
-                ls0' = sortOn snd ls0
-                ls1' = sortOn snd ls1
+                ls0' = sortOn snd $ NE.toList ls0
+                ls1' = sortOn snd $ NE.toList ls1
         less_specific _ _ = False
         es = nubSort es'
 
@@ -234,12 +233,14 @@ locToLI loc = LI
             (srcLocStartLine loc)
             (srcLocStartCol loc)
 
-errorTrace :: [FilePath] -> CallStack -> String -> [Error]
-errorTrace fs stack msg = [MLError msg $ map (_2 %~ locToLI) loc]
+errorTrace :: I.Pre => [FilePath] -> CallStack -> String -> [Error]
+errorTrace fs stack msg = [MLError msg $ nonEmpty' $ loc & mapped._2 %~ locToLI]
     where
         loc = getSrcLocs fs stack
 
-instance NFData Error
+instance NFData Error where
+    rnf (Error x li) = x `deepseq` rnf li
+    rnf (MLError x lis) = x `deepseq` rnf lis
 instance NFData LineInfo
 instance NFData a => NFData (TokenStream a)
 instance Serialize LineInfo where

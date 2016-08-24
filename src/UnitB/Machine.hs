@@ -159,18 +159,18 @@ class (Controls mch (Internal mch expr)
     type Internal mch expr :: *
     empty_machine :: Name -> mch
 
-instance HasExpr expr => HasMachine (MachineAST' expr) expr where
+instance (HasExpr expr,ZoomEq expr) => HasMachine (MachineAST' expr) expr where
     type Internal (MachineAST' expr) expr = MachineBase expr
     empty_machine = empty_machine'
 
-instance HasExpr expr => HasMachine (MachineBase expr) expr where
+instance (HasExpr expr,ZoomEq expr) => HasMachine (MachineBase expr) expr where
     type Internal (MachineBase expr) expr = MachineBase expr
     empty_machine = view content' . empty_machine'
 
-instance (HasExpr expr) => HasName (MachineAST' expr) Name where
+instance (HasExpr expr,ZoomEq expr) => HasName (MachineAST' expr) Name where
     name = content.name
 
-instance (HasExpr expr) => HasInvariant (MachineBase expr) where
+instance (HasExpr expr,ZoomEq expr) => HasInvariant (MachineBase expr) where
     invariant m = withPrefix (render $ m^.name) $ do
             "inv0" ## F.all ((`isSubmapOf` (m^.variables)).frame.view (new.actions)) (conc_events m) 
             "inv1" ## F.all validEvent (m^.props.transient)
@@ -187,7 +187,7 @@ instance (HasExpr expr) => HasInvariant (MachineBase expr) where
             "inv7" ## noClashes (m^.inh_props) (m^.props)
             withPrefix "inv8" $ forM_ (all_refs m) $ \ev -> 
                 [printf|%s - %s|] (pretty $ ev^.abstract._1) (pretty $ ev^.concrete._1) 
-                    ## (ev^.old.actions) === (ev^.abs_actions)
+                    ## (ev^.old.actions) .== (ev^.abs_actions)
                 -- Proofs match properties
             "inv9" ## Pretty ((m^.derivation) `M.difference` (m^.props.progress)) === Pretty M.empty
                 -- events in proofs
@@ -204,7 +204,7 @@ instance (HasExpr expr) => HasInvariant (MachineBase expr) where
             tr_wit_enough (Tr _ _ es (TrHint ws _)) = fmap M.keys (unions . L.map (view indices) <$> tr_evt es) == Just (M.keys ws)
             tr_evt es = mapM (flip M.lookup $ nonSkipUpwards m) (NE.toList es)
 
-instance HasExpr expr => HasScope (MachineBase expr) where
+instance (HasExpr expr,ZoomEq expr) => HasScope (MachineBase expr) where
     scopeCorrect' m = mconcat 
         [ withVars (symbols $ m^.theory) $ mconcat 
             [ withPrefix "inherited"
@@ -440,7 +440,7 @@ all_notation m = flip precede logical_notation
     where
         th = (getExpr <$> m!.theory) : ascElems (_extends $ m!.theory)
 
-instance (HasExpr expr) => Named (MachineAST' expr) where
+instance (HasExpr expr,ZoomEq expr) => Named (MachineAST' expr) where
     type NameOf (MachineAST' expr) = Name
     decorated_name' = adaptName . view name
 
@@ -461,7 +461,7 @@ ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions :: 
         eqPrime v = Word (prime v) `zeq` Word v
         noWitness = ((m!.del_vars) `M.intersection` (m!.abs_vars)) `M.difference` (evt^.witness)
 
-empty_machine' :: (HasScope expr, HasExpr expr) => Name -> MachineAST' expr
+empty_machine' :: (HasScope expr, HasExpr expr, ZoomEq expr) => Name -> MachineAST' expr
 empty_machine' n = check $ flip execState (makeMachineBase n (empty_theory n)) $ do
             -- & events .~ _ $ G.fromList _ _
             events .= G.fromList' [(skip,def)] [(skip,def)] [(skip,skip)]

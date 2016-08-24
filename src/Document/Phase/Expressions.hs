@@ -36,7 +36,6 @@ import           Control.Monad
 import           Control.Monad.Reader.Class 
 import           Control.Monad.Reader (Reader)
 import           Control.Monad.State.Class 
-import           Control.Monad.Writer.Class 
 import           Control.Monad.Trans.RWS as RWS ( RWS )
 import qualified Control.Monad.Writer as W
 
@@ -88,14 +87,7 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
                 =<< make_all_tables' err_msg
                 =<< triggerM es'
             let _ = exprs :: MTable (Table Label ExprScope)
-            xs <- T.sequence $ make_phase3 <$> p2 <.> exprs
-            let mergeError (cevt,(e:es)) = unless (all (((e^.eActions) ==).view eActions) es) $ 
-                    tell [MLError ([printf|event %s merges events with different action sets|] $ pretty cevt) []]
-                mergeError (_,[]) = return ()
-                merges :: [(EventId, [EventP3])]
-                merges = xs^.traverse.pEventMerge'.withKey'.traverse.to ((:[]).second (L.map snd.snd))
-            forM_ merges mergeError
-            return xs
+            T.sequence $ make_phase3 <$> p2 <.> exprs
         expressions = run_phase 
             [ assignment
             , bcmeq_assgn
@@ -178,7 +170,7 @@ assignment = machineCmd "\\evassignment" $ \(Conc evt, NewLabel lbl, Expr xs) _m
             let frame = M.ascElems $ (p2^.pStateVars) `M.difference` (p2^.pAbstractVars)
                 act = BcmSuchThat frame pred
             li <- ask
-            return [(lbl,evtScope ev (Action (InhAdd (pure ev,act)) Local $ pure li))]
+            return [(lbl,evtScope ev (Action (InhAdd (pure (ev,li),act)) Local $ pure li))]
 
 bcmeq_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -195,7 +187,7 @@ bcmeq_assgn = machineCmd "\\evbcmeq" $ \(Conc evt, NewLabel lbl, VarName v, Expr
             check_types
                 $ Right (Word var :: RawExpr) `mzeq` Right (asExpr xp)
             let act = Assign var xp
-            return [(lbl,evtScope ev (Action (InhAdd (pure ev,act)) Local $ pure li))]
+            return [(lbl,evtScope ev (Action (InhAdd (pure (ev,li),act)) Local $ pure li))]
 
 bcmsuch_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -209,7 +201,7 @@ bcmsuch_assgn = machineCmd "\\evbcmsuch" $ \(Conc evt, NewLabel lbl, vs, Expr xs
                 ([printf|variable '%s' undeclared|] . render)
                 $ (`M.lookup` (p2^.pStateVars))
             let act = BcmSuchThat vars xp
-            return [(lbl,evtScope ev (Action (InhAdd (pure ev,act)) Local $ pure li))]
+            return [(lbl,evtScope ev (Action (InhAdd (pure (ev,li),act)) Local $ pure li))]
 
 bcmin_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -224,7 +216,7 @@ bcmin_assgn = machineCmd "\\evbcmin" $ \(Conc evt, NewLabel lbl, VarName v, Expr
                     xs
             let act = BcmIn var xp
             check_types $ Right (Word var) `zelem` Right (asExpr xp)
-            return [(lbl,evtScope ev (Action (InhAdd (pure ev,act)) Local $ pure li))]
+            return [(lbl,evtScope ev (Action (InhAdd (pure (ev,li),act)) Local $ pure li))]
 
 instance ZoomEq Initially where
 instance Scope Initially where
@@ -242,7 +234,7 @@ instance IsExprScope Initially where
         return $ case (i^.inhStatus,i^.declSource) of
             (InhAdd x,_)
                 | L.null lis' -> [Right $ PInit lbl x]
-                | otherwise   -> [Left $ MLError msg $ ([printf|predicate %s|] $ pretty lbl,li):lis']
+                | otherwise   -> [Left $ MLError msg $ ([printf|predicate %s|] $ pretty lbl,li) :| lis']
                 where
                     lis = L.map (first $ view name) $ M.ascElems $ vs `M.intersection` used_var' x
                     lis' = L.map (first ([printf|deleted variable %s|] . render)) lis
@@ -314,7 +306,7 @@ instance Scope EventExpr where
     merge_scopes' (EventExpr m0) (EventExpr m1) = EventExpr <$> scopeUnion merge_scopes' m0 m1
     rename_events' lookup (EventExpr es) = map EventExpr $ concatMap f $ toList es
         where
-            f (Right eid,x) = [ singleton (Right e) $ setSource eid x | e <- lookup eid ]
+            f (Right eid,x) = [ singleton (Right e) $ setSource eid (x^.lineInfo) x | e <- lookup eid ]
             f (Left InitEvent,x) = [singleton (Left InitEvent) x]
 
 checkLocalExpr' :: ( HasInhStatus decl (InhStatus expr)
@@ -337,9 +329,10 @@ checkLocalExpr' expKind free eid lbl sch = do
                         errs   = fv (vs `M.intersection` fvars) `M.union` fi (is `M.intersection` fvars)
                         schLI  = ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
                         varsLI = M.ascElems errs
+                        app (x :| xs) ys = x :| (xs ++ ys)
                     in if M.null errs 
                        then []
-                       else [Left $ MLError msg $ setToList schLI ++ varsLI]
+                       else [Left $ MLError msg $ setToNeList schLI `app` varsLI]
                 InhDelete Nothing -> 
                     let msg = [printf|event '%s', %s '%s' was deleted but does not exist|] (pretty eid) expKind (pretty lbl)
                         li  = isOne . setToNeList $ ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
@@ -347,7 +340,7 @@ checkLocalExpr' expKind free eid lbl sch = do
                 _ -> []
     where
         isOne (x:|[]) = Right x
-        isOne (x:|xs) = Left (x:xs)
+        isOne (x:|xs) = Left (x:|xs)
 
 parseEvtExpr :: ( HasInhStatus decl (EventInhStatus Expr)
                 , HasLineInfo decl (NonEmptyListSet LineInfo)
@@ -368,7 +361,18 @@ parseEvtExpr' :: ( HasInhStatus decl (EventInhStatus expr)
               -> RefScope
               -> EventId -> Label -> decl
               -> Reader MachineP2 [Either Error (EventId,[field])]
-parseEvtExpr' expKind fvars field scope evt lbl decl = 
+parseEvtExpr' expKind fvars field = parseEvtExpr'' expKind fvars (const . field)
+
+parseEvtExpr'' :: ( HasInhStatus decl (EventInhStatus expr)
+                  , HasLineInfo decl (NonEmptyListSet LineInfo)
+                  , HasDeclSource decl DeclSource)
+               => String 
+               -> (expr -> Table Name Var)
+               -> (Label -> NonEmptyListSet LineInfo -> expr -> field)
+               -> RefScope
+               -> EventId -> Label -> decl
+               -> Reader MachineP2 [Either Error (EventId,[field])]
+parseEvtExpr'' expKind fvars field scope evt lbl decl = 
     (++) <$> check
          <*>
         -- (old_xs, del_xs, new_xs)
@@ -383,11 +387,11 @@ parseEvtExpr' expKind fvars field scope evt lbl decl =
                     Old -> return []
                     New -> checkLocalExpr' expKind (fvars.snd) evt lbl decl
         old = case scope of
-            Old -> \(evts,e) -> [Right (ev,[field lbl e]) | ev <- setToList evts]
+            Old -> \(evts,e) -> [Right (ev,[field lbl (pure li) e]) | (ev,li) <- setToList evts]
             New -> const []
         new = case scope of
             Old -> const []
-            New -> \(_,e) -> [Right (evt,[field lbl e])]
+            New -> \(_,e) -> [Right (evt,[field lbl (decl^.lineInfo) e])]
 
 instance IsEvtExpr CoarseSchedule where
     toMchScopeExpr _ _    = return []
@@ -413,7 +417,7 @@ guard_decl = machineCmd "\\evguard" $ \(Conc evt, NewLabel lbl, Expr xs) _m p2 -
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- ask
             xp <- parse_expr'' (event_parser p2 ev) xs
-            return [(lbl,evtScope ev (Guard (InhAdd (pure ev,xp)) Local $ pure li))]
+            return [(lbl,evtScope ev (Guard (InhAdd (pure (ev,li),xp)) Local $ pure li))]
 
 guard_removal :: MPipeline MachineP2 [(Label,ExprScope)]
 guard_removal = machineCmd "\\removeguard" $ \(Conc evt_lbl,lbls) _m p2 -> do
@@ -439,7 +443,7 @@ coarse_sch_decl = machineCmd "\\cschedule" $ \(Conc evt, NewLabel lbl, Expr xs) 
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- ask
             xp <- parse_expr'' (schedule_parser p2 ev) xs
-            return [(lbl,evtScope ev (CoarseSchedule (InhAdd (pure ev,xp)) Local $ pure li))]
+            return [(lbl,evtScope ev (CoarseSchedule (InhAdd (pure (ev,li),xp)) Local $ pure li))]
 
 fine_sch_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -447,7 +451,7 @@ fine_sch_decl = machineCmd "\\fschedule" $ \(Conc evt, NewLabel lbl, Expr xs) _m
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- ask
             xp <- parse_expr'' (schedule_parser p2 ev) xs
-            return [(lbl,evtScope ev (FineSchedule (InhAdd (pure ev,xp)) Local $ pure li))]
+            return [(lbl,evtScope ev (FineSchedule (InhAdd (pure (ev,li),xp)) Local $ pure li))]
 
         -------------------------
         --  Theory Properties  --
@@ -504,18 +508,23 @@ default_schedule_decl = arr $ \(p2,csch) ->
     where
         --asCell' = asCell :: Prism' ExprScope EventExpr
         addDefSch m evts = m^.pNewEvents.eEventId._Right.to (default_sch evts)
-        evtsWith csch = csch^.traverse & traverse %~ rights.referencedEvents
-        referencedEvents :: [(Label, ExprScope)] -> [InitOrEvent]
-        referencedEvents m = m^.traverse._2._EventExpr'.withKey'.traverse._1.to (:[]) -- .secondL _CoarseSchedule'._ -- _1.to (:[])
+        evtsWith :: Maybe (Map MachineId [(Label, ExprScope)]) 
+                 -> Map MachineId [(EventId, LineInfo)]
+        evtsWith csch = csch^.traverse & traverse %~ rights.(traverse %~ _1 id).referencedEvents
+        referencedEvents :: [(Label, ExprScope)] -> [(InitOrEvent,LineInfo)]
+        referencedEvents m = m^.traverse._2._EventExpr'.withKey'.traverse.to (\(eid,s) -> (eid,) <$> s^.lineInfo.to setToList) -- _1.to (:[])
         li = LI "default" 1 1
         makeDelete (InhAdd x) = InhDelete (Just x)
         makeDelete (InhDelete x) = InhDelete x
-        default_sch evts e 
-                | e `elem` evts = map ((def,) . makeEvtCell (Right e)) [sch,sch']
-                | otherwise     = map ((def,) . makeEvtCell (Right e)) [sch]
+        default_sch :: [(EventId, LineInfo)]
+                    ->   EventId
+                    -> [(Label, ExprScope)]
+        default_sch evts e = case e `L.lookup` evts of
+                Just _li -> map ((def,) . makeEvtCell (Right e)) [sch,sch']
+                Nothing  -> map ((def,) . makeEvtCell (Right e)) [sch]
             where
                 def  = label "default"
-                sch  = CoarseSchedule (InhAdd (pure e,zfalse)) Inherited $ pure li
+                sch  = CoarseSchedule (InhAdd (pure (e,li),zfalse)) Inherited $ pure li
                 sch' = sch & inhStatus %~ makeDelete & declSource .~ Local
 
 instance PrettyPrintable Invariant where
@@ -787,7 +796,7 @@ instance IsEvtExpr IndexWitness where
         | otherwise              = return []
         where v = w^.ES.var
     toEvtScopeExpr New _ _ _ = return []
-    setSource _ x = x
+    setSource _ _ x = x
     inheritedFrom _ = []
 
 instance PrettyPrintable ParamWitness where
@@ -801,7 +810,7 @@ instance IsEvtExpr ParamWitness where
         | otherwise              = return []
         where v = w^.ES.var
     toEvtScopeExpr Old _ _ _ = return []
-    setSource _ x = x
+    setSource _ _ x = x
     inheritedFrom _ = []
 
 instance PrettyPrintable IndexWitness where
@@ -818,7 +827,7 @@ instance IsEvtExpr ES.Witness where
         | w^.declSource == Local = return [Right (evt,[EWitness (v^.name) (WitSuch v $ w^.evtExpr)])]
         | otherwise              = return []
         where v = w^.ES.var
-    setSource _ x = x
+    setSource _ _ x = x
     inheritedFrom _ = []
 
 instance PrettyPrintable ES.Witness where
@@ -833,9 +842,9 @@ instance IsEvtExpr ActionDecl where
         _ -> return []
     toMchScopeExpr _ _  = return []
     toEvtScopeExpr scope eid lbl decl = do
-            x <- parseEvtExpr' "action"
+            x <- parseEvtExpr'' "action"
                 (uncurry M.union . (frame' &&& used_var'.ba_pred))
-                EActions scope eid lbl decl
+                (curry . lmap (_1 %~ setToNeList) . EActions) scope eid lbl decl
             return x
 
 instance PrettyPrintable ActionDecl where

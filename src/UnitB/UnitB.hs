@@ -141,19 +141,19 @@ instance Controls (MachinePO' expr) (MachinePO' expr) where
 --    check arse m = fromRight'' arse $ withPO _ _
 --    content arse = _
     --func = 
-instance HasExpr expr => HasMachineBase (MachinePO' expr) expr where
+instance (HasExpr expr,ZoomEq expr) => HasMachineBase (MachinePO' expr) expr where
     machineBase = syntax.content
-instance HasExpr expr => HasAbs_vars (MachinePO' expr) (Table Name Var) where
+instance (HasExpr expr,ZoomEq expr) => HasAbs_vars (MachinePO' expr) (Table Name Var) where
     abs_vars = machineBase.abs_vars
 instance HasName (MachinePO' expr) Name where
     name = syntax.content'.name
-instance HasExpr expr => HasMachine (Machine' expr) expr where
+instance (HasExpr expr,ZoomEq expr) => HasMachine (Machine' expr) expr where
     type Internal (Machine' expr) expr = MachinePO' expr
     empty_machine = fromSyntax . empty_machine
-instance HasExpr expr => HasMachine (MachinePO' expr) expr where
+instance (HasExpr expr,ZoomEq expr) => HasMachine (MachinePO' expr) expr where
     type Internal (MachinePO' expr) expr = MachinePO' expr
     empty_machine = view content' . fromSyntax . empty_machine
-instance HasExpr expr => HasDefs (MachinePO' expr) (Map Name expr) where
+instance (HasExpr expr,ZoomEq expr) => HasDefs (MachinePO' expr) (Map Name expr) where
     defs = machineBase.defs
 
 instance HasExpr expr => HasInvariant (MachinePO' expr) where

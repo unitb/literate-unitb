@@ -52,6 +52,7 @@ import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map.Class  as M
 import Data.Maybe
+import Data.Semigroup
 
 import Test.QuickCheck
 import Test.QuickCheck.Report
@@ -70,7 +71,7 @@ prop_inherit_equiv h = forAll (mkMap h) $ \m ->
 
 return []
 
-runMap :: (M.IsKey Table k, Scope a) 
+runMap :: (M.IsKey Table k, Scope a, Pre) 
        => MapSyntax k a b 
        -> Table k a
 runMap = runMapWith merge_scopes
@@ -374,14 +375,14 @@ case4 = return $ do
     where
         decl x con y = do
             scope <- ask
-            lift $ x ## makeCell (con y scope li)
-        event evt lbl con x = event' evt lbl [evt] con x
+            lift $ x ## makeCell (con y scope $ li 1)
+        event evt lbl con x = event' evt lbl [(evt,li $ -3)] con x
         mkEvent evt lbl es con x inh = do
             scope <- ask
-            lift $ lbl ## makeEvtCell (Right evt) (con (inh (nonEmptyListSet $ fromMaybe (evt :| []) $ nonEmpty es,x)) scope $ pure li)
+            lift $ lbl ## makeEvtCell (Right evt) (con (inh (nonEmptyListSet $ fromMaybe ((evt,li (-1)) :| []) $ nonEmpty es,x)) scope $ listSet $ snd <$> es)
         event' evt lbl es con x = mkEvent evt lbl es con x InhAdd
         del_event evt lbl es con = mkEvent evt lbl es con (assertFalse' "del_event") $ InhDelete . const Nothing
-        li = LI "file.ext" 1 1 
+        li = LI "file.ext" 1
         declVar n t = decls %= insert_symbol (z3Var n t)
         c_aux b = ctx $ do
             declVar "x" int
@@ -396,33 +397,32 @@ case4 = return $ do
                 event "ae0"  "grd0" Guard $ c [expr| x = 0 |]
                 event "ae0"  "sch0" CoarseSchedule $ c [expr| y = y |]
                 event "ae0"  "sch2" CoarseSchedule $ c [expr| y = 0 |]
-                forM_ ["ae1a","ae1b"] $ \evt -> do
-                    event evt "default" CoarseSchedule zfalse
-                    event evt "act0" Action $ c' [act| y := y + 1 |] 
-                    event evt "act1" Action $ c' [act| x := x - 1 |] 
+                forM_ [("ae1a",li 108,li 164),("ae1b",li 136,li 192)] $ \(evt,l0,l1) -> do
+                    event evt "default"  CoarseSchedule zfalse
+                    event' evt "act0" [(evt,l0)] Action $ c' [act| y := y + 1 |] 
+                    event' evt "act1" [(evt,l1)] Action $ c' [act| x := x - 1 |] 
         es1 = runMap $ flip runReaderT Inherited $ do
                 local (const Local) $ do
                     decl "prog0" ProgressProp $ LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
                     decl "prog1" ProgressProp $ LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
                     decl "saf0" SafetyProp $ Unless [] (c [expr| x \le y |]) (c [expr| x = y |])
                 decl "inv0" Invariant $ c [expr| x \le y |]
-                --event 
-                event' "ce0a" "grd0" ["ae0"] Guard $ c [expr|x = 0|]
-                event' "ce0b" "grd0" ["ae0"] Guard $ c [expr|x = 0|]
+                event' "ce0a" "grd0" [("ae0",li 1)] Guard $ c [expr|x = 0|]
+                event' "ce0b" "grd0" [("ae0",li 1)] Guard $ c [expr|x = 0|]
                 local (const Local) $ do
                     del_event "ce0a" "grd0" [] Guard
                     del_event "ce0b" "grd0" [] Guard
-                event' "ce0a"  "sch1" ["ce0a"] CoarseSchedule $ c [expr| y = y |]
-                event' "ce0a"  "sch2" ["ae0"] CoarseSchedule $ c [expr| y = 0 |]
-                event' "ce0b"  "sch0" ["ae0"] CoarseSchedule $ c [expr| y = y |]
-                event' "ce0b"  "sch2" ["ae0"] CoarseSchedule $ c [expr| y = 0 |]
+                event' "ce0a"  "sch1" [("ce0a",li 1)] CoarseSchedule $ c [expr| y = y |]
+                event' "ce0a"  "sch2" [("ae0",li 1)]  CoarseSchedule $ c [expr| y = 0 |]
+                event' "ce0b"  "sch0" [("ae0",li 1)]  CoarseSchedule $ c [expr| y = y |]
+                event' "ce0b"  "sch2" [("ae0",li 1)]  CoarseSchedule $ c [expr| y = 0 |]
 
-                forM_ [("ce1",["ae1a","ae1b"]),("ce2",[])] $ \(evt,es) -> 
+                forM_ [("ce1",[("ae1a",li 1),("ae1b",li 1)]),("ce2",[])] $ \(evt,es) -> 
                     event' evt "default" es CoarseSchedule zfalse
-                event' "ce1" "act0" ["ae1a","ae1b"] Action $ c [act| y := y + 1 |]
-                event' "ce1" "act1" ["ae1a","ae1b"] Action $ c' [act| x := x - 1 |] 
+                event' "ce1" "act0" [("ae1a",li 108),("ae1b",li 136)] Action $ c [act| y := y + 1 |]
+                event' "ce1" "act1" [("ae1a",li 164),("ae1b",li 192)] Action $ c' [act| x := x - 1 |] 
                 local (const Local) $
-                    del_event "ce1" "act1" ["ae1a","ae1b"] Action -- $ c [act| x := x - 1 |]
+                    del_event "ce1" "act1" [("ae1a",li 6),("ae1b",li 7)] Action -- $ c [act| x := x - 1 |]
 
 decl :: String -> GenericType -> State ParserSetting ()
 decl n t = decls %= insert_symbol (z3Var n t)
@@ -465,19 +465,20 @@ result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
             | eid `elem` ["ae0","ce0a","ce0b"] = makeEventP3 e $ evtField mid eid
             | otherwise = makeEventP3 e $ [ ECoarseSched "default" zfalse] ++ evtField mid eid
         newEvt _mid _m (Left SkipEvent) e = makeEventP3 e [ECoarseSched "default" zfalse]
+        lis = pure . LI "file.ext" 1
         evtField mid eid
             | eid == "ae0"                 = [ EGuards  "grd0" $ c [expr|x = 0|]
                                              , ECoarseSched "sch0" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
-            | eid == "ae1a"                = [ EActions "act0" $ c' [act| y := y + 1 |] 
-                                             , EActions "act1" $ c' [act| x := x - 1 |] ]
-            | eid == "ae1b"                = [ EActions "act0" $ c' [act| y := y + 1 |] 
-                                             , EActions "act1" $ c' [act| x := x - 1 |] ]
+            | eid == "ae1a"                = [ EActions "act0" (lis 108,c' [act| y := y + 1 |]) 
+                                             , EActions "act1" (lis 164,c' [act| x := x - 1 |]) ]
+            | eid == "ae1b"                = [ EActions "act0" (lis 136,c' [act| y := y + 1 |]) 
+                                             , EActions "act1" (lis 192,c' [act| x := x - 1 |]) ]
             | eid == "ce0a"                = [ ECoarseSched "sch1" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
             | eid == "ce0b"                = [ ECoarseSched "sch0" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
-            | eid == "ce1" && mid == "m1"  = [ EActions "act0" $ c' [act| y := y + 1 |] 
+            | eid == "ce1" && mid == "m1"  = [ EActions "act0" (lis 108 <> lis 136,c' [act| y := y + 1 |]) 
                                              , make' EWitness "x" (WitEq xvar $ c' [expr|x - 1|]) ]
             | otherwise = []
 

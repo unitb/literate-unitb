@@ -572,6 +572,7 @@ topological_order :: Pipeline MM
                      (Hierarchy MachineId)
 topological_order = Pipeline empty_spec empty_spec $ \es' -> do
         let es = M.map fst es'
+            lis :: Map MachineId LineInfo
             lis = convertMap $ M.map snd es'
             cs = cycles $ M.toList es
         vs <- triggerM =<< sequence <$> mapM (cycl_err_msg lis) cs
@@ -579,11 +580,14 @@ topological_order = Pipeline empty_spec empty_spec $ \es' -> do
     where
         struct = "refinement structure" :: String
         cycle_msg = msg struct
+        cycl_err_msg :: MonadWriter [Error] m 
+                     => Map MachineId LineInfo 
+                     -> SCC MachineId -> m (Maybe MachineId)
         cycl_err_msg _ (AcyclicSCC v) = return $ Just v
         cycl_err_msg lis (CyclicSCC vs) = do
-            tell [MLError cycle_msg 
-                $ L.map (first pretty) $ M.toList $ 
-                lis `M.intersection` fromList' vs ] 
+            tell [MLError cycle_msg $ nonEmpty'
+                $ L.map (first pretty) $ M.toList
+                $ lis `M.intersection` fromList' vs ] 
             return Nothing -- (error "topological_order")
         msg = [printf|A cycle exists in the %s|]
 
