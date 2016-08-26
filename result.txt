@@ -47,7 +47,8 @@
 |  |  |  +- test 43, use new schedules in proofs of weakening, PO
 |  |  |  +- test 45, weird error with merging
 |  |  |  +- test 46, inconsistent merge event
-|  |  +- [ Success: 45 / 45 ]
+|  |  |  +- test 47, deleting indices of non-existant event
+|  |  +- [ Success: 46 / 46 ]
 |  |  +- small machine example
 |  |  |  +- test 0
 |  |  |  +- test 1 (separate machine blocks)
@@ -243,7 +244,7 @@
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
 |  |  +- variable scope, properties
-|  +- [ Success: 193 / 193 ]
+|  +- [ Success: 194 / 194 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -357,17 +358,17 @@
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 288 / 288 ]
++- [ Success: 289 / 289 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38837 total
+   38848 total
     1149 src/UnitB/PO.hs
      952 src/Document/Phase/Expressions.hs
+     802 src/Document/Phase.hs
      795 src/Document/Visitor.lhs
      780 logic/Logic/Expr/Expr.hs
-     767 src/Document/Phase.hs
-Run time: 2m 38s
+Run time: 2m 28s

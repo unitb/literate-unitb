@@ -215,6 +215,7 @@ instance PrettyPrintable MachineVar where
 remove_ind :: MPipeline MachineP1 [(Name,VarScope)]
 remove_ind = machineCmd "\\removeind" $ \(Conc evt,xs) _m _p1 -> do
         li <- ask
+        get_concrete_event _p1 evt
         return [ (x,makeCell $ Evt $ M.singleton (Just evt) 
                 $ EventDecl (Index $ InhDelete Nothing) (pure evt) Local li) 
             | IndName x <- xs ]

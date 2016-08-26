@@ -132,6 +132,8 @@ test = test_cases
                 case45 result45
             , stringCase "test 46, inconsistent merge event"
                 case46 result46
+            , stringCase "test 47, deleting indices of non-existant event"
+                case47 result47
             ]            
 
 path0 :: FilePath
@@ -432,3 +434,16 @@ result46 = unlines
     , "\tEvent read:LH, action m1:act2"
     , ""
     ]
+
+path47 :: FilePath
+path47 = [path|Tests/pop-left-t8.tex|]
+
+case47 :: IO String
+case47 = find_errors path47
+
+result47 :: String
+result47 = unlines
+    [ "error 615:3:"
+    , "    event 'hdl:popL:empty' is undeclared"
+    ]
+

@@ -11,7 +11,7 @@ import Document.Pipeline
 import Document.Phase.Types
 import Document.Phase.Parameters
 import Document.Scope
-import Document.Visitor (M,runM,left,hoistEither)
+import Document.Visitor (M,runM,left,hoistEither,bind,bind_all)
 
 import Latex.Parser
 
@@ -28,6 +28,7 @@ import Control.CoApplicative
 import Control.Lens as L hiding ((<.>))
 import Control.Lens.HierarchyTH
 
+import Control.Monad.Except (MonadError)
 import Control.Monad.Reader.Class 
 import Control.Monad.Reader (Reader,runReader) 
 import Control.Monad.State
@@ -52,7 +53,7 @@ import Test.QuickCheck as QC hiding (label,collect)
 import Text.Printf.TH
 
 import Utilities.Graph (cycles,SCC(..))
-import Utilities.Error
+import Utilities.Error (myError)
 import Utilities.Syntactic
 import Utilities.Table 
 
@@ -420,6 +421,40 @@ pEventId = iso
 pIndices  :: HasMachineP2 mch
           => Getter mch (Table EventId (Table Name Var))
 pIndices = pEvents . onMap eIndices
+
+get_event :: (HasMachineP1 phase,MonadReader LineInfo m,MonadError [Error] m) 
+          => phase -> Label -> m EventId
+get_event p2 ev_lbl = do
+        let evts = p2^.pEventIds
+        bind
+            ([printf|event '%s' is undeclared|] $ pretty ev_lbl)
+            $ ev_lbl `M.lookup` evts
+
+get_abstract_event :: HasMachineP1 phase => phase -> EventId -> M EventId
+get_abstract_event p2 ev_lbl = do
+        let evts = p2^.pEventSplit & M.mapKeys as_label . M.mapWithKey const
+        bind
+            ([printf|event '%s' is undeclared|] $ pretty ev_lbl)
+            $ as_label ev_lbl `M.lookup` evts
+
+get_concrete_event :: HasMachineP1 phase => phase -> EventId -> M EventId
+get_concrete_event p2 ev_lbl = do
+        let evts = p2^.pEventMerge & M.mapKeys as_label . M.mapWithKey const
+        bind
+            ([printf|event '%s' is undeclared|] $ pretty ev_lbl)
+            $ as_label ev_lbl `M.lookup` evts
+
+get_events :: ( Traversable f
+              , MonadReader r m
+              , Syntactic r
+              , HasMachineP2 mch
+              , MonadError [Error] m)
+           => mch -> f Label -> m (f EventId)
+get_events p2 ev_lbl = do
+            let evts = p2^.pEventIds
+            bind_all ev_lbl
+                ([printf|event '%s' is undeclared|] . pretty)
+                $ (`M.lookup` evts)
 
 --pParams   :: HasMachineP2 mch
 --          => Getter mch (Map EventId (Map String Var))
