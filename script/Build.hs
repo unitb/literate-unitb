@@ -82,7 +82,7 @@ args opt file = do
                                   ,"libs/axiomatic-classes","libs/data-compressed"
                                   ,"libs/data-map-class","libs/data-packaged"
                                   ,"libs/existential","libs/generic-instances"
-                                  ,"libs/invariants","libs/partial-order"
+                                  ,"libs/invariants","libs/partial-order","libs/type-map"
                                   ,"libs/printf-th","libs/reactive-banana-transformers"
                                   ,"libs/string-lenses","libs/unfoldable"
                                   ,"libs/show-with","libs/typelist-functor"

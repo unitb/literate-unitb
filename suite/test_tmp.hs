@@ -13,7 +13,7 @@ import Document.Tests.Parser as Parser
 import Document.Tests.Phase  as Sync
 import Document.Tests.Puzzle  as Puzz
 import Document.Tests.SmallMachine  as SM
-import Document.Tests.Suite hiding (proof_obligation)
+import Document.Tests.Suite hiding (proof_obligation,check)
 import Document.Tests.TerminationDetection  as Term
 import Document.Tests.TrainStation  as TS
 import Document.Tests.TrainStationRefinement  as TSRef
@@ -37,6 +37,12 @@ import qualified Latex.Test as Tex
 import qualified Utilities.Test as UT
 import qualified Code.Test as Code
 import qualified Documentation.Test as Sum
+
+import Logic.Theories.Arithmetic
+import Logic.Theories.IntervalTheory
+import Logic.Proof.Monad
+import Logic.QuasiQuote
+import Z3.Z3
 
 import Test.UnitTest
 
@@ -76,6 +82,10 @@ main = timeIt $ void $ do
     return $ printQuickCheckResult MSpec.run_spec
     return $ quickCheck MSpec.prop_expr_parser
     return $ run_test_cases Deq.test_case
+    (print =<<) $ discharge "case22" $ runSequent $ do
+        include arithmetic
+        include interval_theory
+        checkQ [expr| 3 = 3 |]
     -- timeIt $ do
     --     p <- parse_system path
     --     evaluate $ force p

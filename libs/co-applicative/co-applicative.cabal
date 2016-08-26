@@ -57,7 +57,7 @@ library
   default-extensions:    TypeFamilies, TupleSections
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14
+  build-depends:       base >=4.8 && <5, lens >=4.13
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

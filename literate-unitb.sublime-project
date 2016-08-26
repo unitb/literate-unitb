@@ -4,11 +4,11 @@
 		{
 			"cmd":
 			[
-				"cabal",
-				"exec",
+				"stack",
+				// "exec",
 				"runghc",
 				"--",
-				"-isrc:script:utils:latex:logic:libs/invariants:libs/generic-instances:libs/string-lenses:libs/axiomatic-classes:libs/printf-th",
+				"-isrc:script:utils:latex:logic:libs/invariants:libs/type-map:libs/generic-instances:libs/string-lenses:libs/axiomatic-classes:libs/printf-th",
 				"$project_path/script/main/display_errors.hs",
 				"$file",
 				"$project_path",

@@ -33,7 +33,7 @@ where
 
 import Control.DeepSeq
 import Control.Monad.Fix
-import Control.Monad.Trans.Instances ()
+-- import Control.Monad.Trans.Instances ()
 import Control.Lens
 
 import Data.Default
@@ -379,6 +379,7 @@ deriving instance Generic (Validation a b)
 deriving instance Generic Fingerprint
 deriving instance Generic TypeRep
 deriving instance Generic TyCon
+deriving instance Generic (Compose f g a)
 
 arbitraryCompose :: Arbitrary (f (g a)) => Gen (Compose f g a)
 arbitraryCompose = Compose <$> arbitrary

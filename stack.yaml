@@ -51,21 +51,25 @@ packages:
 - libs/show-with
 - libs/string-lenses
 - libs/transformer-lenses
+- libs/type-map
 - libs/typelist-functor
 - libs/unfoldable
 - libs/unitb-testing
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
-extra-deps:
+extra-deps: 
 - assert-0.0.1.2
-- directory-1.2.5.1
+- equational-reasoning-0.4.1.1
+- ghc-typelits-presburger-0.1.1.0
 - monoid-transformer-0.0.3
+- monomorphic-0.0.3.3
 - portable-lines-0.1
 - pqueue-1.3.1.1
-- process-1.4.2.0
 - pseudomacros-0.0.2
-- reactive-banana-1.1.0.0
-- transformers-compat-0.5.1.4
-
+- reactive-banana-1.1.0.1
+- singletons-2.1
+- th-desugar-1.6
+- type-natural-0.4.1.1
+    
 # Override default flag values for local packages and extra-deps
 flags: {}
 
