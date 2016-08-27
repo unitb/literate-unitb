@@ -586,13 +586,12 @@ parse_expr set xs = do
         x <- parse_expression set xs
         e <- checkTypes c x li
         typed_x  <- case set^.expected_type of
-            Just _ -> mapLeft
-                (\xs -> map (`Error` li) xs) $ Right e
+            Just t -> mapLeft (\xs -> map (`Error` li) xs) $ zcast t (Right e)
             Nothing -> return e
         let x = normalize_generics typed_x
         unless (L.null $ ambiguities x) $ Left 
             $ map (\x -> Error (msg (pretty x) (pretty $ type_of x)) li)
                 $ ambiguities x
-        return $ DispExpr (flatten xs) x
+        return $ DispExpr (flatten xs) (flattenConnectors x)
     where
         msg   = [printf|type of %s is ill-defined: %s|]

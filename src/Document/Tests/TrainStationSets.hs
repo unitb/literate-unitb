@@ -309,8 +309,8 @@ path0 = "Tests/train-station-set.tex"
 
 result3 :: String
 result3 = unlines
-    [ "error 295:53:"
-    , "    type error: arguments of 'and' do not match its signature:"
+    [ "error 295:4:"
+    , "    arguments of 'and' do not match its signature:"
     , "   signature: [\\Bool,\\Bool] -> \\Bool"
     , "   left argument: (not (= (apply loc t) ent))"
     , "     type \\Bool"

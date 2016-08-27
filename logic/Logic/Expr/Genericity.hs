@@ -172,15 +172,20 @@ check_type' :: (IsQuantifier q,IsName n)
             -> ExprPG n Type q
 check_type' f fun@(Fun _ n _ ts t _) mxs = do
         xs <- check_all mxs
-        let args = unlines $ map (\(i,x) -> unlines 
-                                    [ [printf|   argument %d:  %s|] i (pretty x)
-                                    , [printf|   type:          %s|] (pretty $ type_of x) ])
-                        (zip [0..] xs) 
-            err_msg = unlines 
-                        [ [printf|arguments of '%s' do not match its signature:|] (render n)
-                        , [printf|   signature: %s -> %s|] (pretty ts) (pretty t)
-                        , [printf|%s|] args ]
-        maybe (Left [err_msg]) Right $ check_args' f fun xs
+        case xs of
+            [x]     -> typ_fun1 fun (Right x)
+            [x,y]   -> typ_fun2 fun (Right x) (Right y)
+            [x,y,z] -> typ_fun3 fun (Right x) (Right y) (Right z)
+            _ -> do
+                let args = unlines $ map (\(i,x) -> unlines
+                                            [ [printf|   argument %d:  %s|] i (pretty x)
+                                            , [printf|   type:          %s|] (pretty $ type_of x) ])
+                                (zip [0..] xs)
+                    err_msg = unlines
+                                [ [printf|arguments of '%s' do not match its signature:|] (render n)
+                                , [printf|   signature: %s -> %s|] (pretty ts) (pretty t)
+                                , [printf|%s|] args ]
+                maybe (Left [err_msg]) Right $ check_args' f fun xs
 
 type OneExprP n t q   = IsQuantifier q => ExprPG n t q -> ExprPG n t q
 type TwoExprP n t q   = IsQuantifier q => ExprPG n t q -> ExprPG n t q -> ExprPG n t q
