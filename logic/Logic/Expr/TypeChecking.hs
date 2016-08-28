@@ -12,9 +12,10 @@ import Logic.Names
 import Control.Lens.Misc
 
 import Control.Monad
-import Control.Lens ((^.),(^?),(&),(%~),_Left,_1,view)
+import Control.Lens ((^.),(^?),(&),(%~),_Left,_Right,_1,view)
 
 import Data.Either
+import Data.Either.Combinators (mapLeft)
 import Data.List
 import qualified Data.Map.Class as M
 import qualified Data.Set as S
@@ -72,10 +73,19 @@ tryBoth :: Either a b -> Either a b -> Either a b
 tryBoth x@(Right _) _ = x
 tryBoth (Left _) x    = x
 
-checkTypes :: Context -> UntypedExpr -> LineInfo -> Either [Error] Expr
-checkTypes c ue li = do
-    (checkTypes' c ue) & _Left.traverse %~ strToErr
+checkTypes :: Maybe GenericType
+           -> Context
+           -> UntypedExpr
+           -> StringLi
+           -> Either [Error] Expr
+checkTypes expected_t c ue xs = do
+    e <- (checkTypes' c ue) & _Left.traverse %~ strToErr
+                            & _Right %~ normalize_generics
+    case expected_t of
+        Just t  -> mapLeft (\xs' -> map (`Error` li) xs') $ zcast t (Right e)
+        Nothing -> return e
     where
+        li = line_info xs
         strToErr = \msg -> Error msg li
 
 checkTypes' :: Context -> UntypedExpr -> Either [String] Expr

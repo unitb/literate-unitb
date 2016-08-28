@@ -134,11 +134,9 @@
 |  |  |  |  +- test 16, verification, proof by parts
 |  |  |  |  +- test 17, ill-defined types
 |  |  |  |  +- test 18, assertions have type bool
-|  |  |  |  *** FAILED ***
-src/Document/Tests/TrainStation.hs:90:16
 |  |  |  |  +- test 22, missing witness
-|  |  |  +- [ Success: 3 / 4 ]
-|  |  +- [ Success: 23 / 24 ]
+|  |  |  +- [ Success: 4 / 4 ]
+|  |  +- [ Success: 24 / 24 ]
 |  |  +- lambda expressions in the cube example
 |  |  |  +- part 0
 |  |  |  |  +- test 0, verification, lambda vs empty-fun
@@ -222,7 +220,7 @@ src/Document/Test.hs:50:8
 |  |  +- conformance of instances to type class axioms
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
-|  +- [ Success: 168 / 170 ]
+|  +- [ Success: 169 / 170 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -336,17 +334,17 @@ src/Document/Test.hs:50:8
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 263 / 265 ]
++- [ Success: 264 / 265 ]
 Data.Map.Base
 
 ***************
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   37819 total
+   37822 total
     1038 src/UnitB/PO.hs
      926 src/Document/Phase/Expressions.hs
      782 src/Document/Visitor.lhs
      768 logic/Logic/Expr/Expr.hs
      751 src/Document/Phase.hs
-Run time: 4m 2s
+Run time: 4m 3s

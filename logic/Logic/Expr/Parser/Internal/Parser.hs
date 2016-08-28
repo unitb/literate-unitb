@@ -29,7 +29,6 @@ import           Control.Precondition
 
 import           Data.Char
 import           Data.Either
-import           Data.Either.Combinators
 import           Data.List as L
 import qualified Data.List.NonEmpty as NE
 import           Data.Map.Class as M hiding ( map )
@@ -581,17 +580,11 @@ parse_expr :: ParserSetting
            -> StringLi
            -> Either [Error] DispExpr
 parse_expr set xs = do
-        let li = line_info xs
-            c  = contextOf set
         x <- parse_expression set xs
-        e <- checkTypes c x li
-        typed_x  <- case set^.expected_type of
-            Just t -> mapLeft (\xs -> map (`Error` li) xs) $ zcast t (Right e)
-            Nothing -> return e
-        let x = normalize_generics typed_x
-        unless (L.null $ ambiguities x) $ Left 
-            $ map (\x -> Error (msg (pretty x) (pretty $ type_of x)) li)
-                $ ambiguities x
-        return $ DispExpr (flatten xs) (flattenConnectors x)
+        typed_x <- checkTypes (set^.expected_type) (contextOf set) x xs
+        unless (L.null $ ambiguities typed_x) $ Left 
+            $ map (\x' -> Error (msg (pretty x') (pretty $ type_of x')) (line_info xs))
+                $ ambiguities typed_x
+        return $ DispExpr (flatten xs) (flattenConnectors typed_x)
     where
         msg   = [printf|type of %s is ill-defined: %s|]
