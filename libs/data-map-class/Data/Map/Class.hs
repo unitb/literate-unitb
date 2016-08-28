@@ -49,7 +49,7 @@ class IsMap (map :: * -> * -> *) where
     mapEither :: (a -> Either b c) -> map k a -> (map k b, map k c)
     mapEitherWithKey :: (k -> a -> Either b c) -> map k a -> (map k b, map k c)
     traverseWithKey :: Applicative f => (k -> a -> f b) -> map k a -> f (map k b)
-    foldMapWithKey :: Monoid map' => (k -> a -> map') -> map k a -> map'
+    foldMapWithKey :: Monoid m => (k -> a -> m) -> map k a -> m
     mapKeys :: IsKey map k1 => (k0 -> k1) -> map k0 a -> map k1 a
     mapKeysWith :: IsKey map k1 
                 => (a -> a -> a)

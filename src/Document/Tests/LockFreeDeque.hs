@@ -134,6 +134,8 @@ test = test_cases
                 case46 result46
             , stringCase "test 47, deleting indices of non-existant event"
                 case47 result47
+            , stringCase "test 48, invariant violation upon index deletion"
+                case48 result48
             ]            
 
 path0 :: FilePath
@@ -443,6 +445,18 @@ case47 = find_errors path47
 
 result47 :: String
 result47 = unlines
+    [ "error 615:3:"
+    , "    event 'hdl:popL:empty' is undeclared"
+    ]
+
+path48 :: FilePath
+path48 = [path|Tests/pop-left-t9.tex|]
+
+case48 :: IO String
+case48 = find_errors path48
+
+result48 :: String
+result48 = unlines
     [ "error 615:3:"
     , "    event 'hdl:popL:empty' is undeclared"
     ]

@@ -246,9 +246,15 @@ instance Eq ExprScope where
 instance Ord ExprScope where
     compare = cellCompare' compare
 
+instance PrettyPrintable EventExpr where
+    pretty = show . fmap Pretty . view eventExprs
+
 instance PrettyPrintable ExprScope where
     pretty = readCell' pretty
 
+instance PrettyRecord CoarseSchedule where
+instance PrettyPrintable CoarseSchedule where
+    pretty = prettyRecord
 instance ZoomEq CoarseSchedule where
 instance Scope CoarseSchedule where
     type Impl CoarseSchedule = Redundant Expr (WithDelete CoarseSchedule)
@@ -257,6 +263,9 @@ instance Scope CoarseSchedule where
                 InhAdd _ -> "coarse schedule"
     rename_events' _ e = [e]
 
+instance PrettyRecord FineSchedule where
+instance PrettyPrintable FineSchedule where
+    pretty = prettyRecord
 instance ZoomEq FineSchedule where
 instance Scope FineSchedule where
     type Impl FineSchedule = Redundant Expr (WithDelete FineSchedule)
@@ -276,21 +285,33 @@ instance Scope Guard where
                 InhAdd _ -> "guard"    
     rename_events' _ e = [e]
 
+instance PrettyRecord Witness where
+instance PrettyPrintable Witness where
+    pretty = prettyRecord
 instance ZoomEq Witness where
 instance Scope Witness where
     kind _ = "witness"
     rename_events' _ e = [e]
 
+instance PrettyRecord IndexWitness where
+instance PrettyPrintable IndexWitness where
+    pretty = prettyRecord
 instance ZoomEq IndexWitness where
 instance Scope IndexWitness where
     kind _ = "witness (index)"
     rename_events' _ e = [e]
 
+instance PrettyRecord ParamWitness where
+instance PrettyPrintable ParamWitness where
+    pretty = prettyRecord
 instance ZoomEq ParamWitness where
 instance Scope ParamWitness where
     kind _ = "witness (parameter)"
     rename_events' _ e = [e]
 
+instance PrettyRecord ActionDecl where
+instance PrettyPrintable ActionDecl where
+    pretty = prettyRecord
 instance ZoomEq ActionDecl where
 instance Scope ActionDecl where
     type Impl ActionDecl = Redundant Action (WithDelete ActionDecl)
@@ -298,6 +319,75 @@ instance Scope ActionDecl where
                 InhDelete _ -> "delete action"
                 InhAdd _ -> "action"
     rename_events' _ e = [e]
+
+instance PrettyRecord InvTheorem where
+instance PrettyPrintable InvTheorem where
+    pretty = prettyRecord
+instance ZoomEq InvTheorem where
+instance Scope InvTheorem where
+    kind _ = "theorem"
+    rename_events' _ x = [x]
+
+instance PrettyRecord TransientProp where
+instance PrettyPrintable TransientProp where
+    pretty = prettyRecord
+instance ZoomEq TransientProp where
+instance Scope TransientProp where
+    kind _ = "transient predicate"
+    rename_events' _ x = [x]
+
+instance PrettyRecord Invariant where
+instance PrettyPrintable Invariant where
+    pretty = prettyRecord
+instance ZoomEq Invariant where
+instance Scope Invariant where
+    kind _ = "invariant"
+    rename_events' _ x = [x]
+
+instance PrettyRecord ConstraintProp where
+instance PrettyPrintable ConstraintProp where
+    pretty = prettyRecord
+instance ZoomEq ConstraintProp where
+instance Scope ConstraintProp where
+    kind _ = "co property"
+    rename_events' _ x = [x]
+
+instance PrettyRecord SafetyDecl where
+instance PrettyPrintable SafetyDecl where
+    pretty = prettyRecord
+instance ZoomEq SafetyDecl where
+instance Scope SafetyDecl where
+    kind _ = "safety property"
+    rename_events' _ x = [x]
+
+instance PrettyRecord ProgressDecl where
+instance PrettyPrintable ProgressDecl where
+    pretty = prettyRecord
+instance ZoomEq ProgressDecl where
+instance Scope ProgressDecl where
+    kind _ = "progress property"
+    rename_events' _ x = [x]
+
+instance PrettyRecord Initially where
+instance PrettyPrintable Initially where
+    pretty = prettyRecord
+instance ZoomEq Initially where
+instance Scope Initially where
+    type Impl Initially = WithDelete Initially
+    kind x = case x^.inhStatus of 
+            InhAdd _ -> "initialization"
+            InhDelete _ -> "deleted initialization"
+    rename_events' _ x = [x]
+
+instance PrettyRecord Axiom where
+instance PrettyPrintable Axiom where
+    pretty = prettyRecord
+instance ZoomEq Axiom where
+instance Scope Axiom where
+    kind _ = "axiom"
+    merge_scopes' _ _ = Nothing -- error "Axiom Scope.merge_scopes: _, _"
+    keep_from s x = guard (s == view declSource x) >> return x
+    rename_events' _ x = [x]
 
 instance ZoomEq EvtExprScope where
     (.==) = cellZoomEqual' (.==)
@@ -326,9 +416,6 @@ instance Arbitrary CoarseSchedule where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance PrettyRecord FineSchedule where
-instance PrettyPrintable FineSchedule where
-    pretty = prettyRecord
 instance Arbitrary FineSchedule where
     arbitrary = genericArbitrary
     shrink = genericShrink
@@ -375,9 +462,6 @@ instance Arbitrary ProgressDecl where
 instance Arbitrary Initially where
     arbitrary = genericArbitrary
     shrink = genericShrink
-instance PrettyRecord Axiom where
-instance PrettyPrintable Axiom where
-    pretty = prettyRecord
 instance Arbitrary Axiom where
     arbitrary = genericArbitrary
     shrink = genericShrink

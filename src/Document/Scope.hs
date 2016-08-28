@@ -61,6 +61,7 @@ import qualified Data.List.Ordered as Ord
 import           Data.List.NonEmpty as NE hiding (length,tail,head,map)
 import qualified Data.List.NonEmpty as NE 
 import Data.Map.Class as M
+import Data.Maybe as MM
 import Data.Semigroup (Semigroup(..),First(..))
 import qualified Data.Traversable as T
 
@@ -81,7 +82,7 @@ data InhStatus a = InhAdd a | InhDelete (Maybe a)
 makePrisms ''InhStatus
 
     -- clashes is a symmetric, reflexive relation
-class (Ord a,Show a,ZoomEq a) => Scope a where
+class (Ord a,Show a,ZoomEq a,PrettyPrintable a) => Scope a where
     type Impl a :: *
     type Impl a = DefaultClashImpl a
     kind :: a -> String
@@ -123,7 +124,9 @@ class (Ord a,Show a,ZoomEq a) => Scope a where
     axiom_Scope_mergeAssociative :: a -> a -> a -> Property
     axiom_Scope_mergeAssociative x y z = not (clashFree [x,y,z]) .||. x <+> (y <+> z) .== (x <+> y) <+> z
 
-rename_events :: Scope a => Table EventId [EventId] -> a -> [a]
+rename_events :: (Scope a) 
+              => Table EventId [EventId] 
+              -> a -> [a]
 rename_events m = rename_events' (\e -> findWithDefault [e] e m)
 
 clash :: Scope a => a -> a -> Bool
@@ -255,9 +258,12 @@ instance Ord a => Wrapped (NonEmptyListSet a) where
 type EventInhStatus a = InhStatus (NonEmptyListSet (EventId,LineInfo),a)
 
 data RefScope = Old | New
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Show)
 
 instance PrettyPrintable a => PrettyPrintable (InhStatus a) where
+
+instance PrettyPrintable RefScope where
+    pretty = show
 
 contents :: HasInhStatus a (InhStatus b) => a -> Maybe b
 contents x = case x ^. inhStatus of
@@ -316,7 +322,7 @@ make_table' f items = all_errors $ M.mapWithKey g conflicts
         conflicts :: Table a (NonEmpty (NonEmpty b))
         conflicts = M.mapMaybe (nonEm . flip u_scc clash) items' 
         nonEm :: [[d]] -> Maybe (NonEmpty (NonEmpty d))
-        nonEm = nonEmpty . catMaybes . (traverse %~ nonEmpty)
+        nonEm = nonEmpty . MM.mapMaybe nonEmpty
 
 newtype WithDelete a = WithDelete { getDelete :: a }
     deriving Show

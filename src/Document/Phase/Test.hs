@@ -275,13 +275,13 @@ case2 = return $ do
         vs0 = M.fromList
                 [ ([tex|x|],makeCell $ MchVar (z3Var "x" int) Local li) 
                 , ([tex|y|],makeCell $ MchVar (z3Var "y" int) Local li)
-                , ([tex|p|],makeCell $ Evt $ M.singleton (Just "ae1b") (EventDecl (Param $ z3Var "p" bool) ("ae1b":|[]) Local li))
+                , ([tex|p|],makeCell $ Evt $ M.singleton (Right "ae1b") (EventDecl (Param $ z3Var "p" bool) (Right "ae1b":|[]) Local li))
                 , ([tex|S0|],makeCell $ TheoryDef (z3Def [] "S0" [] (set_type s0') (se s0')) Local li) ]
         vs1 = M.fromList
                 [ ([tex|z|],makeCell $ MchVar (z3Var "z" int) Local li) 
                 , ([tex|y|],makeCell $ MchVar (z3Var "y" int) Inherited li) 
-                , ([tex|p|],makeCell $ Evt $ M.singleton (Just "ce1") (EventDecl (Param $ z3Var "p" bool) ("ae1b":|[]) Inherited li))
-                , ([tex|q|],makeCell $ Evt $ M.singleton (Just "ce2") (EventDecl (Index . InhAdd $ z3Var "q" int) ("ce2":|[]) Local li))
+                , ([tex|p|],makeCell $ Evt $ M.singleton (Right "ce1") (EventDecl (Param $ z3Var "p" bool) (Right "ae1b":|[]) Inherited li))
+                , ([tex|q|],makeCell $ Evt $ M.singleton (Right "ce2") (EventDecl (Index . InhAdd $ z3Var "q" int) (Right "ce2":|[]) Local li))
                 , ([tex|x|],makeCell $ DelMchVar (Just $ z3Var "x" int) Local li) 
                 , ([tex|S0|],makeCell $ TheoryDef (z3Def [] "S0" [] (set_type s0') (se s0')) Local li)
                 , ([tex|\S1|],makeCell $ TheoryDef (z3Def [] "sl$S1" [] (set_type s1') (se s1')) Local li) ]

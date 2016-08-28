@@ -140,6 +140,9 @@ type RawSafetyProp = SafetyProp' RawExpr
 data SafetyProp' expr = Unless [Var] expr expr
     deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable,Generic,Show)
 
+instance PrettyPrintable expr => PrettyPrintable (Constraint' expr) where
+    pretty (Co _ p) = "constraint:  " ++ pretty p
+
 instance PrettyPrintable expr => PrettyPrintable (ProgressProp' expr) where
     pretty (LeadsTo _ p q) = pretty p ++ "  |->  " ++ pretty q
 

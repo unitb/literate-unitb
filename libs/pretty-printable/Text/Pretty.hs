@@ -9,6 +9,7 @@ import Control.Lens hiding (List,cons,uncons)
 import Control.Monad.Reader
 
 import Data.Either.Combinators
+import Data.Either.Validation
 import Data.Existential
 import Data.Functor.Compose
 import Data.Hashable as H
@@ -48,6 +49,10 @@ instance (PrettyPrintable k,Ord k,Hashable k,PrettyPrintable a)
 instance (PrettyPrintable k,Ord k,Hashable k,PrettyPrintable a) 
         => PrettyPrintable (H.HashMap k a) where
     pretty m = "fromList\n" ++ withMargin "  " "  " (pretty $ H.toList m)
+
+instance (PrettyPrintable a,PrettyPrintable b) 
+        => PrettyPrintable (Validation a b) where
+    pretty = pretty . validationToEither
 
 instance (PrettyPrintable a,PrettyPrintable b) 
         => PrettyPrintable (Either a b) where
@@ -104,6 +109,26 @@ instance (ZoomEq a,PrettyPrintable a) => ZoomEq (Pretty a) where
 
 withMargin :: String -> String -> String -> String
 withMargin first other = asLines %~ NE.zipWith (++) (first :| repeat other) 
+
+class GPrettyADT a where
+    gPrettyADT :: a p -> ShowS
+
+instance (GPrettyADT a,GPrettyADT b) => GPrettyADT (a :*: b) where
+    gPrettyADT (x :*: y) = gPrettyADT x . gPrettyADT y
+instance (GPrettyADT a,GPrettyADT b) => GPrettyADT (a :+: b) where
+    gPrettyADT (L1 x) = gPrettyADT x
+    gPrettyADT (R1 x) = gPrettyADT x
+instance GPrettyADT b => GPrettyADT (S1 a b) where
+    gPrettyADT (M1 x) = gPrettyADT x
+instance (GPrettyADT b,Constructor a) => GPrettyADT (C1 a b) where
+    gPrettyADT c@(M1 x) = (conName c ++) . gPrettyADT x
+instance GPrettyADT b => GPrettyADT (D1 a b) where
+    gPrettyADT (M1 x) = gPrettyADT x
+instance PrettyPrintable b => GPrettyADT (K1 a b) where
+    gPrettyADT (K1 x) = ((" (" ++ pretty x ++ ")") ++)
+
+prettyADT :: (Generic s, GPrettyADT (Rep s)) => s -> String
+prettyADT x = gPrettyADT (x^.generic) []
 
 class PrettyRecord a where
     recordFields :: a -> (String,[(String,String)])

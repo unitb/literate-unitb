@@ -26,6 +26,8 @@ import Data.Typeable
 
 import GHC.Generics (Generic)
 
+import Text.Pretty
+
 import Utilities.Syntactic
 import Utilities.Table
 
@@ -260,6 +262,9 @@ makeRecordConstr ''EventP4
 
 makeRecordConstr ''TheoryP2
 makeRecordConstr ''TheoryP3
+
+instance PrettyPrintable EventP2Field where
+    pretty = prettyADT
 
 type MachineP2'Field = MachineP2''Field StringLi
 

@@ -265,7 +265,7 @@ instance HasExpr expr => HasScope (EventSplitting expr) where
             correct lbl w = withVars [witVar w] $ scopeCorrect'' lbl (witExpr w)
 instance (HasExpr expr) => HasScope (Event' expr) where
     scopeCorrect' e = withPrefix "event" $ withVars (e^.indices) $ F.fold 
-        [ foldMapWithKey scopeCorrect'' (e^.coarse_sched) 
+        [ withPrefix (pretty e) $ foldMapWithKey scopeCorrect'' (e^.coarse_sched) 
         , foldMapWithKey scopeCorrect'' (e^.fine_sched) 
         , withVars (e^.params) $ F.fold 
             [ foldMapWithKey scopeCorrect'' (e^.guards) 

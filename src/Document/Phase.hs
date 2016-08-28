@@ -473,15 +473,15 @@ eIndParams = to $ \e -> (e^.eParams) `M.union` (e^.eIndices)
 
 pEventRenaming :: HasMachineP1 mch
                => Getter mch (Table EventId [EventId])
-pEventRenaming = pEventRef . to (g . f) -- to (M.fromListWith (++) . f)
+pEventRenaming = pEventRef . to (g . f) 
     where
         g :: Table SkipOrEvent (NonEmpty SkipOrEvent)
           -> Table EventId [EventId]
-        g = asList %~ MM.mapMaybe (\(x,y) -> rightToMaybe $ (,) <$> x <*> y)
-                          . L.map (second $ sequence . NE.toList)
+        g = asListWith const %~ MM.mapMaybe (\(x,y) -> rightToMaybe $ (,) <$> x <*> y)
+                                   . L.map (second $ sequence . NE.toList)
         f g = readGraph g $ do
             vs <- getLeftVertices
-            fmap M.fromList $ forM vs $ \v -> 
+            fmap (M.fromListWith (<>)) $ forM vs $ \v -> do
                 (,) <$> leftKey v 
                     <*> (T.mapM (rightKey . G.target) =<< successors v)
 
@@ -569,7 +569,7 @@ inheritWith' decl inh (++) (Hierarchy _xs es) m = m2 -- _ $ L.foldl' f (M.map de
         prec k = do
             p <- M.lookup k es 
             inh k <$> p `M.lookup` m2
-        m2 = M.mapWithKey (\k c -> fromMaybe c ((c ++) <$> (prec k))) m1
+        m2 = M.mapWithKey (\k c -> maybe c (c ++) (prec k)) m1
 
 inheritWithAlt :: M.IsKey Table k 
              => (base -> conc) 
@@ -639,13 +639,15 @@ inherit2 :: (Scope s,HasMachineP1 phase)
          -> MTable [(t, s)]
 inherit2 phase = inheritWith'
             id
-            (\m -> concatMap $ second' $ \s -> make_inherited' s >>= rename_events (names ! m))
+            (\m -> concatMap $ second' (make_inherited' >=> rename_events (names ! m)))
             (++)
     where
         names = M.map (view pEventRenaming) phase
         make_inherited' = MM.maybeToList . make_inherited
-        second' = runKleisli . second . Kleisli
         _ = MM.mapMaybe :: (a -> Maybe a) -> [a] -> [a]
+
+second' :: Monad m => (a -> m b) -> (d, a) -> m (d, b)
+second' = runKleisli . second . Kleisli
 
 inheritEvents :: Hierarchy MachineId
               -> Table MachineId [(Label, (EventId, [EventId]), t1)]
