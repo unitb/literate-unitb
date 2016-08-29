@@ -67,9 +67,10 @@ makeRef p pre lbl
 combineLblExpr :: ExprDispOpt label expr
                -> EventId -> label -> String -> M String
 combineLblExpr opts pre lbl expr = case opts^.style of 
-                    Untagged   -> [printf|  \\item[ ]%s|] 
+                    Untagged   -> [printf|  \\item[ ]%s\n  %%%s|] 
                                             -- <$> makeRef opts pre lbl
                                             <$> format_formula expr
+                                            <*> makeRef opts pre lbl
                     Tagged     -> [printf|  \\item[ %s ]%s|] 
                                             <$> makeRef opts pre lbl
                                             <*> format_formula expr

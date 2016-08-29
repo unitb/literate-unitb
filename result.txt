@@ -49,7 +49,10 @@
 |  |  |  +- test 46, inconsistent merge event
 |  |  |  +- test 47, deleting indices of non-existant event
 |  |  |  +- test 48, invariant violation upon index deletion
-|  |  +- [ Success: 47 / 47 ]
+|  |  |  +- test 49, guard strengthening / merging with index deletion
+|  |  |  +- test 50, improper error message
+|  |  |  +- test 51, invalid goal for liveness proof
+|  |  +- [ Success: 50 / 50 ]
 |  |  +- small machine example
 |  |  |  +- test 0
 |  |  |  +- test 1 (separate machine blocks)
@@ -245,7 +248,7 @@
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
 |  |  +- variable scope, properties
-|  +- [ Success: 195 / 195 ]
+|  +- [ Success: 198 / 198 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -359,17 +362,17 @@
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 290 / 290 ]
++- [ Success: 293 / 293 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38910 total
+   38915 total
     1149 src/UnitB/PO.hs
      873 src/Document/Phase/Expressions.hs
      804 src/Document/Phase.hs
      795 src/Document/Visitor.lhs
      780 logic/Logic/Expr/Expr.hs
-Run time: 2m 27s
+Run time: 2m 13s

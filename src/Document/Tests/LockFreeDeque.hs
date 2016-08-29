@@ -136,6 +136,12 @@ test = test_cases
                 case47 result47
             , stringCase "test 48, invariant violation upon index deletion"
                 case48 result48
+            , stringCase "test 49, guard strengthening / merging with index deletion"
+                case49 result49
+            , stringCase "test 50, improper error message"
+                case50 result50
+            , stringCase "test 51, invalid goal for liveness proof"
+                case51 result51
             ]            
 
 path0 :: FilePath
@@ -461,3 +467,32 @@ result48 = unlines
     , "    event 'hdl:popL:empty' is undeclared"
     ]
 
+path49 :: FilePath
+path49 = [path|Tests/pop-left-t10.tex|]
+
+case49 :: IO String
+case49 = proof_obligation path49 "m2/read:LH/GRD/str" 2
+
+path50 :: FilePath
+path50 = [path|Tests/pop-left-t11.tex|]
+
+case50 :: IO String
+case50 = find_errors path50
+
+result50 :: String
+result50 = unlines
+    [ "error 641:1:"
+    , "    goal m1:prog1 is not a valid progress property"
+    ]
+
+path51 :: FilePath
+path51 = [path|Tests/pop-left-t12.tex|]
+
+case51 :: IO String
+case51 = find_errors path51
+
+result51 :: String
+result51 = unlines
+    [ "error 633:1:"
+    , "    goal m1:prog2 is not a valid progress property"
+    ]
