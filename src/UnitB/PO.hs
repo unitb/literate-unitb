@@ -440,7 +440,12 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = provided (null inds) $ do
                                     named_hyps $ M.map (new_dummy ind) grd)
                       $ do
                         emit_goal [as_label evt_lbl,"NEG"] 
-                            $ xp `zimplies` (znot $ primed ((m!.variables) `M.union` (m!.definedSymbols)) xp) 
+                            $ xp `zimplies` (znot $ primed vars xp) 
+        vars = M.unions 
+                    [ m!.variables
+                    , m!.abs_vars
+                    , m!.definedSymbols
+                    ]
         all_ind = M.ascElems $ M.unions $ fv : L.zipWith local_ind (NE.toList evt_lbl) es
         inds    = L.map (fmap1 $ setSuffix "param") $ M.ascElems 
                         $ M.unions (L.map (view indices) es) `M.difference` hint
@@ -528,8 +533,8 @@ prop_saf' m excp (pname, Unless fv p q) =
             inds :: Table SkipOrEvent (Table Name Var)
             inds  = M.map (view indices) $ M.fromList excps
         forM_ evts $ \(evt_lbl,evt) -> do
-            let grd  = evt^.new.guards
-                act  = ba_predicate m evt
+            let grd = evt^.new.guards
+                act = ba_predicate m evt
                 ind = findWithDefault M.empty (Right evt_lbl) inds
                 fvs = symbol_table fv 
                 neq x = znot $ Word x `zeq` Word (suff x)
@@ -553,7 +558,7 @@ prop_saf' m excp (pname, Unless fv p q) =
                                             $ p `zor` q))
     where
         evts = rights $ L.map (\(x,y) -> (,y) <$> x) $ M.toList $ all_upwards m
-        vars = m!.variables
+        vars = (m!.variables) `M.union` (m!.abs_vars)
         suff = add_suffix "param"
 
 inv_po :: RawMachineAST -> (Label, RawExpr) -> M ()
@@ -563,6 +568,7 @@ inv_po m (pname, xp) =
             $ forM_ (M.toList $ nonSkipUpwards m) $ \(evt_lbl,evt) -> do
                 let grd  = evt^.new.guards
                     act  = ba_predicate m evt
+                    vars = view' variables m `M.union` view' abs_vars m `M.union` view' definedSymbols m
                 with 
                     (do named_hyps $ grd
                         assume_old_guard evt
@@ -572,7 +578,7 @@ inv_po m (pname, xp) =
                         POG.variables $ evt^.new.indices
                         POG.variables $ evt^.new.params)
                     (emit_goal [as_label evt_lbl,inv_lbl,pname] 
-                        (primed (view' variables m `M.union` view' abs_vars m `M.union` view' definedSymbols m) xp))
+                        (primed vars xp))
         with (do _context $ assert_ctx m
                  named_hyps $ m!.inits 
                  named_hyps $ M.mapKeys as_label $ witnessDef <$> m!.init_witness)
@@ -942,11 +948,16 @@ co_wd_po m (lbl, Co vs p) =
                  prefix_label "CO"
                  _context $ step_ctx m
                  nameless_hyps $ M.elems $
-                    M.map (primed $ view' variables m `M.union` view' definedSymbols m) 
+                    M.map (primed vars) 
                         $ invariants m
                  named_hyps $ invariants m)
              $ emit_goal ["WD"]
                 $ well_definedness $ zforall vs ztrue p
+    where
+        vars = M.unions [ view' variables m
+                        , view' abs_vars m
+                        , view' definedSymbols m
+                        ]
 
 inv_wd_po :: RawMachineAST -> M ()
 inv_wd_po m = 

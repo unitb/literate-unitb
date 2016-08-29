@@ -52,7 +52,8 @@
 |  |  |  +- test 49, guard strengthening / merging with index deletion
 |  |  |  +- test 50, improper error message
 |  |  |  +- test 51, invalid goal for liveness proof
-|  |  +- [ Success: 50 / 50 ]
+|  |  |  +- test 52, deleted variables are not primed
+|  |  +- [ Success: 51 / 51 ]
 |  |  +- small machine example
 |  |  |  +- test 0
 |  |  |  +- test 1 (separate machine blocks)
@@ -248,7 +249,7 @@
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
 |  |  +- variable scope, properties
-|  +- [ Success: 198 / 198 ]
+|  +- [ Success: 199 / 199 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -362,17 +363,17 @@
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 293 / 293 ]
++- [ Success: 294 / 294 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38915 total
-    1149 src/UnitB/PO.hs
+   38926 total
+    1160 src/UnitB/PO.hs
      873 src/Document/Phase/Expressions.hs
      804 src/Document/Phase.hs
      795 src/Document/Visitor.lhs
      780 logic/Logic/Expr/Expr.hs
-Run time: 2m 13s
+Run time: 2m 11s

@@ -142,6 +142,8 @@ test = test_cases
                 case50 result50
             , stringCase "test 51, invalid goal for liveness proof"
                 case51 result51
+            , stringCase "test 52, deleted variables are not primed"
+                case52 result52
             ]            
 
 path0 :: FilePath
@@ -496,3 +498,9 @@ result51 = unlines
     [ "error 633:1:"
     , "    goal m1:prog2 is not a valid progress property"
     ]
+
+path52 :: FilePath
+path52 = [path|Tests/pop-left-t13.tex|]
+
+case52 :: IO String
+case52 = proof_obligation path52 "m2/read:LH/SAF/LIVE/m2:prog0/ensure" 2
