@@ -22,12 +22,12 @@ import Text.Printf
 stripTypes :: GenExpr t0 t1 q -> GenExpr () t1 q
 stripTypes (Word (Var n _))  = Word (Var n ())
 stripTypes (Const n _)       = Const n ()
-stripTypes (FunApp fun args) = FunApp fun' (map stripTypes args)
+stripTypes (FunApp fun args) = funApp fun' (map stripTypes args)
     where
         f = map $ const ()
         fun' = Fun (f ts) n lf (f targs) ()
         Fun ts n lf targs _rt = fun
-stripTypes (Binder q vs r t _) = Binder q (f vs) (stripTypes r) (stripTypes t) ()
+stripTypes (Binder q vs r t _) = binder q (f vs) (stripTypes r) (stripTypes t) ()
     where
         f = map (\(Var n _) -> (Var n ()))
 stripTypes (Cast e t) = Cast (stripTypes e) t
@@ -132,7 +132,7 @@ checkTypes c' (Binder q vs' r t _) = do
         t' = substitute ts' t''
         vs' = map snd ts
         tuple = ztuple_type $ map var_type vs'
-    return (Binder q vs' r' t' (exprType q tuple (type_of t')))
+    return (binder q vs' r' t' (exprType q tuple (type_of t')))
 
     -- return $ FunApp _ _
 -- checkTypes c (Const xs n ()) = do

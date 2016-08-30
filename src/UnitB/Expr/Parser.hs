@@ -14,7 +14,7 @@ machine_setting m = setting
         & decls %~ (view' variables m `union`)
         & primed_vars .~ M.mapKeys addPrime (M.map prime $ m!.variables)
     where
-        setting = theory_setting (m!.theory)
+        setting = theory_setting (getExpr <$> m!.theory)
 
 schedule_setting :: Machine -> Event -> ParserSetting
 schedule_setting m evt = setting & decls %~ ((evt^.indices) `union`)

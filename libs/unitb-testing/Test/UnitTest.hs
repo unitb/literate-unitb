@@ -13,6 +13,7 @@ module Test.UnitTest
     , M, UnitTest(..) 
     , IsTestCase(..)
     , logNothing, PrintLog
+    , path
     , allLeaves )
 where
 
@@ -46,10 +47,12 @@ import GHC.Stack
 import GHC.SrcLoc
 
 import Language.Haskell.TH
+import Language.Haskell.TH.Quote
 
 import Prelude
 import PseudoMacros
 
+import System.Directory
 import System.FilePath
 import System.IO
 import System.IO.Unsafe
@@ -84,7 +87,7 @@ aCase :: (Pre,Eq a,Show a,Typeable a,NFData a)
       -> TestCase
 aCase n test res = WithLineInfo (?loc) $ Case n test res
 
-class IsTestCase c where
+class Typeable c => IsTestCase c where
     makeCase :: Maybe CallStack -> c -> ReaderT Args IO UnitTest
     nameOf :: Lens' c String
 
@@ -93,7 +96,7 @@ instance IsTestCase TestCase where
     makeCase _ (Suite cs n xs) = Node cs n <$> mapM (makeCase $ Just cs) xs
     makeCase cs (Case x y z) = return UT
                         { name = x
-                        , routine = (,logNothing) <$> y
+                        , routine = sequenceOf _1 (y,logNothing)
                         , outcome = z
                         , _mcallStack = cs
                         , _displayA = disp
@@ -126,14 +129,14 @@ instance IsTestCase TestCase where
     makeCase cs (QuickCheckProps n prop) = do
             args <- ask
             return UT
-                            { name = n
-                            , routine = (,logNothing) <$> prop (quickCheckWithResult' args)
-                            , outcome = True
-                            , _mcallStack = cs
-                            , _displayA = intercalate "\n" . fst
-                            , _displayE = const ""
-                            , _criterion = snd
-                            }
+                { name = n
+                , routine = (,logNothing) <$> prop (quickCheckWithResult' args)
+                , outcome = True
+                , _mcallStack = cs
+                , _displayA = intercalate "\n" . fst
+                , _displayE = const ""
+                , _criterion = snd
+                }
     makeCase cs (Other c) = makeCase cs c
     nameOf f (WithLineInfo x0 c) = WithLineInfo x0 <$> nameOf f c
     nameOf f (Suite x0 n x1) = (\n' -> Suite x0 n' x1) <$> f n
@@ -192,10 +195,12 @@ new_failure cs name actual expected = do
         liftIO $ withFile ([printf|actual-%d.txt|] n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
             forM_ (callStackLineInfo cs) $ hPutStrLn h . ("; " ++)
+            hPutStrLn h "; END HEADER"
             hPutStrLn h actual
         liftIO $ withFile ([printf|expected-%d.txt|] n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
             forM_ (callStackLineInfo cs) $ hPutStrLn h . ("; " ++)
+            hPutStrLn h "; END HEADER"
             hPutStrLn h expected
     else return ()
 
@@ -457,3 +462,15 @@ makeTestSuite title = do
     else do
         mapM_ (reportError . [printf|missing component for test case # %d|]) es
         [e| undefined |]
+
+path :: QuasiQuoter
+path = QuasiQuoter 
+    { quoteExp = \xs -> do
+            xs' <- runIO $ canonicalizePath xs 
+            exists <- runIO (doesFileExist xs')  
+            when (not exists) $ fail $ "file " ++ show xs' ++ " does not exist" 
+            stringE xs
+    , quotePat  = undefined
+    , quoteType = undefined
+    , quoteDec  = undefined
+    }

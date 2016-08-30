@@ -2,7 +2,7 @@
 \usepackage[margin=0.5in]{geometry} 
   % see geometry.pdf on how to lay out the page. There's lots.
 \usepackage{bsymb}
-\usepackage{calculation}
+\usepackage{calculational}
 \usepackage{ulem}
 \usepackage{hyperref}
 \usepackage{unitb}
@@ -33,8 +33,10 @@
       \cschedule{handle}{m0:sch0}{ \neg req = \emptyset } \\
       \evguard{handle}{m0:grd0}{ r \in req } \\
       \evbcmeq{handle}{m0:act0}{req}{ req \setminus \{ r \} } 
+      \invariant{inv777}{ var \in Req }
+      \[ \variable{var : \{ 'req : \REQ \} } ]
   \end{align*}
-
+\definition{Req}{ [ 'req : \REQ ] }
 \noindent
 \end{machine}
 \section{Model m1 --- Version numbers and individual fairness}
@@ -189,7 +191,7 @@
   \refiningevent{handle:popR}{handle:popR:empty}{handle\_popR\_empty}
   \refiningevent{handle:popR}{handle:popR:non:empty}{handle\_popR\_non\_empty}
   \[ \dummy{v : \Int} \]
-  \replace{handle:popL}{}{m3:sch0}{m1:sch1}{m3:prog0}
+  \replace{handle:popL}{m3:sch0}{m3:prog0}
   \begin{align*}
     & \progress{m3:prog0}{v = ver}{p = q \lor p < q}
     \refine{m3:prog0}{implication}{}{}
@@ -201,7 +203,7 @@
     \evbcmeq{handle:popL:non:empty}{m3:act1}{p}{p+1} \\
     \evbcmeq{handle:popL:non:empty}{m3:act2}{qe}{ \{p\} \domsub qe }
   \end{align}
-  \replace{handle:popR}{}{m3:sch0}{m1:sch1}{m3:prog0}
+  \replace{handle:popR}{m3:sch0}{m3:prog0}
   \begin{align}
     \cschedule{handle:popR:non:empty}{m3:sch0}{ p < q } \\
     \cschedule{handle:popR:empty}{m3:sch0}{ p = q } \\

@@ -76,6 +76,11 @@ class IsAssertion a where
     toInvariant :: a -> Invariant
     fromBool :: Bool -> a
 
+instance (a ~ ()) => Testable (InvariantM a) where
+    property p = conjoin (map (`counterexample` property False) xs)
+        where
+            xs = invariantResults p
+
 instance IsAssertion Bool where
     toInvariant b = Invariant $ do
         p <- ask
@@ -144,12 +149,12 @@ checkAssertM p msg = checkAssert p msg (return ())
 checkAssert :: (IsAssertion a,Pre) => a -> String -> b -> b
 checkAssert prop detail x = providedMessage' ?loc "Invariants" msg (null p) x
         where
-            msg = [printf|assertion failure: \n%s\n%s|] (intercalate "\n" p) detail
+            msg = [printf|assertion failure: \n%s\n%s|] (intercalate "\n" p) (take 1000 detail)
             p = invariantResults prop
 
 invariantResults :: IsAssertion a => a -> [String]
 invariantResults prop = 
-        snd $ execRWS (runInvariant $ toInvariant prop) [] ()
+        map (take 1000) . snd $ execRWS (runInvariant $ toInvariant prop) [] ()
 
 invariantMessage :: IsAssertion a => a -> String
 invariantMessage prop 

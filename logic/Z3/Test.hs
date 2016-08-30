@@ -75,7 +75,7 @@ a        = Word (make' Var "a" int)
 (x,x')   = var "x" int
 ff       = mk_fun' [] "f" [int, bool] int
 
-sample_ast :: [Command]
+sample_ast :: [Z3Command]
 sample_ast = [
         Decl (make' ConstDecl "a" int),
         Decl (make' (FunDecl []) "f" [int, bool] int),
@@ -85,7 +85,7 @@ sample_ast = [
     where
         f x y   = ($typeCheck) $ typ_fun2 ff (Right x) (Right y)
 
-sample_quant :: [Command]
+sample_quant :: [Z3Command]
 sample_quant = [
         Decl (make' (FunDecl []) "f" [int] int),
         assert $ M.fromJust $ strip_generics $ ($typeCheck) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
@@ -106,7 +106,7 @@ sample_proof = Sequent 3000 1
         ff          = mk_fun' [] "f" [int] int
         f           = typ_fun1 ff
 
-sample_quant2 :: [Command]
+sample_quant2 :: [Z3Command]
 sample_quant2 = [
         Decl (make' (FunDecl []) "f" [int] int),
         assert $ M.fromJust $ strip_generics $ ($typeCheck) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
@@ -115,7 +115,7 @@ sample_quant2 = [
     where
         f           = typ_fun1 $ mk_fun' [] "f" [int] int
 
-sample_quant3 :: [Command]
+sample_quant3 :: [Z3Command]
 sample_quant3 = [
         Decl (make' (FunDecl []) "f" [int] int),
         assert $ M.fromJust $ strip_generics $ ($typeCheck) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
@@ -124,7 +124,7 @@ sample_quant3 = [
     where
         f           = typ_fun1 $ mk_fun' [] "f" [int] int
         
-assert :: FOExpr -> Command
+assert :: FOExpr -> Z3Command
 assert x = Assert x Nothing
 
 sample_calc :: Calculation

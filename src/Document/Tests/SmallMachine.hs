@@ -55,15 +55,15 @@ test = test_cases "small machine example" [
         (stringCase "test 12 name clash between coarse schedule and co properties" 
             case12 result12) ]
 
-path0 :: String
-path0 = "Tests/small_machine_t0.tex"
+path0 :: FilePath
+path0 = [path|Tests/small_machine_t0.tex|]
 
 case0 :: IO (Either [Error] [Machine])
 case0 = do
     parse path0
     
-path1 :: String
-path1 = "Tests/small_machine_t1.tex"
+path1 :: FilePath
+path1 = [path|Tests/small_machine_t1.tex|]
 
 case1 :: IO (Either [Error] [Machine])
 case1 = do
@@ -71,68 +71,40 @@ case1 = do
 
 result2 :: String
 result2 = unlines 
-    [ "  o  m0/INIT/FIS/x"
-    , "  o  m0/INIT/FIS/y"
-    , "  o  m0/INIT/INV/inv0"
+    [ "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
-    , "  o  m0/INV/WD"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
     , "  o  m0/inc/INV/inv1"
-    , "  o  m0/inc/WD/ACT/a0"
-    , "  o  m0/inc/WD/ACT/a1"
-    , "  o  m0/inc/WD/C_SCH"
-    , "  o  m0/inc/WD/F_SCH"
-    , "  o  m0/inc/WD/GRD"
-    , "  o  m0/inc/WWD"
     , " xxx m0/prog0/LIVE/add"
-    , "  o  m0/prog0/PROG/WD/lhs"
-    , "  o  m0/prog0/PROG/WD/rhs"
-    , "  o  m0/tr0/TR/WD"
     , " xxx m0/tr0/TR/inc/EN"
     , "  o  m0/tr0/TR/inc/NEG"
-    , "  o  m0/tr0/TR/leadsto/lhs"
     , "  o  m0/tr0/TR/leadsto/rhs"
-    , "passed 23 / 25"
+    , "passed 8 / 10"
     ]
 
-path2 :: String
-path2 = "Tests/small_machine_t2.tex"
+path2 :: FilePath
+path2 = [path|Tests/small_machine_t2.tex|]
 
 case2 :: IO (String, Table Label Sequent)
 case2 =  verify path2 0
 
 result3 :: String
 result3 = unlines 
-    [ "  o  m0/INIT/FIS/x"
-    , "  o  m0/INIT/FIS/y"
-    , "  o  m0/INIT/INV/inv0"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
-    , "  o  m0/INV/WD"
+    [ "  o  m0/INIT/INV/inv0"
     , " xxx m0/SKIP/CO/co0"
-    , "  o  m0/co0/CO/WD"
     , "  o  m0/inc/CO/co0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
-    , "  o  m0/inc/WD/ACT/a0"
-    , "  o  m0/inc/WD/ACT/a1"
-    , "  o  m0/inc/WD/C_SCH"
-    , "  o  m0/inc/WD/F_SCH"
-    , "  o  m0/inc/WD/GRD"
-    , "  o  m0/inc/WWD"
-    , "  o  m0/tr0/TR/WD"
     , "  o  m0/tr0/TR/inc/EN"
     , "  o  m0/tr0/TR/inc/NEG"
-    , "passed 20 / 21"
+    , "passed 7 / 8"
     ]
 
-path3 :: String
-path3 = "Tests/small_machine.tex"
+path3 :: FilePath
+path3 = [path|Tests/small_machine.tex|]
 
 case3 :: IO (String, Table Label Sequent)
 case3 = verify path3 0
@@ -210,33 +182,20 @@ case5 = show_po path3 "m0/SKIP/CO/co0"
 
 result6 :: String
 result6 = unlines 
-    [ "  o  m0/INIT/FIS/x"
-    , "  o  m0/INIT/FIS/y"
-    , "  o  m0/INIT/INV/inv0"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
-    , "  o  m0/INV/WD"
+    [ "  o  m0/INIT/INV/inv0"
     , " xxx m0/SKIP/CO/co0"
-    , "  o  m0/co0/CO/WD"
     , "  o  m0/inc/CO/co0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
     , "  o  m0/inc/SCH/grd0"
-    , "  o  m0/inc/WD/ACT/a0"
-    , "  o  m0/inc/WD/ACT/a1"
-    , "  o  m0/inc/WD/C_SCH"
-    , "  o  m0/inc/WD/F_SCH"
-    , "  o  m0/inc/WD/GRD"
-    , "  o  m0/inc/WWD"
-    , "  o  m0/tr0/TR/WD"
     , "  o  m0/tr0/TR/inc/EN"
     , "  o  m0/tr0/TR/inc/NEG"
-    , "passed 21 / 22"
+    , "passed 8 / 9"
     ]
 
-path6 :: String
-path6 = "Tests/small_machine_t3.tex"
+path6 :: FilePath
+path6 = [path|Tests/small_machine_t3.tex|]
 
 case6 :: IO (String, Table Label Sequent)
 case6 = verify path6 0
@@ -271,7 +230,7 @@ case7 :: IO String
 case7 = show_po path6 "m0/inc/SCH/grd0"
 
 path8 :: FilePath
-path8 = "Tests/small_machine_t4.tex"
+path8 = [path|Tests/small_machine_t4.tex|]
 
 result8 :: String
 result8 = unlines 
@@ -466,8 +425,8 @@ m1_props = m0_props
                 (_inv m0_props)
         }
 
-path12 :: String
-path12 = "Tests/small_machine_t12.tex"
+path12 :: FilePath
+path12 = [path|Tests/small_machine_t12.tex|]
 
 case12 :: IO String
 case12 = do
@@ -481,6 +440,5 @@ result12 = unlines
     , ""
     , "error 46:1:"
     , "\tco property"
-    , ""
     , ""
     ]

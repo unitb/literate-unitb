@@ -5,6 +5,7 @@ import Control.Lens
 import Control.Monad
 import Control.Precondition
 
+import Data.List
 import Data.These
 import Data.Proxy.TH
 import Data.Semigroup
@@ -13,7 +14,7 @@ import Data.TypeList
 import Reactive.Banana
 
 unionsWith :: (a -> a -> a) -> [Event a] -> Event a
-unionsWith f (x:xs) = foldl (unionWith f) x xs
+unionsWith f (x:xs) = foldl' (unionWith f) x xs
 unionsWith _ []     = never
 
 unionsM :: Monad m => [Event (a -> m a)] -> Event (a -> m a)

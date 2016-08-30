@@ -4,8 +4,9 @@
 		{
 			"cmd":
 			[
-				"cabal",
-				"exec",
+				// "cabal",
+				"stack",
+				// "exec",
 				"runghc",
 				"--",
 				"-isrc:script:utils:latex:logic:libs/invariants:libs/generic-instances:libs/string-lenses:libs/axiomatic-classes:libs/printf-th",

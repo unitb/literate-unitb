@@ -7,7 +7,7 @@ module Logic.Expr.Parser.Internal.Parser where
 import Latex.Scanner 
 import Latex.Parser  hiding (Close,Open,BracketType(..),Command,Parser,Bracket,token)
 
-import Logic.Expr hiding (recordFields)
+import Logic.Expr hiding (recordFields,Field)
 import Logic.Expr.Parser.Internal.Monad 
 import Logic.Expr.Parser.Internal.Scanner
 import Logic.Expr.Parser.Internal.Setting hiding (with_vars)
@@ -30,7 +30,6 @@ import           Data.Char
 import           Data.Either
 import           Data.Either.Combinators
 import           Data.List as L
-import qualified Data.List.NonEmpty as NE
 import           Data.Map.Class as M hiding ( map )
 import qualified Data.Map.Class as M
 import           Data.Semigroup hiding (option)
@@ -102,11 +101,13 @@ from m = attempt $ do
                 Just x  -> return x
 
 type_t :: Parser Type
-type_t = do
+type_t = choose_la 
+    [ add_context "foo" $ recordType
+    , do
         t  <- choiceP 
             [ word_or_command
             , operator ]
-            (fail "expecting word or command") 
+            (liftP read_char >>= \c -> fail $ "expecting word or command: " ++ lexeme c) 
             return
         b1 <- look_aheadP $ read_listP [Open Square]
         ts <- if b1
@@ -135,7 +136,7 @@ type_t = do
             read_listP [Ident "\\pfun"]
             t2 <- type_t
             return $ fun_type t t2
-        else return t
+        else return t ]
 
 get_type :: Context -> Name -> Maybe Sort
 get_type (Context ts _ _ _ _) x = M.lookup x m
@@ -242,11 +243,15 @@ assignTok = getToken _Assign ":=" >> pure (,)
 colonTok :: Parser (a -> b -> (a,b))
 colonTok = getToken _Colon ":" >> pure (,)
 
-
 binding :: Parser (Expr -> LineInfo -> a) -> Parser (Name,a)
-binding tok = do
+binding = binding' expr
+
+binding' :: Parser term
+         -> Parser (term -> LineInfo -> a) 
+         -> Parser (Name,a)
+binding' term tok = do
     li <- liftP get_line_info
-    liftM2 (,) nameLit (tok <*> expr <*> pure li)
+    liftM2 (,) nameLit (tok <*> term <*> pure li)
 
 data Term = 
         Cmd Command 
@@ -340,7 +345,7 @@ term = do
                 fail (   "unrecognized term: "
                       ++ render xs ++ if not $ L.null sug then
                             "\nPerhaps you meant:\n"
-                      ++ unlines sug else "")
+                      ++ intercalate "\n" sug else "")
         , do    xs <- attempt number
                 return $ E $ zint $ read xs
         , do    Field <$> nameLit
@@ -377,11 +382,24 @@ validateFields xs = raiseErrors $ traverseWithKey f xs'
     where
         xs' = fromListWith (<>) $ xs & mapped._2 %~ pure
         f _ ((x,_):|[]) = Success x
-        f k xs = Failure [MLError (msg $ render k) $ NE.toList xs & mapped._1 .~ " - "]
+        f k xs = Failure [MLError (msg $ render k) $ xs & mapped._1 .~ " - "]
         msg = [printf|Multiple record entry with label '%s'|]
         raiseErrors :: Validation [Error] a -> Parser a
         raiseErrors = either (liftP . Scanner . const . Left) 
                              return . validationToEither
+
+recordType :: Parser Type
+recordType = do
+        let field = binding' type_t colonTok
+            field :: Parser (Name, (Type, LineInfo))
+        attempt open_curly
+        xs <- choose_la 
+            [ attempt close_curly >> return []
+            , do xs <- sep1P field comma
+                 close_curly
+                 return xs
+            ]
+        record_type <$> validateFields xs
 
 recordFields :: Parser (Name,(a,LineInfo)) -> Parser (Table Name a)
 recordFields field = do
@@ -421,7 +439,7 @@ close_curly :: Parser [ExprToken]
 close_curly = read_listP [Close QuotedCurly]
 
 applyRecUpdate :: [Map Name Expr] -> Term -> Parser Term
-applyRecUpdate rUpd (E e) = return $ E $ foldl (fmap Record . RecUpdate) e rUpd
+applyRecUpdate rUpd (E e) = fmap E . check_types $ foldl' (zrec_update') (Right e) (fmap Right <$> rUpd)
 applyRecUpdate xs e@(Cmd op)
         | L.null xs = return e
         | otherwise = fail $ "Cannot apply a record update to an operator: " ++ pretty op
@@ -445,8 +463,9 @@ expr = do
                 [ do    attempt open_brack
                         e <- expr
                         close_brack
+                        rUpd <- manyP (recordFields $ binding assignTok)
                         add_context "parsing (" $
-                            read_op xs us (E e) 
+                            read_op xs us =<< applyRecUpdate rUpd (E e)
                 , do    attempt open_curly
                         rs <- sep1P expr comma
                         close_curly

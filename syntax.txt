@@ -3,6 +3,7 @@
 \constant{text / comment}
 \constraint{fresh-name}{expression}
 \cschedule{concrete event-name}{fresh-name}{expression}
+\definition{variable}{expression}
 \dummy{text / comment}
 \evassignment{concrete event-name}{fresh-name}{expression}
 \evbcmeq{concrete event-name}{fresh-name}{variable}{expression}
@@ -26,12 +27,14 @@
 \removecoarse{concrete event-name}{zero or more abstract coarse-schedule-label}
 \removefine{concrete event-name}{zero or more abstract fine-schedule-label}
 \removeguard{concrete event-name}{zero or more abstract guard-label}
+\removeind{concrete event-name}{zero or more index}
 \removeinit{zero or more abstract initialization-label}
 \removevar{zero or more variable}
-\replace{abstract event-name}{zero or more abstract coarse-schedule-label}{zero or more concrete coarse-schedule-label}{zero or more preserved coarse-schedule-label}{progress-property-label}
+\replace{abstract event-name}{zero or more concrete coarse-schedule-label}{progress-property-label}
 \replacefine{abstract event-name}{progress-property-label}
 \safety{fresh-name}{expression}{expression}
 \safetyB{fresh-name}{abstract event-name}{expression}{expression}
+\setTimeout{factor}
 \splitevent{abstract event-name}{zero or more concrete event-name}
 \theorem{fresh-name}{expression}
 \transient{zero or more concrete event-name}{fresh-name}{expression}

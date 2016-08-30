@@ -1,0 +1,20 @@
+
+\begin{machine}{m0}
+\definition{foo}{x \le y}
+
+\variable{ x, y : \Int }
+\initialization{init0}{x = 0 \land y = 0}
+\invariant{inv0}{foo}
+\newevent{act}
+
+\evbcmeq{act}{act0}{x}{x+1}
+
+\end{machine}
+
+\begin{machine}{m1}
+    \refines{m0}
+
+\definition{bar}{y \le x}
+\invariant{inv1}{foo \implies bar}
+
+\end{machine}

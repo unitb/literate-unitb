@@ -18,7 +18,6 @@ import Control.Monad.Reader
 
 import Data.Existential
 import Data.Hashable
-import Data.List.NonEmpty as NE (toList)
 import Data.Maybe as M
 import Data.Typeable
 import Data.TypeList
@@ -36,36 +35,44 @@ import Utilities.Table
 data CoarseSchedule = CoarseSchedule 
         { _coarseScheduleInhStatus :: EventInhStatus Expr
         , _coarseScheduleDeclSource :: DeclSource
-        , _coarseScheduleLineInfo :: NonEmpty LineInfo
+        , _coarseScheduleLineInfo :: NonEmptyListSet LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 data FineSchedule = FineSchedule 
         { _fineScheduleInhStatus :: EventInhStatus Expr
         , _fineScheduleDeclSource :: DeclSource
-        , _fineScheduleLineInfo :: NonEmpty LineInfo
+        , _fineScheduleLineInfo :: NonEmptyListSet LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 data Guard = Guard 
         { _guardInhStatus :: EventInhStatus Expr
         , _guardDeclSource :: DeclSource
-        , _guardLineInfo :: NonEmpty LineInfo
+        , _guardLineInfo :: NonEmptyListSet LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 data Witness = Witness 
         { _witnessVar :: Var
         , _witnessEvtExpr :: Expr 
         , _witnessDeclSource :: DeclSource
-        , _witnessLineInfo :: NonEmpty LineInfo
+        , _witnessLineInfo :: NonEmptyListSet LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 data IndexWitness = IndexWitness 
         { _indexWitnessVar :: Var
         , _indexWitnessEvtExpr :: Expr 
         , _indexWitnessDeclSource :: DeclSource
-        , _indexWitnessLineInfo :: NonEmpty LineInfo
+        , _indexWitnessLineInfo :: NonEmptyListSet LineInfo
+        } deriving (Eq,Ord,Typeable,Show,Generic)
+data ParamWitness = ParamWitness 
+        { _paramWitnessVar :: Var
+        , _paramWitnessEvtExpr :: Expr 
+        , _paramWitnessDeclSource :: DeclSource
+        , _paramWitnessLineInfo :: NonEmptyListSet LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 data ActionDecl = Action 
         { _actionDeclInhStatus :: EventInhStatus Action
         , _actionDeclDeclSource :: DeclSource
-        , _actionDeclLineInfo :: NonEmpty LineInfo
+        , _actionDeclLineInfo :: NonEmptyListSet LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 
+data WitnessType = DeletedVar | AddedIndex | DeletedParam
+    deriving (Eq,Ord)
 
 makeFields ''CoarseSchedule
 makePrisms ''CoarseSchedule
@@ -74,6 +81,7 @@ makeFields ''Guard
 makeFields ''ActionDecl
 makeFields ''Witness
 makeFields ''IndexWitness
+makeFields ''ParamWitness
 
 newtype ExprScope = ExprScope { _exprScopeCell :: Cell IsExprScope }
     deriving (Typeable,Generic)
@@ -115,7 +123,7 @@ instance PrettyPrintable EvtExprScope where
 class ( Eq a, Ord a, Typeable a
       , Show a, Scope a
       , PrettyPrintable a
-      , HasLineInfo a (NonEmpty LineInfo)
+      , HasLineInfo a (NonEmptyListSet LineInfo)
       , HasDeclSource a DeclSource ) => IsEvtExpr a where
     toMchScopeExpr :: Label -> a 
                    -> Reader MachineP2 [Either Error (MachineP3'Field ae ce t)]
@@ -123,13 +131,17 @@ class ( Eq a, Ord a, Typeable a
                    -> Reader MachineP2 [Either Error (EventId,[EventP3Field])]
     defaultEvtWitness :: EventId -> a 
                       -> Reader MachineP2 [Either Error (EventId,[EventP3Field])]
-    setSource :: EventId -> a -> a
+    setSource :: EventId 
+              -> NonEmptyListSet LineInfo
+              -> a -> a
     default setSource :: HasInhStatus a (EventInhStatus b)
-                      => EventId -> a -> a
-    setSource ev x = x & inhStatus.traverse._1 .~ pure ev
+                      => EventId 
+                      -> NonEmptyListSet LineInfo
+                      -> a -> a
+    setSource ev li x = x & inhStatus.traverse._1 .~ fmap (ev,) li
     inheritedFrom :: a -> [EventId]
     default inheritedFrom :: HasInhStatus a (EventInhStatus b) => a -> [EventId]
-    inheritedFrom = fromMaybe [].fmap (NE.toList.unNonEmptyListSet.fst).contents
+    inheritedFrom = fromMaybe [].fmap (fmap fst.setToList'.fst).contents
 
 makeFields ''EvtExprScope
 makePrisms ''EvtExprScope
@@ -138,13 +150,13 @@ instance IsEvtExpr EvtExprScope where
     toMchScopeExpr lbl x = readCell' (toMchScopeExpr lbl) x
     toEvtScopeExpr ref e lbl x = readCell' (toEvtScopeExpr ref e lbl) x
     defaultEvtWitness ev x = readCell' (defaultEvtWitness ev) x
-    setSource ev x = mapCell' (setSource ev) x
+    setSource ev li x = mapCell' (setSource ev li) x
     inheritedFrom x = readCell' inheritedFrom x
 
 instance HasDeclSource EvtExprScope DeclSource where
     declSource f = traverseCell' (declSource f)
 
-instance HasLineInfo EvtExprScope (NonEmpty LineInfo) where
+instance HasLineInfo EvtExprScope (NonEmptyListSet LineInfo) where
     lineInfo f = traverseCell' (lineInfo f)
 
 type InitOrEvent = Either InitEventId EventId
@@ -234,9 +246,15 @@ instance Eq ExprScope where
 instance Ord ExprScope where
     compare = cellCompare' compare
 
+instance PrettyPrintable EventExpr where
+    pretty = show . fmap Pretty . view eventExprs
+
 instance PrettyPrintable ExprScope where
     pretty = readCell' pretty
 
+instance PrettyRecord CoarseSchedule where
+instance PrettyPrintable CoarseSchedule where
+    pretty = prettyRecord
 instance ZoomEq CoarseSchedule where
 instance Scope CoarseSchedule where
     type Impl CoarseSchedule = Redundant Expr (WithDelete CoarseSchedule)
@@ -245,6 +263,9 @@ instance Scope CoarseSchedule where
                 InhAdd _ -> "coarse schedule"
     rename_events' _ e = [e]
 
+instance PrettyRecord FineSchedule where
+instance PrettyPrintable FineSchedule where
+    pretty = prettyRecord
 instance ZoomEq FineSchedule where
 instance Scope FineSchedule where
     type Impl FineSchedule = Redundant Expr (WithDelete FineSchedule)
@@ -253,6 +274,9 @@ instance Scope FineSchedule where
                 InhAdd _ -> "fine schedule"
     rename_events' _ e = [e]
 
+instance PrettyRecord Guard where
+instance PrettyPrintable Guard where
+    pretty = prettyRecord
 instance ZoomEq Guard where
 instance Scope Guard where
     type Impl Guard = Redundant Expr (WithDelete Guard)
@@ -261,16 +285,33 @@ instance Scope Guard where
                 InhAdd _ -> "guard"    
     rename_events' _ e = [e]
 
+instance PrettyRecord Witness where
+instance PrettyPrintable Witness where
+    pretty = prettyRecord
 instance ZoomEq Witness where
 instance Scope Witness where
     kind _ = "witness"
     rename_events' _ e = [e]
 
+instance PrettyRecord IndexWitness where
+instance PrettyPrintable IndexWitness where
+    pretty = prettyRecord
 instance ZoomEq IndexWitness where
 instance Scope IndexWitness where
     kind _ = "witness (index)"
     rename_events' _ e = [e]
 
+instance PrettyRecord ParamWitness where
+instance PrettyPrintable ParamWitness where
+    pretty = prettyRecord
+instance ZoomEq ParamWitness where
+instance Scope ParamWitness where
+    kind _ = "witness (parameter)"
+    rename_events' _ e = [e]
+
+instance PrettyRecord ActionDecl where
+instance PrettyPrintable ActionDecl where
+    pretty = prettyRecord
 instance ZoomEq ActionDecl where
 instance Scope ActionDecl where
     type Impl ActionDecl = Redundant Action (WithDelete ActionDecl)
@@ -278,6 +319,75 @@ instance Scope ActionDecl where
                 InhDelete _ -> "delete action"
                 InhAdd _ -> "action"
     rename_events' _ e = [e]
+
+instance PrettyRecord InvTheorem where
+instance PrettyPrintable InvTheorem where
+    pretty = prettyRecord
+instance ZoomEq InvTheorem where
+instance Scope InvTheorem where
+    kind _ = "theorem"
+    rename_events' _ x = [x]
+
+instance PrettyRecord TransientProp where
+instance PrettyPrintable TransientProp where
+    pretty = prettyRecord
+instance ZoomEq TransientProp where
+instance Scope TransientProp where
+    kind _ = "transient predicate"
+    rename_events' _ x = [x]
+
+instance PrettyRecord Invariant where
+instance PrettyPrintable Invariant where
+    pretty = prettyRecord
+instance ZoomEq Invariant where
+instance Scope Invariant where
+    kind _ = "invariant"
+    rename_events' _ x = [x]
+
+instance PrettyRecord ConstraintProp where
+instance PrettyPrintable ConstraintProp where
+    pretty = prettyRecord
+instance ZoomEq ConstraintProp where
+instance Scope ConstraintProp where
+    kind _ = "co property"
+    rename_events' _ x = [x]
+
+instance PrettyRecord SafetyDecl where
+instance PrettyPrintable SafetyDecl where
+    pretty = prettyRecord
+instance ZoomEq SafetyDecl where
+instance Scope SafetyDecl where
+    kind _ = "safety property"
+    rename_events' _ x = [x]
+
+instance PrettyRecord ProgressDecl where
+instance PrettyPrintable ProgressDecl where
+    pretty = prettyRecord
+instance ZoomEq ProgressDecl where
+instance Scope ProgressDecl where
+    kind _ = "progress property"
+    rename_events' _ x = [x]
+
+instance PrettyRecord Initially where
+instance PrettyPrintable Initially where
+    pretty = prettyRecord
+instance ZoomEq Initially where
+instance Scope Initially where
+    type Impl Initially = WithDelete Initially
+    kind x = case x^.inhStatus of 
+            InhAdd _ -> "initialization"
+            InhDelete _ -> "deleted initialization"
+    rename_events' _ x = [x]
+
+instance PrettyRecord Axiom where
+instance PrettyPrintable Axiom where
+    pretty = prettyRecord
+instance ZoomEq Axiom where
+instance Scope Axiom where
+    kind _ = "axiom"
+    merge_scopes' _ _ = Nothing -- error "Axiom Scope.merge_scopes: _, _"
+    keep_from s x = guard (s == view declSource x) >> return x
+    rename_events' _ x = [x]
 
 instance ZoomEq EvtExprScope where
     (.==) = cellZoomEqual' (.==)
@@ -326,6 +436,10 @@ instance Arbitrary IndexWitness where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
+instance Arbitrary ParamWitness where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
 instance Arbitrary TransientProp where
     arbitrary = genericArbitrary
     shrink = genericShrink
@@ -360,46 +474,46 @@ prop_axiom_Scope_mergeCommutative = regression
         (uncurry axiom_Scope_mergeCommutative) 
         [(g0,g1)]
     where
-        g0 = Guard {_guardInhStatus = InhAdd (NonEmptyListSet $ "i" :| [],zfalse), _guardDeclSource = Inherited, _guardLineInfo = pure (LI "file" 0 0)}
-        g1 = Guard {_guardInhStatus = InhAdd (NonEmptyListSet $ "e" :| [],zfalse), _guardDeclSource = Local, _guardLineInfo = pure (LI "file" 0 0)}
+        li = LI "file" 1 1
+        g0 = Guard {_guardInhStatus = InhAdd (nonEmptyListSet $ ("i",li) :| [],zfalse), _guardDeclSource = Inherited, _guardLineInfo = pure (LI "file" 0 0)}
+        g1 = Guard {_guardInhStatus = InhAdd (nonEmptyListSet $ ("e",li) :| [],zfalse), _guardDeclSource = Local, _guardLineInfo = pure (LI "file" 0 0)}
 
 prop_axiom_Scope_clashesOverMerge :: Property
 prop_axiom_Scope_clashesOverMerge = regression (axiom_Scope_clashesOverMerge^.uncurried') 
             [ (g0,g1,g2) ]
     where
+        li = LI "file" 1 1
         a = EventId "a"
         e = DispExpr "-" $ Word (Var [smt|-|] (Gen RealSort []))
-        g0 = Guard { _guardInhStatus = InhAdd (pure a,e)
+        g0 = Guard { _guardInhStatus = InhAdd (pure (a,li),e)
                    , _guardDeclSource = Local
-                   , _guardLineInfo = (LI "file" 10 0) :| []}
+                   , _guardLineInfo = nonEmptyListSet $ (LI "file" 10 0) :| []}
         g1 = Guard { _guardInhStatus = InhDelete Nothing
                    , _guardDeclSource = Local
-                   , _guardLineInfo = (LI "file" 0 5) :| []}
-        g2 = Guard { _guardInhStatus = InhDelete (Just (pure a,e))
+                   , _guardLineInfo = nonEmptyListSet $ (LI "file" 0 5) :| []}
+        g2 = Guard { _guardInhStatus = InhDelete (Just (pure (a,li),e))
                    , _guardDeclSource = Inherited
-                   , _guardLineInfo = (LI "file" 0 5) :| []}
+                   , _guardLineInfo = nonEmptyListSet $ (LI "file" 0 5) :| []}
 
-g3 :: Guard
-g3 = Guard { _guardInhStatus = InhDelete (Just (pure a,e))
-           , _guardDeclSource = Local
-           , _guardLineInfo = (LI "file" 0 5) :| []}
-    where
-        a = EventId "a"
-        e = DispExpr "-" $ Word (Var [smt|-|] (Gen RealSort []))
 
 prop_axiom_mergeAssociative_FineSchedule :: Property
 prop_axiom_mergeAssociative_FineSchedule = regression
         (axiom_Scope_mergeAssociative^.uncurried')
-        [ (x,y,z) ]
+        [ (x,y,z) 
+        , (x1,y1,z1)]
     where
         -- e0 = DispExpr "" $ Cast (Cast (Lit (RealVal (-44.32742578351186)) (Gen (DefSort (Name {_backslash = True, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""},Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen (Datatype [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Name {_backslash = False, _base = 'M' :| "aybe", _primes = 0, _suffix = ""}) [(Name {_backslash = False, _base = 'J' :| "ust", _primes = 0, _suffix = ""},[(Name {_backslash = False, _base = 'f' :| "romJust", _primes = 0, _suffix = ""},GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""))]),(Name {_backslash = False, _base = 'N' :| "othing", _primes = 0, _suffix = ""},[])]) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")]])) [Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen RealSort []],Gen (DefSort (Name {_backslash = True, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""},Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen (Datatype [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Name {_backslash = False, _base = 'M' :| "aybe", _primes = 0, _suffix = ""}) [(Name {_backslash = False, _base = 'J' :| "ust", _primes = 0, _suffix = ""},[(Name {_backslash = False, _base = 'f' :| "romJust", _primes = 0, _suffix = ""},GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""))]),(Name {_backslash = False, _base = 'N' :| "othing", _primes = 0, _suffix = ""},[])]) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")]])) [Gen (Sort (Name {_backslash = False, _base = 'D' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'D' :| "", _primes = 0, _suffix = ""}) "") 2) [Gen RealSort [],Gen (DefSort (Name {_backslash = True, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""},Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen (Datatype [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Name {_backslash = False, _base = 'M' :| "aybe", _primes = 0, _suffix = ""}) [(Name {_backslash = False, _base = 'J' :| "ust", _primes = 0, _suffix = ""},[(Name {_backslash = False, _base = 'f' :| "romJust", _primes = 0, _suffix = ""},GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""))]),(Name {_backslash = False, _base = 'N' :| "othing", _primes = 0, _suffix = ""},[])]) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")]])) [Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []],GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) "")]],GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")]])) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen BoolSort []]]])) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "", _primes = 0, _suffix = ""}) "") 0) [])
         -- e0 = DispExpr "" $ Lit (IntVal 7) int
         -- x = FineSchedule {_fineScheduleInhStatus = InhDelete Nothing, _fineScheduleDeclSource = Local, _fineScheduleLineInfo = (LI "file" 5 5) :| [(LI "file" 0 0),(LI "file" 5 0),(LI "file" 10 5),(LI "file" 10 0),(LI "file" 5 10),(LI "file" 10 10),(LI "file" 5 0),(LI "file" 10 0),(LI "file" 0 10),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 0 5),(LI "file" 0 10),(LI "file" 10 0),(LI "file" 5 5),(LI "file" 0 0),(LI "file" 10 0),(LI "file" 0 0),(LI "file" 10 5),(LI "file" 0 0),(LI "file" 5 0),(LI "file" 10 0),(LI "file" 5 0),(LI "file" 0 0),(LI "file" 0 5),(LI "file" 5 10),(LI "file" 10 5),(LI "file" 5 10),(LI "file" 0 0),(LI "file" 10 10),(LI "file" 5 5),(LI "file" 10 10),(LI "file" 5 0),(LI "file" 5 5)]}
         -- y = FineSchedule {_fineScheduleInhStatus = InhDelete Nothing, _fineScheduleDeclSource = Local, _fineScheduleLineInfo = (LI "file" 0 0) :| [(LI "file" 10 0),(LI "file" 5 0),(LI "file" 0 10),(LI "file" 10 0),(LI "file" 0 0),(LI "file" 10 10),(LI "file" 0 0),(LI "file" 10 5),(LI "file" 0 10),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 10),(LI "file" 5 0),(LI "file" 10 0),(LI "file" 5 5),(LI "file" 0 10),(LI "file" 0 10),(LI "file" 10 0),(LI "file" 5 0),(LI "file" 10 10),(LI "file" 0 5),(LI "file" 5 0),(LI "file" 0 5),(LI "file" 5 10),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 0 0),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 0 5),(LI "file" 10 10)]}
         -- z = FineSchedule {_fineScheduleInhStatus = InhAdd (   EventId "k" :| [EventId "e",EventId "h",EventId "g",EventId "f",EventId "l",EventId "l",EventId "i",EventId "b",EventId "g",EventId "h",EventId "e",EventId "i",EventId "j",EventId "i",EventId "i",EventId "j",EventId "c",EventId "e"],e0), _fineScheduleDeclSource = Local, _fineScheduleLineInfo = (LI "file" 5 0) :| [(LI "file" 5 5),(LI "file" 5 5),(LI "file" 10 10),(LI "file" 10 5),(LI "file" 10 0),(LI "file" 10 10),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 10 10),(LI "file" 10 5),(LI "file" 5 0),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 0 5),(LI "file" 5 10),(LI "file" 0 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 5 0),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 0 0),(LI "file" 10 5),(LI "file" 5 5),(LI "file" 0 5),(LI "file" 5 5),(LI "file" 10 0),(LI "file" 10 10),(LI "file" 0 0),(LI "file" 10 10),(LI "file" 10 5),(LI "file" 5 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 5),(LI "file" 10 5),(LI "file" 5 0),(LI "file" 0 10),(LI "file" 0 0),(LI "file" 0 10),(LI "file" 0 0),(LI "file" 5 10)]}
-        x = FineSchedule {_fineScheduleInhStatus = InhDelete Nothing, _fineScheduleDeclSource = Local, _fineScheduleLineInfo = (LI "file" 5 5) :| []}
-        y = FineSchedule {_fineScheduleInhStatus = InhDelete Nothing, _fineScheduleDeclSource = Local, _fineScheduleLineInfo = (LI "file" 0 0) :| []}
-        z = FineSchedule {_fineScheduleInhStatus = InhAdd (NonEmptyListSet $ EventId (Lbl "a") :| [EventId (Lbl "b"),EventId (Lbl "c")],DispExpr "" (Lit (RealVal 0.0) (Gen (DefSort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") [] (Gen (Sort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") 0) [])) []))), _fineScheduleDeclSource = Local, _fineScheduleLineInfo = (LI "file" 5 0) :| []}  
+        li = LI "file" 1 1
+        x = FineSchedule {_fineScheduleInhStatus = InhDelete Nothing, _fineScheduleDeclSource = Local, _fineScheduleLineInfo = nonEmptyListSet $ (LI "file" 5 5) :| []}
+        y = FineSchedule {_fineScheduleInhStatus = InhDelete Nothing, _fineScheduleDeclSource = Local, _fineScheduleLineInfo = nonEmptyListSet $ (LI "file" 0 0) :| []}
+        z = FineSchedule {_fineScheduleInhStatus = InhAdd (nonEmptyListSet $ (EventId $ Lbl "a",li) :| [(EventId (Lbl "b"),li),(EventId (Lbl "c"),li)],DispExpr "" (Lit (RealVal 0.0) (Gen (DefSort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") [] (Gen (Sort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") 0) [])) []))), _fineScheduleDeclSource = Local, _fineScheduleLineInfo = nonEmptyListSet $ (LI "file" 5 0) :| []}  
+        x1 = FineSchedule {_fineScheduleInhStatus = InhDelete Nothing, _fineScheduleDeclSource = Local, _fineScheduleLineInfo = nonEmptyListSet $ (LI "file" 10 0) :| []}
+        y1 = FineSchedule {_fineScheduleInhStatus = InhAdd (nonEmptyListSet ((EventId $ Lbl "a",li) :| []),DispExpr "" (Lit (RealVal 0.0) (Gen IntSort []))), _fineScheduleDeclSource = Inherited, _fineScheduleLineInfo = nonEmptyListSet $ (LI "file" 0 0) :| []}
+        z1 = FineSchedule {_fineScheduleInhStatus = InhDelete (Just (nonEmptyListSet ((EventId $ Lbl "b",li) :| []),DispExpr "" (Lit (RealVal 0.0) (Gen IntSort [])))), _fineScheduleDeclSource = Local, _fineScheduleLineInfo = nonEmptyListSet $ (LI "file" 10 10) :| []}
         -- FineSchedule {_fineScheduleInhStatus = InhDelete (Just (EventId b :| [EventId c,EventId e,EventId e,EventId e,EventId f,EventId g,EventId g,EventId h,EventId h,EventId i,EventId i,EventId i,EventId i,EventId j,EventId j,EventId k,EventId l,EventId l],Cast (Cast (Lit (RealVal (-44.32742578351186)) (Gen (DefSort (Name {_backslash = True, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""},Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen (Datatype [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Name {_backslash = False, _base = 'M' :| "aybe", _primes = 0, _suffix = ""}) [(Name {_backslash = False, _base = 'J' :| "ust", _primes = 0, _suffix = ""},[(Name {_backslash = False, _base = 'f' :| "romJust", _primes = 0, _suffix = ""},GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""))]),(Name {_backslash = False, _base = 'N' :| "othing", _primes = 0, _suffix = ""},[])]) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")]])) [Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen RealSort []],Gen (DefSort (Name {_backslash = True, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""},Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen (Datatype [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Name {_backslash = False, _base = 'M' :| "aybe", _primes = 0, _suffix = ""}) [(Name {_backslash = False, _base = 'J' :| "ust", _primes = 0, _suffix = ""},[(Name {_backslash = False, _base = 'f' :| "romJust", _primes = 0, _suffix = ""},GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""))]),(Name {_backslash = False, _base = 'N' :| "othing", _primes = 0, _suffix = ""},[])]) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")]])) [Gen (Sort (Name {_backslash = False, _base = 'D' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'D' :| "", _primes = 0, _suffix = ""}) "") 2) [Gen RealSort [],Gen (DefSort (Name {_backslash = True, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""},Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen (Datatype [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Name {_backslash = False, _base = 'M' :| "aybe", _primes = 0, _suffix = ""}) [(Name {_backslash = False, _base = 'J' :| "ust", _primes = 0, _suffix = ""},[(Name {_backslash = False, _base = 'f' :| "romJust", _primes = 0, _suffix = ""},GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""))]),(Name {_backslash = False, _base = 'N' :| "othing", _primes = 0, _suffix = ""},[])]) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")]])) [Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []],GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) "")]],GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")]])) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen BoolSort []]]])) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "", _primes = 0, _suffix = ""}) "") 0) []))), _fineScheduleDeclSource = Local, _fineScheduleLineInfo = (LI "file" 0 0) :| [(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 5),(LI "file" 0 5),(LI "file" 0 5),(LI "file" 0 5),(LI "file" 0 5),(LI "file" 0 10),(LI "file" 0 10),(LI "file" 0 10),(LI "file" 0 10),(LI "file" 0 10),(LI "file" 0 10),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 5),(LI "file" 5 5),(LI "file" 5 5),(LI "file" 5 5),(LI "file" 5 5),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 10 5),(LI "file" 10 5),(LI "file" 10 5),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10)]} /= FineSchedule {_fineScheduleInhStatus = InhDelete (Just (EventId k :| [EventId e,EventId h,EventId g,EventId f,EventId l,EventId l,EventId i,EventId b,EventId g,EventId h,EventId e,EventId i,EventId j,EventId i,EventId i,EventId j,EventId c,EventId e],Cast (Cast (Lit (RealVal (-44.32742578351186)) (Gen (DefSort (Name {_backslash = True, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""},Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen (Datatype [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Name {_backslash = False, _base = 'M' :| "aybe", _primes = 0, _suffix = ""}) [(Name {_backslash = False, _base = 'J' :| "ust", _primes = 0, _suffix = ""},[(Name {_backslash = False, _base = 'f' :| "romJust", _primes = 0, _suffix = ""},GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""))]),(Name {_backslash = False, _base = 'N' :| "othing", _primes = 0, _suffix = ""},[])]) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")]])) [Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen RealSort []],Gen (DefSort (Name {_backslash = True, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""},Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen (Datatype [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Name {_backslash = False, _base = 'M' :| "aybe", _primes = 0, _suffix = ""}) [(Name {_backslash = False, _base = 'J' :| "ust", _primes = 0, _suffix = ""},[(Name {_backslash = False, _base = 'f' :| "romJust", _primes = 0, _suffix = ""},GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""))]),(Name {_backslash = False, _base = 'N' :| "othing", _primes = 0, _suffix = ""},[])]) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")]])) [Gen (Sort (Name {_backslash = False, _base = 'D' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'D' :| "", _primes = 0, _suffix = ""}) "") 2) [Gen RealSort [],Gen (DefSort (Name {_backslash = True, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'p' :| "fun", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""},Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen (Datatype [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Name {_backslash = False, _base = 'M' :| "aybe", _primes = 0, _suffix = ""}) [(Name {_backslash = False, _base = 'J' :| "ust", _primes = 0, _suffix = ""},[(Name {_backslash = False, _base = 'f' :| "romJust", _primes = 0, _suffix = ""},GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""))]),(Name {_backslash = False, _base = 'N' :| "othing", _primes = 0, _suffix = ""},[])]) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")]])) [Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []],GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) "")]],GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")]])) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen BoolSort []]]])) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "", _primes = 0, _suffix = ""}) "") 0) []))), _fineScheduleDeclSource = Local, _fineScheduleLineInfo = (LI "file" 0 0) :| [(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 0),(LI "file" 0 5),(LI "file" 0 5),(LI "file" 0 5),(LI "file" 0 5),(LI "file" 0 5),(LI "file" 0 10),(LI "file" 0 10),(LI "file" 0 10),(LI "file" 0 10),(LI "file" 0 10),(LI "file" 0 10),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 0),(LI "file" 5 5),(LI "file" 5 5),(LI "file" 5 5),(LI "file" 5 5),(LI "file" 5 5),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 10 5),(LI "file" 10 5),(LI "file" 10 5),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10),(LI "file" 10 10)]}
 
 prop_axiom_mergeAssociative_Guard :: Property
@@ -409,9 +523,10 @@ prop_axiom_mergeAssociative_Guard =
         [ (x,y,z) ]
         -- $ shrink (x,y,z)
     where
-        x = Guard {_guardInhStatus = InhAdd (NonEmptyListSet $ EventId (Lbl "a") :| [EventId (Lbl "b"),EventId (Lbl "c")],DispExpr "" (Lit (RealVal 0.0) (Gen (DefSort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") [] (Gen (Sort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") 0) [])) []))), _guardDeclSource = Local, _guardLineInfo = (LI "file" 10 10) :| []}
-        y = Guard {_guardInhStatus = InhDelete Nothing, _guardDeclSource = Inherited, _guardLineInfo = (LI "file" 10 5) :| []}
-        z = Guard {_guardInhStatus = InhDelete Nothing, _guardDeclSource = Local, _guardLineInfo = (LI "file" 0 10) :| []}
+        li = LI "file" 1 1
+        x = Guard {_guardInhStatus = InhAdd (nonEmptyListSet $ (EventId $ Lbl "a",li) :| [(EventId $ Lbl "b",li),(EventId $ Lbl "c",li)],DispExpr "" (Lit (RealVal 0.0) (Gen (DefSort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") [] (Gen (Sort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") 0) [])) []))), _guardDeclSource = Local, _guardLineInfo = nonEmptyListSet $ (LI "file" 10 10) :| []}
+        y = Guard {_guardInhStatus = InhDelete Nothing, _guardDeclSource = Inherited, _guardLineInfo = nonEmptyListSet $ (LI "file" 10 5) :| []}
+        z = Guard {_guardInhStatus = InhDelete Nothing, _guardDeclSource = Local, _guardLineInfo = nonEmptyListSet $ (LI "file" 0 10) :| []}
         -- t = head $ filter _ 
 -- === Axiom of Document.Scope.Scope Document.ExprScope.Guard : axiom_Scope_mergeAssociative from src/Document/Test.hs:127 ===
 -- guards_c_ex :: (Guard,Guard,Guard)
@@ -432,13 +547,34 @@ prop_axiom_mergeAssociative_Action = regression
     where
 -- === Axiom of Document.Scope.Scope Document.ExprScope.ActionDecl : axiom_Scope_mergeAssociative from src/Document/Test.hs:127 ===
 -- *** Failed! Falsifiable, Falsifiable (after 6 tests): 
-        -- x = Action {_actionDeclInhStatus = InhAdd (EventId "j" :| [EventId "e",EventId "i",EventId "f",EventId "m"],BcmIn (Var (Name {_backslash = False, _base = 'p' :| "rimeprimesl", _primes = 0, _suffix = ""}) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen IntSort []])) $ DispExpr "" $ FunApp (Fun {_annotation = [], _funName = Name {_backslash = True, _base = 'p' :| "rimesl", _primes = 3, _suffix = ""}, lifted = Lifted, _arguments = [GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "")]], _result = Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")], _finite = InfiniteWD}) [Word (Var (Name {_backslash = False, _base = 'p' :| "rimesl------", _primes = 2, _suffix = ""}) (GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""))),Word (Var (Name {_backslash = False, _base = 's' :| "lOprime", _primes = 1, _suffix = ""}) (Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []]))]), _actionDeclDeclSource = Inherited, _actionDeclLineInfo = (LI "file" 10 0) :| [(LI "file" 5 0),(LI "file" 10 5),(LI "file" 0 5)]}
+        -- x = Action {_actionDeclInhStatus = InhAdd (EventId "j" :| [EventId "e",EventId "i",EventId "f",EventId "m"],BcmIn (Var (Name {_backslash = False, _base = 'p' :| "rimeprimesl", _primes = 0, _suffix = ""}) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen IntSort []])) $ DispExpr "" $ funApp (Fun {_annotation = [], _funName = Name {_backslash = True, _base = 'p' :| "rimesl", _primes = 3, _suffix = ""}, lifted = Lifted, _arguments = [GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "")]], _result = Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")], _finite = InfiniteWD}) [Word (Var (Name {_backslash = False, _base = 'p' :| "rimesl------", _primes = 2, _suffix = ""}) (GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""))),Word (Var (Name {_backslash = False, _base = 's' :| "lOprime", _primes = 1, _suffix = ""}) (Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []]))]), _actionDeclDeclSource = Inherited, _actionDeclLineInfo = (LI "file" 10 0) :| [(LI "file" 5 0),(LI "file" 10 5),(LI "file" 0 5)]}
         -- y = Action {_actionDeclInhStatus = InhDelete Nothing, _actionDeclDeclSource = Local, _actionDeclLineInfo = (LI "file" 10 0) :| [(LI "file" 10 5),(LI "file" 5 10),(LI "file" 0 10),(LI "file" 5 10),(LI "file" 10 10)]}
         -- z = Action {_actionDeclInhStatus = InhDelete Nothing, _actionDeclDeclSource = Local, _actionDeclLineInfo = (LI "file" 5 5) :| [(LI "file" 0 5),(LI "file" 5 0),(LI "file" 10 5),(LI "file" 5 10)]}
-        x = Action {_actionDeclInhStatus = InhAdd (NonEmptyListSet $ EventId (Lbl "e") :| [EventId (Lbl "f"),EventId (Lbl "i"),EventId (Lbl "j"),EventId (Lbl "m")],BcmIn (Var (Name {_backslash = False, _base = 'p' :| "rimeprimesl", _primes = 0, _suffix = ""}) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen IntSort []])) (DispExpr "" (FunApp (Fun {_annotation = [], _funName = Name {_backslash = True, _base = 'p' :| "rimesl", _primes = 3, _suffix = ""}, lifted = Lifted, _arguments = [GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "")]], _result = Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")], _finite = InfiniteWD}) [Word (Var (Name {_backslash = False, _base = 'p' :| "rimesl------", _primes = 2, _suffix = ""}) (GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""))),Word (Var (Name {_backslash = False, _base = 's' :| "lOprime", _primes = 1, _suffix = ""}) (Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []]))]))), _actionDeclDeclSource = Inherited, _actionDeclLineInfo = (LI "file" 10 0) :| [(LI "file" 5 0),(LI "file" 10 5),(LI "file" 0 5)]}
-        y = Action {_actionDeclInhStatus = InhDelete Nothing, _actionDeclDeclSource = Local, _actionDeclLineInfo = (LI "file" 10 0) :| [(LI "file" 10 5),(LI "file" 5 10),(LI "file" 0 10),(LI "file" 5 10),(LI "file" 10 10)]}
-        z = Action {_actionDeclInhStatus = InhDelete Nothing, _actionDeclDeclSource = Local, _actionDeclLineInfo = (LI "file" 5 5) :| [(LI "file" 0 5),(LI "file" 5 0),(LI "file" 10 5),(LI "file" 5 10)]}
-        -- Action {_actionDeclInhStatus = InhDelete (Just (EventId "j" :| [EventId "e",EventId "i",EventId "f",EventId "m"],BcmIn (Var (Name {_backslash = False, _base = 'p' :| "rimeprimesl", _primes = 0, _suffix = ""}) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen IntSort []])) FunApp (Fun {_annotation = [], _funName = Name {_backslash = True, _base = 'p' :| "rimesl", _primes = 3, _suffix = ""}, lifted = Lifted, _arguments = [GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "")]], _result = Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")], _finite = InfiniteWD}) [Word (Var (Name {_backslash = False, _base = 'p' :| "rimesl------", _primes = 2, _suffix = ""}) (GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""))),Word (Var (Name {_backslash = False, _base = 's' :| "lOprime", _primes = 1, _suffix = ""}) (Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []]))])), _actionDeclDeclSource = Local, _actionDeclLineInfo = (LI "file" 0 5) :| [(LI "file" 0 10),(LI "file" 5 0),(LI "file" 5 5),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 10 5),(LI "file" 10 10)]} /= Action {_actionDeclInhStatus = InhDelete (Just (EventId e :| [EventId f,EventId i,EventId j,EventId m],BcmIn (Var (Name {_backslash = False, _base = 'p' :| "rimeprimesl", _primes = 0, _suffix = ""}) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen IntSort []])) FunApp (Fun {_annotation = [], _funName = Name {_backslash = True, _base = 'p' :| "rimesl", _primes = 3, _suffix = ""}, lifted = Lifted, _arguments = [GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "")]], _result = Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")], _finite = InfiniteWD}) [Word (Var (Name {_backslash = False, _base = 'p' :| "rimesl------", _primes = 2, _suffix = ""}) (GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""))),Word (Var (Name {_backslash = False, _base = 's' :| "lOprime", _primes = 1, _suffix = ""}) (Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []]))])), _actionDeclDeclSource = Local, _actionDeclLineInfo = (LI "file" 0 5) :| [(LI "file" 0 10),(LI "file" 5 0),(LI "file" 5 5),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 10 5),(LI "file" 10 10)]}
+        li = LI "file" 1 1
+        x = Action {_actionDeclInhStatus = InhAdd (nonEmptyListSet $ (EventId $ Lbl "e",li) :| [(EventId $ Lbl "f",li),(EventId $ Lbl "i",li),(EventId $ Lbl "j",li),(EventId $ Lbl "m",li)],BcmIn (Var (Name {_backslash = False, _base = 'p' :| "rimeprimesl", _primes = 0, _suffix = ""}) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen IntSort []])) (DispExpr "" (funApp (Fun {_annotation = [], _funName = Name {_backslash = True, _base = 'p' :| "rimesl", _primes = 3, _suffix = ""}, lifted = Lifted, _arguments = [GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "")]], _result = Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")], _finite = InfiniteWD}) [Word (Var (Name {_backslash = False, _base = 'p' :| "rimesl------", _primes = 2, _suffix = ""}) (GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""))),Word (Var (Name {_backslash = False, _base = 's' :| "lOprime", _primes = 1, _suffix = ""}) (Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []]))]))), _actionDeclDeclSource = Inherited, _actionDeclLineInfo = nonEmptyListSet $ (LI "file" 10 0) :| [(LI "file" 5 0),(LI "file" 10 5),(LI "file" 0 5)]}
+        y = Action {_actionDeclInhStatus = InhDelete Nothing, _actionDeclDeclSource = Local, _actionDeclLineInfo = nonEmptyListSet $ (LI "file" 10 0) :| [(LI "file" 10 5),(LI "file" 5 10),(LI "file" 0 10),(LI "file" 5 10),(LI "file" 10 10)]}
+        z = Action {_actionDeclInhStatus = InhDelete Nothing, _actionDeclDeclSource = Local, _actionDeclLineInfo = nonEmptyListSet $ (LI "file" 5 5) :| [(LI "file" 0 5),(LI "file" 5 0),(LI "file" 10 5),(LI "file" 5 10)]}
+        -- Action {_actionDeclInhStatus = InhDelete (Just (EventId "j" :| [EventId "e",EventId "i",EventId "f",EventId "m"],BcmIn (Var (Name {_backslash = False, _base = 'p' :| "rimeprimesl", _primes = 0, _suffix = ""}) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen IntSort []])) funApp (Fun {_annotation = [], _funName = Name {_backslash = True, _base = 'p' :| "rimesl", _primes = 3, _suffix = ""}, lifted = Lifted, _arguments = [GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "")]], _result = Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")], _finite = InfiniteWD}) [Word (Var (Name {_backslash = False, _base = 'p' :| "rimesl------", _primes = 2, _suffix = ""}) (GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""))),Word (Var (Name {_backslash = False, _base = 's' :| "lOprime", _primes = 1, _suffix = ""}) (Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []]))])), _actionDeclDeclSource = Local, _actionDeclLineInfo = (LI "file" 0 5) :| [(LI "file" 0 10),(LI "file" 5 0),(LI "file" 5 5),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 10 5),(LI "file" 10 10)]} /= Action {_actionDeclInhStatus = InhDelete (Just (EventId e :| [EventId f,EventId i,EventId j,EventId m],BcmIn (Var (Name {_backslash = False, _base = 'p' :| "rimeprimesl", _primes = 0, _suffix = ""}) (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [Gen BoolSort [],Gen IntSort []])) funApp (Fun {_annotation = [], _funName = Name {_backslash = True, _base = 'p' :| "rimesl", _primes = 3, _suffix = ""}, lifted = Lifted, _arguments = [GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""),Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "")]], _result = Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'b' :| "", _primes = 0, _suffix = ""}) "")], _finite = InfiniteWD}) [Word (Var (Name {_backslash = False, _base = 'p' :| "rimesl------", _primes = 2, _suffix = ""}) (GENERIC (InternalName "" (Name {_backslash = False, _base = 'c' :| "", _primes = 0, _suffix = ""}) ""))),Word (Var (Name {_backslash = False, _base = 's' :| "lOprime", _primes = 1, _suffix = ""}) (Gen (DefSort (Name {_backslash = True, _base = 's' :| "et", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 's' :| "et", _primes = 0, _suffix = ""}) "") [Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}] (Gen (Sort (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'A' :| "rray", _primes = 0, _suffix = ""}) "") 2) [GENERIC (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) ""),Gen BoolSort []])) [Gen IntSort []]))])), _actionDeclDeclSource = Local, _actionDeclLineInfo = (LI "file" 0 5) :| [(LI "file" 0 10),(LI "file" 5 0),(LI "file" 5 5),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 10 5),(LI "file" 10 10)]}
+
+prop_axiom_Scope_mergeAssociative_Guard :: Property
+prop_axiom_Scope_mergeAssociative_Guard = regression
+        ((axiom_Scope_mergeAssociative^.uncurried') . unPretty)
+        [Pretty (x,y,z)]
+    where
+        li = LI "file" 1 1
+        x = Guard {_guardInhStatus = InhAdd (listSet [(EventId $ Lbl "l",li)],DispExpr "" (FunApp (Fun {_annotation = [], _funName = Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}, lifted = Lifted, _arguments = [], _result = Gen (DefSort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") [] (Gen (Sort (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (InternalName "" (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) "") 0) [])) [], _finite = FiniteWD}) [])), _guardDeclSource = Local, _guardLineInfo = listSet [(LI "file" 0 0),(LI "file" 0 5),(LI "file" 0 10)]}
+        y = Guard {_guardInhStatus = InhDelete Nothing, _guardDeclSource = Inherited, _guardLineInfo = listSet [(LI "file" 5 0),(LI "file" 5 5),(LI "file" 10 0)]}
+        z = Guard {_guardInhStatus = InhDelete Nothing, _guardDeclSource = Inherited, _guardLineInfo = listSet [(LI "file" 5 0),(LI "file" 10 5)]}
+
+prop_axiom_Scope_clashesOverMerge_FineSchedule :: Property
+prop_axiom_Scope_clashesOverMerge_FineSchedule = regression
+        ((axiom_Scope_clashesOverMerge^.uncurried') . unPretty)
+        [Pretty (x,y,z)]
+    where
+        li = LI "file" 1 1
+        x = FineSchedule {_fineScheduleInhStatus = InhAdd (listSet [(EventId $ Lbl "a",li),(EventId $ Lbl "b",li),(EventId $ Lbl "c",li),(EventId $ Lbl "d",li),(EventId $ Lbl "e",li),(EventId $ Lbl "g",li),(EventId $ Lbl "h",li),(EventId $ Lbl "i",li),(EventId $ Lbl "j",li),(EventId $ Lbl "k",li),(EventId $ Lbl "l",li),(EventId $ Lbl "m",li)],DispExpr "" (Word (Var (Name {_backslash = False, _base = 'a' :| "", _primes = 0, _suffix = ""}) (Gen RealSort [])))), _fineScheduleDeclSource = Local, _fineScheduleLineInfo = listSet [(LI "file" 0 0),(LI "file" 0 5),(LI "file" 0 10),(LI "file" 5 0),(LI "file" 5 5),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 10 10)]}
+        y = FineSchedule {_fineScheduleInhStatus = InhDelete Nothing, _fineScheduleDeclSource = Inherited, _fineScheduleLineInfo = listSet [(LI "file" 0 10),(LI "file" 5 5),(LI "file" 10 5)]}
+        z = FineSchedule {_fineScheduleInhStatus = InhDelete Nothing, _fineScheduleDeclSource = Inherited, _fineScheduleLineInfo = listSet [(LI "file" 0 0),(LI "file" 0 5),(LI "file" 0 10),(LI "file" 5 0),(LI "file" 5 5),(LI "file" 5 10),(LI "file" 10 0),(LI "file" 10 5),(LI "file" 10 10)]}
 
 return []
 

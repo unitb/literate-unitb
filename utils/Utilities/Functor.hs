@@ -3,6 +3,7 @@ module Utilities.Functor where
 
 import Control.Lens hiding (Traversable1(..))
 
+import Data.Foldable
 import Data.Map.Class
 
 newtype Swap1 f a b = Swap1 {swap1 :: f b a}
@@ -154,3 +155,6 @@ traversePairs f = fmap fromList . traverse f . snd . toListIntl
 
 instance Foldable1 Map where
     foldMap1 f = foldMapWithKey $ const . f
+
+evalList :: Foldable f => f a -> f a
+evalList x = foldl' (flip seq) () x `seq` x

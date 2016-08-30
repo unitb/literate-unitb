@@ -10,6 +10,7 @@ module Data.Existential where
 import Control.Applicative as A
 import Control.Arrow
 import Control.Category
+import qualified Control.Invariant as I
 import Control.Lens
 import Control.Monad
 
@@ -337,14 +338,14 @@ cellEqual' :: HasCell c (Cell constr)
 cellEqual' f x y = cellEqual f (x^.cell) (y^.cell)
 
 cellZoomEqual' :: (HasCell c (Cell constr), Eq c,Show c)
-               => (forall a. constr a => a -> a -> Property)
-               -> c -> c -> Property
+               => (forall a. constr a => a -> a -> I.Invariant)
+               -> c -> c -> I.Invariant
 cellZoomEqual' f = cell1ZoomEqual' (f `on` runIdentity)
 
 cell1ZoomEqual' :: (HasCell c (Cell1 f constr), Eq c,Show c,Typeable f)
-                => (forall a. constr a => f a -> f a -> Property)
-                -> c -> c -> Property
-cell1ZoomEqual' f x y = read2Cells1With f (x === y) (x^.cell) (y^.cell)
+                => (forall a. constr a => f a -> f a -> I.Invariant)
+                -> c -> c -> I.Invariant
+cell1ZoomEqual' f x y = read2Cells1With f (x I.=== y) (x^.cell) (y^.cell)
 
 cellCompare :: (forall a. constr a => a -> a -> Ordering)
             -> Cell constr 

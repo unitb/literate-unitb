@@ -11,6 +11,7 @@ import UnitB.Expr
 import UnitB.Property
 
     -- Libraries
+import Control.Applicative
 import Control.DeepSeq
 import Control.Lens hiding (indices)
 import Control.Lens.HierarchyTH
@@ -22,7 +23,7 @@ import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map.Class  as M
 import Data.Maybe
-import Data.Semigroup
+import Data.Semigroup hiding (All)
 import Data.Serialize hiding (label)
 import Data.String
 import Data.Typeable
@@ -63,6 +64,9 @@ instance Hashable SkipEventId where
 instance ZoomEq SkipEventId where
 instance PrettyPrintable SkipEventId where
     pretty = show
+
+prettyEvent :: SkipOrEvent -> String
+prettyEvent = either (const "[skip]") pretty
 
 type SkipOrEvent = Either SkipEventId EventId
 
@@ -114,6 +118,7 @@ type ConcrEvent = ConcrEvent' Expr
 data ConcrEvent' expr = CEvent 
         { _new   :: Event' expr
         , _witness   :: Table Name (Witness' expr)
+        , _param_witness :: Table Name (Witness' expr)
         , _eql_vars  :: Table Name Var
         , _abs_actions :: Table Label (Action' expr)
         } deriving (Eq,Show,Functor,Foldable,Traversable,Generic)
@@ -149,13 +154,12 @@ type ScheduleChange = ScheduleChange' Expr
 type RawScheduleChange = ScheduleChange' RawExpr
 
 data ScheduleChange' expr = ScheduleChange 
-        { _remove :: Table Label ()
-        , _add    :: Table Label ()
-        , _keep   :: Table Label ()
+        { _add    :: Table Label ()
         , _sch_prog :: (Label,ProgressProp' expr) 
         }
     deriving (Show,Eq,Typeable,Functor,Foldable,Traversable,Generic)
 
+makePrisms ''Action'
 makeFields ''EventRef
 makeLenses ''EventRef
 makeLenses ''ScheduleChange'
@@ -164,11 +168,28 @@ makeFields ''EventMerging
 makeClassy ''Event'
 makeClassy ''AbstrEvent'
 makeClassy ''ConcrEvent'
+mkCons ''Event'
+
+type OldNewPair expr = (Table Label expr,Table Label expr)
+
+oldNewPair :: HasExpr expr
+           => AbstrEvent' expr
+           -> ScheduleChange' expr 
+           -> OldNewPair ()
+oldNewPair e sch = (() <$ e^.coarse_sched,sch^.add)
+
+unrefinedSched :: HasExpr expr
+               => EventSplitting expr
+               -> Maybe (OldNewPair expr)
+unrefinedSched e 
+        | M.null new = Nothing
+        | otherwise  = Just (e^.old.coarse_sched,new)
+    where
+        new = M.unions [ unref e' | e' <- NE.toList $ e^.evt_pairs ]
+        unref e' = (e'^.added.coarse_sched) `M.difference` M.unions (L.map (view add) $ e^.c_sched_ref)
 
 hyps_label :: ScheduleChange -> ProgId
 hyps_label = PId . fst . view sch_prog
-
-mkCons ''Event'
 
 instance ZoomEq expr => ZoomEq (ScheduleChange' expr) where
 
@@ -244,7 +265,7 @@ instance HasExpr expr => HasScope (EventSplitting expr) where
             correct lbl w = withVars [witVar w] $ scopeCorrect'' lbl (witExpr w)
 instance (HasExpr expr) => HasScope (Event' expr) where
     scopeCorrect' e = withPrefix "event" $ withVars (e^.indices) $ F.fold 
-        [ foldMapWithKey scopeCorrect'' (e^.coarse_sched) 
+        [ withPrefix (pretty e) $ foldMapWithKey scopeCorrect'' (e^.coarse_sched) 
         , foldMapWithKey scopeCorrect'' (e^.fine_sched) 
         , withVars (e^.params) $ F.fold 
             [ foldMapWithKey scopeCorrect'' (e^.guards) 
@@ -371,6 +392,12 @@ instance ActionRefinement (EventRef expr) expr where
     abstract_acts = old.actions
     concrete_acts = new.actions
 
+isOneToOne :: EventRefinement evt expr
+           => evt -> Bool
+isOneToOne x = neOne (x^.abstract_evts) && neOne (x^.concrete_evts)
+    where
+        neOne = L.null . NE.tail
+
 class HasExpr expr => EventRefinement a expr | a -> expr where
     abstract_evts :: Getter a (NonEmpty (SkipOrEvent,AbstrEvent' expr))
     concrete_evts :: Getter a (NonEmpty (SkipOrEvent,ConcrEvent' expr))
@@ -406,18 +433,34 @@ guards = to $ \e -> M.unions
         , e^.fine_sched
         ]
 
+data Changes = Old | New | All | Kept
 
 {-# INLINE changes #-}
 changes :: (HasExpr expr)
-        => (forall k a map. (IsMap map,IsKey map k) => map k a -> map k a -> map k a)
+        => Changes
         -> Getter (EventRef expr) (Event' expr)
-changes diff = to $ \(EvtRef (_,aevt) (_,cevt)) -> create $ do 
-    indices .= ( aevt^.indices ) `diff` ( cevt^.indices )
-    coarse_sched .= ( aevt^.coarse_sched ) `diff` ( cevt^.coarse_sched )
-    fine_sched   .= ( aevt^.fine_sched )   `diff` ( cevt^.fine_sched ) 
-    params  .= ( aevt^.params )  `diff` ( cevt^.params ) 
-    raw_guards  .= ( aevt^.raw_guards )  `diff` ( cevt^.raw_guards ) 
-    actions .= ( aevt^.actions ) `diff` ( cevt^.actions )
+changes ch = to $ \(EvtRef (_,aevt) (_,cevt)) -> create $ do 
+        indices .= ( aevt^.indices ) `diff` ( cevt^.indices )
+        raw_coarse_sched .= combine ( aevt^.raw_coarse_sched ) ( cevt^.raw_coarse_sched )
+        fine_sched   .= ( aevt^.fine_sched )   `diff` ( cevt^.fine_sched ) 
+        params  .= ( aevt^.params )  `diff` ( cevt^.params ) 
+        raw_guards  .= ( aevt^.raw_guards )  `diff` ( cevt^.raw_guards ) 
+        actions .= ( aevt^.actions ) `diff` ( cevt^.actions )
+    where
+        diff :: IsKey Table k
+             => Table k a -> Table k a -> Table k a
+        diff = case ch of
+                    Old -> M.difference
+                    New -> flip M.difference
+                    Kept -> M.intersection
+                    All  -> M.union
+        combine asch csch = case ch of
+                    Old  -> liftA2 M.difference asch csch <|> asch <|> emp csch
+                    New  -> liftA2 (flip M.difference) asch csch <|> csch <|> emp asch
+                    Kept -> liftA2 M.intersection asch csch <|> (M.empty <$ asch) <|> (M.empty <$ csch)
+                    All  -> liftA2 M.union asch csch <|> asch <|> csch
+        emp Nothing = Just M.empty
+        emp (Just _)= Nothing
 
 schedules :: HasExpr expr => Getter (Event' expr) (Table Label expr)
 schedules = to $ \e -> view coarse_sched e `M.union` _fine_sched e
@@ -434,7 +477,7 @@ deleted' :: (EventRefinement evt expr,Ord a)
 deleted' = getItems deleted
 
 deleted :: HasExpr expr => Getter (EventRef expr) (Event' expr)
-deleted = changes M.difference
+deleted = changes Old
 
 added' :: (EventRefinement evt expr,Ord a)
        => Getter (Event' expr) (Table a b) 
@@ -442,7 +485,7 @@ added' :: (EventRefinement evt expr,Ord a)
 added' = getItems added
 
 added :: HasExpr expr => Getter (EventRef expr) (Event' expr)
-added = changes (flip M.difference)
+added = changes New
 
 kept' :: (EventRefinement evt expr,Ord a)
       => Getter (Event' expr) (Table a b) 
@@ -450,7 +493,7 @@ kept' :: (EventRefinement evt expr,Ord a)
 kept' = getItems kept
 
 kept :: HasExpr expr => Getter (EventRef expr) (Event' expr)
-kept = changes M.intersection
+kept = changes Kept
 
 total' :: (EventRefinement evt expr,Ord a)
        => Getter (Event' expr) (Table a b) 
@@ -458,7 +501,7 @@ total' :: (EventRefinement evt expr,Ord a)
 total' = getItems total
 
 total :: HasExpr expr => Getter (EventRef expr) (Event' expr)
-total = changes M.union
+total = changes All
 
 new' :: (EventRefinement evt expr,Ord a)
      => Getter (Event' expr) (Table a b) 
@@ -500,7 +543,7 @@ compact = to $ \m -> EvtRef
         (Left SkipEvent, sconcat $ snd <$> m^.concrete_evts)
 
 replace :: (Label, ProgressProp) -> ScheduleChange
-replace prog = ScheduleChange def def def prog
+replace prog = ScheduleChange def prog
 
 instance NFData expr => NFData (Event' expr)
 instance NFData expr => NFData (AbstrEvent' expr)

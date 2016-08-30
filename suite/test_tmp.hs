@@ -6,6 +6,7 @@ import Document.Document as Doc ( syntaxSummary )
 import Document.Phase.Expressions as PExp
 import Document.MachineSpec as MSpec
 import Document.Tests.Cubes   as Cubes
+import Document.Tests.Definitions  as Def
 import Document.Tests.GarbageCollector  as GC
 import Document.Tests.Lambdas as Lam
 import Document.Tests.LockFreeDeque as Deq
@@ -99,6 +100,7 @@ main = timeIt $ void $ do
     return $ quickCheck MSpec.prop_expr_parser
     return $ printQuickCheckResult MSpec.run_spec
     return $ print =<< run_test_cases check_axioms
+    return $ run_test_cases Def.test_case
     return $ run_test_cases T.test_case
     -- timeout (60 * 1000000) $ do
     return $ run_test_cases UB.test_case

@@ -78,7 +78,7 @@ set_decl :: CPipeline TheoryP0
 set_decl = contextCmd "\\newset" $ \(String name, String tag) _m _ -> do
             let new_sort = Sort tag name 0
                 new_type = Gen $ USER_DEFINED new_sort []
-                new_def  = Def [] name [] (set_type new_type)
+                new_def  = makeDef [] name [] (set_type new_type)
                                     $ zlift (set_type new_type) ztrue
             li <- lift ask
             return ([(tag,new_sort,li)],[(tag,(new_def,Local,li))])

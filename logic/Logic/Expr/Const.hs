@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables,ViewPatterns #-}
 module Logic.Expr.Const where
 
     -- Modules   
@@ -6,8 +6,8 @@ import Logic.Expr.Classes
 import Logic.Expr.Expr
 import Logic.Expr.Genericity
 import Logic.Expr.PrettyPrint
+import Logic.Expr.Prism
 import Logic.Expr.Type
-import Logic.Names
 
     -- Libraries
 import Control.Applicative 
@@ -45,11 +45,11 @@ type TwoExpr n t q = AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
 fun1 :: ( TypeSystem t )
      => AbsFun n t 
      -> AbsExpr n t q -> AbsExpr n t q
-fun1 f x           = FunApp f [x]
+fun1 f x           = funApp f [x]
 fun2 :: ( TypeSystem t  )
      => AbsFun n t -> AbsExpr n t q
      -> AbsExpr n t q -> AbsExpr n t q
-fun2 f x y         = FunApp f [x,y]
+fun2 f x y         = funApp f [x,y]
 
 no_errors2 :: ( TypeSystem t 
               , IsQuantifier q )
@@ -89,7 +89,7 @@ mzeq_symb    = typ_fun2 $ mk_fun [gA] [smt|eq|] [gA, gA] bool
 
 zeq :: (IsQuantifier q,IsName n)
     => AbsExpr n Type q -> AbsExpr n Type q -> AbsExpr n Type q
-zeq x y = provided (type_of x == type_of y) $ FunApp (zeq_fun $ type_of x) [x,y]
+zeq x y = provided (type_of x == type_of y) $ funApp (zeq_fun $ type_of x) [x,y]
 mzeq :: IsName n => TwoExprP n Type q
 mzeq         = typ_fun2 (zeq_fun gA)
 
@@ -151,11 +151,11 @@ zforall [] x y  = zimplies x y
 zforall vs x w@(Binder q us y z _) 
     | q == qForall = if x == ztrue
             then zforall (vs ++ us) y z
-            else Binder qForall vs x w bool
+            else binder qForall vs x w bool
 zforall vs x w   
     |    x `elem` [ztrue, zfalse]
       && w `elem` [ztrue, zfalse] = zimplies x w
-    | otherwise                   = Binder qForall vs x w bool
+    | otherwise                   = binder qForall vs x w bool
 
 zexists :: (TypeSystem2 t, IsQuantifier q,IsName n)
         => [AbsVar n t] 
@@ -178,16 +178,19 @@ zquantifier q vs r t = do
     t' <- zcast (termType q) t
     let tuple = ztuple_type (map var_type vs)
         rt    = exprType q tuple (type_of t')
-    return $ Binder q vs r' t' rt
+    return $ binder q vs r' t' rt
+
+ite_fun :: IsName n => AbsFun n Type
+ite_fun = mk_fun [] [smt|ite|] [bool,gA,gA] gA
 
 zite :: IsName n => ThreeExprP n Type q
-zite       = typ_fun3 (mk_fun [] [smt|ite|] [bool,gA,gA] gA)
+zite       = typ_fun3 ite_fun
 
 zjust :: IsName n => OneExprP n Type q
 zjust      = typ_fun1 (mk_fun [] [smt|Just|] [gA] (maybe_type gA))
 
 znothing :: IsName n => ExprPG n Type q
-znothing   = Right $ Cast (FunApp (mk_fun [] [smt|Nothing|] [] $ maybe_type gA) []) (maybe_type gA)
+znothing   = Right $ Cast (funApp (mk_fun [] [smt|Nothing|] [] $ maybe_type gA) []) (maybe_type gA)
 
 mznot :: (TypeSystem2 t,IsName n) => OneExprP n t q
 mznot me       = do
@@ -382,7 +385,28 @@ zapply  = typ_fun2 apply_fun
 
 one_point_rule :: forall n t q. (IsQuantifier q, TypeSystem2 t,IsName n) 
                => AbsExpr n t q -> AbsExpr n t q
-one_point_rule (Binder q vs r t _) 
+one_point_rule = foo . one_point_rule'
+    where
+        foo e = case rewrite foo e of
+                    [fun| (= $lhs $rhs) |] 
+                        | lhs == rhs -> ztrue
+                        -- | lhs == ztrue -> lhs
+                        -- | lhs == ztrue -> lhs
+                    Binder q _ x y _
+                        | q == qExists && x == ztrue && y == ztrue     -> ztrue
+                        | q == qExists && (x == zfalse || y == zfalse) -> zfalse
+                        | q == qForall && (x == zfalse || y == ztrue)  -> ztrue
+                        | q == qForall && x == ztrue && y == zfalse    -> zfalse
+                    FunApp fun xs
+                        | (fun^.name) == [smt|and|] -> zall xs
+                        | (fun^.name) == [smt|or|]  -> zsome xs
+                        | (fun^.name) == [smt|not|] -> znot $ head xs
+                        | (fun^.name) == [smt|=>|]  -> zimplies (xs !! 0) (xs !! 1)
+                    e' -> e'
+
+one_point_rule' :: forall n t q. (IsQuantifier q, TypeSystem2 t,IsName n) 
+                => AbsExpr n t q -> AbsExpr n t q
+one_point_rule' (Binder q vs r t _) 
         | q == qExists = e
     where
         e  = zsome [ f $ zexists (filter (`S.member` fv) vs \\ M.keys inst) ztrue 
@@ -406,11 +430,11 @@ one_point_rule (Binder q vs r t _)
                         return (k, xs ! j)
         subst _ = M.empty
         f x
-            | length ts' == 1   = rewrite one_point_rule x
-            | otherwise         = one_point_rule x
-        ts = conjuncts r ++ conjuncts t
+            | length ts' == 1   = rewrite one_point_rule' x
+            | otherwise         = one_point_rule' x
+        ts  = conjuncts r ++ conjuncts t
         ts' = forM (map disjuncts ts) id
-one_point_rule e = rewrite one_point_rule e
+one_point_rule' e = rewrite one_point_rule' e
 
 conjuncts :: (IsName n,TypeSystem t) => AbsExpr n t q -> [AbsExpr n t q]
 conjuncts (FunApp f xs) 
@@ -424,7 +448,7 @@ disjuncts (FunApp f xs)
 disjuncts x = [x]
 
 applyAssoc :: (Int -> AbsFun n a) -> [GenExpr n t a q] -> GenExpr n t a q
-applyAssoc op xs = FunApp (op (length xs)) xs
+applyAssoc op xs = funApp (op (length xs)) xs
 
 flattenConnectors :: (IsName n,TypeSystem2 t,IsQuantifier q) 
                   => AbsExpr n t q -> AbsExpr n t q
@@ -462,24 +486,42 @@ zelemUnchecked :: (TypeSystem t,IsName n,IsQuantifier q)
                -> AbsExpr n t q 
                -> AbsExpr n t q
 zelemUnchecked x s = provided (set_type (type_of x) == type_of s) $
-        FunApp (elem_fun (type_of x)) [x,s]
+        funApp (elem_fun (type_of x)) [x,s]
 
 zident :: ExprP
-zident = Right $ FunApp ident_fun []
+zident = Right $ funApp ident_fun []
 
 zrecord' :: MapSyntax Name (ExprPG n t q) () -> ExprPG n t q
 zrecord' = zrecord . runMap'
 zrecord :: M.Map Name (ExprPG n t q) -> ExprPG n t q
-zrecord = fmap (Record . RecLit) . traverseValidation id
+zrecord = fmap (Record . RecLit . M.mapKeys Field) . traverseValidation id
 
-zrec_update :: ExprPG n t q 
+
+zrec_update :: (TypeSystem t,IsName n,IsQuantifier q)
+            => ExprPG n t q 
             -> MapSyntax Name (ExprPG n t q) ()
             -> ExprPG n t q
-zrec_update e m = Record <$> liftA2 RecUpdate e (traverseValidation id $ runMap' m)
+zrec_update e = zrec_update' e . runMap'
+
+zrec_update' :: (TypeSystem t,IsName n,IsQuantifier q)
+             => ExprPG n t q 
+             -> M.Map Name (ExprPG n t q)
+             -> ExprPG n t q
+zrec_update' e m = do
+    let e' = f =<< e
+        f e = case type_of e^?_FromSort._1._RecordSort of
+                Just _ -> Right e
+                _ -> Left [[printf|expecting a record type, met %s in %s|] 
+                            (pretty $ type_of e)
+                            (pretty e)
+                            ]
+    Record <$> liftA2 RecUpdate e' (fmap (M.mapKeysMonotonic Field)
+                                                  . traverseValidation id $ m)
 
 zfield :: (IsName n,TypeSystem t,IsQuantifier q) 
        => ExprPG n t q -> Name -> ExprPG n t q
-zfield e field = do
+zfield e field' = do
+    let field = Field field'
     e' <- e
     let msg1 = [printf|Field lookup requires a record type:\n  in expression %s\n  of type: %s|] 
                     (pretty e')

@@ -1,7 +1,9 @@
+{-# LANGUAGE LambdaCase #-}
 module Z3.Version where
 
 import Control.Lens
 import Control.Monad
+import Control.Monad.Trans.Maybe
 import Control.Precondition
 
 import Data.Char
@@ -65,18 +67,29 @@ data Z3Config = Z3Config
     , z3c_capacity :: Int }
     deriving Show
 
+doesFileExist' :: FilePath -> IO (Maybe FilePath)
+doesFileExist' fn = do
+    doesFileExist fn >>= \case 
+        True  -> return $ Just fn
+        False -> return $ Nothing
+
+doFilesExist :: [FilePath]
+             -> IO (Maybe FilePath)
+doFilesExist fs = do
+    runMaybeT $ msum $ map (MaybeT . doesFileExist') fs
+
 z3_config :: Z3Config
 z3_config = unsafePerformIO $ do
     let fn = "z3_config.conf"
-    lc   <- doesFileExist fn
     path <- getExecutablePath
-    gc   <- doesFileExist $ path </> fn
-    cp <- if lc then do
-        readfile emptyCP fn
-    else if gc then do
-        readfile emptyCP fn
-    else
-        return $ return emptyCP
+    home <- homeSettingPath
+    cp <- doFilesExist 
+            [ fn 
+            , path </> fn 
+            , home </> fn ]
+        >>= \case
+            Just fn' -> readfile emptyCP fn'
+            Nothing  -> return $ return emptyCP
     let option :: Get_C a => a -> String -> a
         option x name = fromRight x $ do
             cp <- cp

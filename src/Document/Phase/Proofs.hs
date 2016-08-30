@@ -60,6 +60,7 @@ import           Data.Functor.Compose
 import qualified Data.Graph.Bipartite as G
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
+import           Data.List.NonEmpty hiding ((<|),map,length,fromList)
 import           Data.Map.Class   as M hiding ( map, (\\) )
 import qualified Data.Map.Class   as M
 import           Data.Proxy.TH
@@ -154,8 +155,8 @@ run_phase4_proofs = proc (SystemP r_ord p3) -> do
                  -> MM (Maybe ((ProgId, ProgressProp), LineInfo))
         only_one _ []   = return Nothing
         only_one _ [x]  = return (Just x)
-        only_one eid xs = tell [MLError ([printf|Multiple refinement provided for the fine schedule of %s|] $ pretty eid) 
-                                    $ L.map (first $ pretty . fst) xs] >> return Nothing
+        only_one eid (x:xs) = tell [MLError ([printf|Multiple refinement provided for the fine schedule of %s|] $ pretty eid) 
+                                    $ first (pretty . fst) <$> (x:|xs)] >> return Nothing
 
 make_phase4 :: MachineP3 
             -> Table EventId [((Label, ScheduleChange), LineInfo)]
@@ -185,9 +186,11 @@ raiseStructError (Conc ls@(LiveStruct { .. }))
         | L.null es = Right ls
         | otherwise = Left es
     where
+        cycles :: [[LiveEvtId]]
         cycles = R.cycles live_live
+        edges :: [R.Relation LiveEvtId LiveEvtId]
         edges  = L.map ((\s -> s <| live_live |> s) . S.fromList) cycles
-        es = L.map (MLError (msg machine_id) . L.map err_item . R.toList) edges
+        es = W.mapMaybe (fmap (MLError $ msg machine_id) . nonEmpty . L.map err_item . R.toList) edges
         err_item :: (LiveEvtId, LiveEvtId) -> (String, LineInfo)
         err_item = uncurry (\les -> first $ name les) . (id &&& uncurry li)
         msg _ = "A cycle exists in the liveness proof"
@@ -243,11 +246,9 @@ refine_prog_prop = machineCmd "\\refine" $ \(goal, RuleName rule, hyps, PlainTex
         return [(goal,(r,dep),li)]
 
 ref_replace_csched :: MPipeline MachineP3 EventRefA
-ref_replace_csched = machineCmd "\\replace" $ \(Abs evt_lbl,del',added',kept',prog) m p3 -> do
-        -- let lbls  = (S.elems $ add `S.union` del `S.union` keep)
-        let del   = map (getCoarseSchLbl . getAbstract) del'
+ref_replace_csched = machineCmd "\\replace" $ \(Abs evt_lbl,added',prog) m p3 -> do
+        let 
             added = map (getCoarseSchLbl . getConcrete) added'
-            kept  = map (getCoarseSchLbl . getCommon) kept'
         (pprop,evt) <- toEither $ do
             pprop <- fromEither (error "replace_csched: prog") 
                         $ _unM $ get_progress_prop p3 m prog
@@ -255,20 +256,12 @@ ref_replace_csched = machineCmd "\\replace" $ \(Abs evt_lbl,del',added',kept',pr
                         $ _unM $ get_abstract_event p3 evt_lbl
             return (pprop,evt)
         toEither $ do
-            _ <- fromEither undefined $ _unM $ bind_all del 
-                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' deleted during refinement|] (pretty lbl) (pretty evt))
-                    (`M.lookup` (M.unions $ p3^.evtSplitDel evt eCoarseSched))
             _ <- fromEither undefined $ _unM $ bind_all added 
                     (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' added during refinement|] (pretty lbl) (pretty evt)) 
-                    (`M.lookup` (M.unions $ p3^.evtSplitAdded evt eCoarseSched))
-            _ <- fromEither undefined $ _unM $ bind_all kept 
-                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' kept during refinement|] (pretty lbl) (pretty evt)) 
-                    (`M.lookup` (M.unions $ p3^.evtSplitKept evt eCoarseSched))
+                    (`M.lookup` (M.unions $ p3^.evtSplitConcrete evt eCoarseSched))
             return ()
         let rule = replace (as_label prog,pprop)
-                        & remove .~ fromList' del
                         & add  .~ fromList' added
-                        & keep .~ fromList' kept
             po_lbl = composite_label ["SCH",as_label m]            
         li <- ask
         return $ EventRef [(evt,[((po_lbl,rule),li)])] []

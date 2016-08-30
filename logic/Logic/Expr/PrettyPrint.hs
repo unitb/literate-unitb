@@ -26,7 +26,6 @@ import Data.List as L hiding (uncons,unlines)
 import Prelude hiding (unlines)
 
 import Text.Pretty
-import Text.Printf.TH 
 
 import Utilities.Syntactic hiding (line)
 
@@ -43,9 +42,6 @@ instance PrettyPrintable StrList where
 
 instance PrettyPrintable Error where
     pretty = report
-
-instance PrettyPrintable LineInfo where
-    pretty (LI _ i j) = [printf|(li:%d:%d)|] i j
 
 data Line = Line String' String'
 -- newtype Line = Line String'

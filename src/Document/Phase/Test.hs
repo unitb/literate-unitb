@@ -43,6 +43,7 @@ import Control.Lens.Misc
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
+import Control.Precondition
 
 import Data.Default
 import Data.Existential
@@ -51,6 +52,7 @@ import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map.Class  as M
 import Data.Maybe
+import Data.Semigroup
 
 import Test.QuickCheck
 import Test.QuickCheck.Report
@@ -69,7 +71,7 @@ prop_inherit_equiv h = forAll (mkMap h) $ \m ->
 
 return []
 
-runMap :: (M.IsKey Table k, Scope a) 
+runMap :: (M.IsKey Table k, Scope a, Pre) 
        => MapSyntax k a b 
        -> Table k a
 runMap = runMapWith merge_scopes
@@ -139,6 +141,7 @@ case0 = do
                          <.> thy 
                          <.> sorts 
                          <.> allSorts 
+                         <.> (ms & traverse .~ M.empty)
                          <.> pdef 
                          <.> evts
 
@@ -181,8 +184,8 @@ result0 = M.fromList
             newEdge askip cskip
         p0 = MachineP0 ms . mId
         tp0 = TheoryP0 ()
-        m0 = MachineP1 (p0 "m0") evts0 (TheoryP1 tp0 thy0 sorts0 allSorts0 pdef0)
-        m1 = MachineP1 (p0 "m1") evts1 (TheoryP1 tp0 thy1 sorts1 allSorts1 pdef1)
+        m0 = MachineP1 (p0 "m0") evts0 (TheoryP1 tp0 thy0 sorts0 allSorts0 pdef0) 1
+        m1 = MachineP1 (p0 "m1") evts1 (TheoryP1 tp0 thy1 sorts1 allSorts1 pdef1) 1
         s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue
@@ -270,16 +273,16 @@ case2 = return $ do
         s1 = z3Sort "\\S1" "sl$S1" 0
         s1' = make_type s1 [] 
         vs0 = M.fromList
-                [ ([tex|x|],makeCell $ Machine (z3Var "x" int) Local li) 
-                , ([tex|y|],makeCell $ Machine (z3Var "y" int) Local li)
-                , ([tex|p|],makeCell $ Evt $ M.singleton (Just "ae1b") (EventDecl (Param $ z3Var "p" bool) ("ae1b":|[]) Local li))
+                [ ([tex|x|],makeCell $ MchVar (z3Var "x" int) Local li) 
+                , ([tex|y|],makeCell $ MchVar (z3Var "y" int) Local li)
+                , ([tex|p|],makeCell $ Evt $ M.singleton (Right "ae1b") (EventDecl (Param $ z3Var "p" bool) (Right "ae1b":|[]) Local li))
                 , ([tex|S0|],makeCell $ TheoryDef (z3Def [] "S0" [] (set_type s0') (se s0')) Local li) ]
         vs1 = M.fromList
-                [ ([tex|z|],makeCell $ Machine (z3Var "z" int) Local li) 
-                , ([tex|y|],makeCell $ Machine (z3Var "y" int) Inherited li) 
-                , ([tex|p|],makeCell $ Evt $ M.singleton (Just "ce1") (EventDecl (Param $ z3Var "p" bool) ("ae1b":|[]) Inherited li))
-                , ([tex|q|],makeCell $ Evt $ M.singleton (Just "ce2") (EventDecl (Index $ z3Var "q" int) ("ce2":|[]) Local li))
-                , ([tex|x|],makeCell $ DelMch (Just $ z3Var "x" int) Local li) 
+                [ ([tex|z|],makeCell $ MchVar (z3Var "z" int) Local li) 
+                , ([tex|y|],makeCell $ MchVar (z3Var "y" int) Inherited li) 
+                , ([tex|p|],makeCell $ Evt $ M.singleton (Right "ce1") (EventDecl (Param $ z3Var "p" bool) (Right "ae1b":|[]) Inherited li))
+                , ([tex|q|],makeCell $ Evt $ M.singleton (Right "ce2") (EventDecl (Index . InhAdd $ z3Var "q" int) (Right "ce2":|[]) Local li))
+                , ([tex|x|],makeCell $ DelMchVar (Just $ z3Var "x" int) Local li) 
                 , ([tex|S0|],makeCell $ TheoryDef (z3Def [] "S0" [] (set_type s0') (se s0')) Local li)
                 , ([tex|\S1|],makeCell $ TheoryDef (z3Def [] "sl$S1" [] (set_type s1') (se s1')) Local li) ]
         vs = M.fromList 
@@ -315,7 +318,7 @@ result2 = do
                       -> MachineP1' EventP1 EventP1 TheoryP2
                       -> MachineP2' EventP1 EventP1 TheoryP2
                       -> MachineP2' EventP1 EventP1 TheoryP2
-            upMachine mid m m' = makeMachineP2' m 
+            upMachine mid m m' = makeMachineP2'' m 
                         (m^.pCtxSynt & decls %~ M.union (m'^.pAllVars) 
                                      & primed_vars %~ M.union (m'^.pAllVars)) 
                         (fieldsM mid)
@@ -339,7 +342,7 @@ result2 = do
                 | eid == Right "ce2"  = [make' EIndices "q" (z3Var "q" int)]
                 | otherwise           = []
         return $ sys & mchTable.withKey.traverse %~ \(mid,m) -> 
-                layeredUpgradeRec (upTheory mid) (upMachine mid) upEvent upEvent m
+                    layeredUpgradeRec (upTheory mid) (upMachine mid) upEvent upEvent m
         -- (\m -> makeMachineP2' (f m) _ [])
 
 name3 :: TestName
@@ -372,14 +375,14 @@ case4 = return $ do
     where
         decl x con y = do
             scope <- ask
-            lift $ x ## makeCell (con y scope li)
-        event evt lbl con x = event' evt lbl [evt] con x
+            lift $ x ## makeCell (con y scope $ li 1)
+        event evt lbl con x = event' evt lbl [(evt,li $ -3)] con x
         mkEvent evt lbl es con x inh = do
             scope <- ask
-            lift $ lbl ## makeEvtCell (Right evt) (con (inh (NonEmptyListSet $ fromMaybe (evt :| []) $ nonEmpty es,x)) scope $ pure li)
+            lift $ lbl ## makeEvtCell (Right evt) (con (inh (nonEmptyListSet $ fromMaybe ((evt,li (-1)) :| []) $ nonEmpty es,x)) scope $ listSet $ snd <$> es)
         event' evt lbl es con x = mkEvent evt lbl es con x InhAdd
         del_event evt lbl es con = mkEvent evt lbl es con (assertFalse' "del_event") $ InhDelete . const Nothing
-        li = LI "file.ext" 1 1 
+        li = LI "file.ext" 1
         declVar n t = decls %= insert_symbol (z3Var n t)
         c_aux b = ctx $ do
             declVar "x" int
@@ -394,33 +397,32 @@ case4 = return $ do
                 event "ae0"  "grd0" Guard $ c [expr| x = 0 |]
                 event "ae0"  "sch0" CoarseSchedule $ c [expr| y = y |]
                 event "ae0"  "sch2" CoarseSchedule $ c [expr| y = 0 |]
-                forM_ ["ae1a","ae1b"] $ \evt -> do
-                    event evt "default" CoarseSchedule zfalse
-                    event evt "act0" Action $ c' [act| y := y + 1 |] 
-                    event evt "act1" Action $ c' [act| x := x - 1 |] 
+                forM_ [("ae1a",li 108,li 164),("ae1b",li 136,li 192)] $ \(evt,l0,l1) -> do
+                    event evt "default"  CoarseSchedule zfalse
+                    event' evt "act0" [(evt,l0)] Action $ c' [act| y := y + 1 |] 
+                    event' evt "act1" [(evt,l1)] Action $ c' [act| x := x - 1 |] 
         es1 = runMap $ flip runReaderT Inherited $ do
                 local (const Local) $ do
                     decl "prog0" ProgressProp $ LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
                     decl "prog1" ProgressProp $ LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
                     decl "saf0" SafetyProp $ Unless [] (c [expr| x \le y |]) (c [expr| x = y |])
                 decl "inv0" Invariant $ c [expr| x \le y |]
-                --event 
-                event' "ce0a" "grd0" ["ae0"] Guard $ c [expr|x = 0|]
-                event' "ce0b" "grd0" ["ae0"] Guard $ c [expr|x = 0|]
+                event' "ce0a" "grd0" [("ae0",li 1)] Guard $ c [expr|x = 0|]
+                event' "ce0b" "grd0" [("ae0",li 1)] Guard $ c [expr|x = 0|]
                 local (const Local) $ do
                     del_event "ce0a" "grd0" [] Guard
                     del_event "ce0b" "grd0" [] Guard
-                event' "ce0a"  "sch1" ["ce0a"] CoarseSchedule $ c [expr| y = y |]
-                event' "ce0a"  "sch2" ["ae0"] CoarseSchedule $ c [expr| y = 0 |]
-                event' "ce0b"  "sch0" ["ae0"] CoarseSchedule $ c [expr| y = y |]
-                event' "ce0b"  "sch2" ["ae0"] CoarseSchedule $ c [expr| y = 0 |]
+                event' "ce0a"  "sch1" [("ce0a",li 1)] CoarseSchedule $ c [expr| y = y |]
+                event' "ce0a"  "sch2" [("ae0",li 1)]  CoarseSchedule $ c [expr| y = 0 |]
+                event' "ce0b"  "sch0" [("ae0",li 1)]  CoarseSchedule $ c [expr| y = y |]
+                event' "ce0b"  "sch2" [("ae0",li 1)]  CoarseSchedule $ c [expr| y = 0 |]
 
-                forM_ [("ce1",["ae1a","ae1b"]),("ce2",[])] $ \(evt,es) -> 
+                forM_ [("ce1",[("ae1a",li 1),("ae1b",li 1)]),("ce2",[])] $ \(evt,es) -> 
                     event' evt "default" es CoarseSchedule zfalse
-                event' "ce1" "act0" ["ae1a","ae1b"] Action $ c [act| y := y + 1 |]
-                event' "ce1" "act1" ["ae1a","ae1b"] Action $ c' [act| x := x - 1 |] 
+                event' "ce1" "act0" [("ae1a",li 108),("ae1b",li 136)] Action $ c [act| y := y + 1 |]
+                event' "ce1" "act1" [("ae1a",li 164),("ae1b",li 192)] Action $ c' [act| x := x - 1 |] 
                 local (const Local) $
-                    del_event "ce1" "act1" ["ae1a","ae1b"] Action -- $ c [act| x := x - 1 |]
+                    del_event "ce1" "act1" [("ae1a",li 6),("ae1b",li 7)] Action -- $ c [act| x := x - 1 |]
 
 decl :: String -> GenericType -> State ParserSetting ()
 decl n t = decls %= insert_symbol (z3Var n t)
@@ -437,11 +439,15 @@ result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
             when b $ expected_type `assign` Nothing
         c  = c_aux False
         c' = c_aux True
+        newMch :: MachineId 
+               -> MachineP2' ae ce thy 
+               -> MachineP3' ae ce thy 
         newMch mid m 
-            | mid == "m0" = makeMachineP3' m empty_property_set 
+            | mid == "m0" = makeMachineP3' m
+                    empty_property_set 
                     (makePropertySet' [Inv "inv0" $ c [expr| x \le y |]])
                     [PInvariant "inv0" $ c [expr| x \le y |]]
-            | otherwise = makeMachineP3' m 
+            | otherwise = makeMachineP3' m
                     (makePropertySet' [Inv "inv0" $ c [expr| x \le y |]])
                     (makePropertySet' 
                         [ Progress "prog1" prog1
@@ -459,19 +465,20 @@ result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
             | eid `elem` ["ae0","ce0a","ce0b"] = makeEventP3 e $ evtField mid eid
             | otherwise = makeEventP3 e $ [ ECoarseSched "default" zfalse] ++ evtField mid eid
         newEvt _mid _m (Left SkipEvent) e = makeEventP3 e [ECoarseSched "default" zfalse]
+        lis = pure . LI "file.ext" 1
         evtField mid eid
             | eid == "ae0"                 = [ EGuards  "grd0" $ c [expr|x = 0|]
                                              , ECoarseSched "sch0" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
-            | eid == "ae1a"                = [ EActions "act0" $ c' [act| y := y + 1 |] 
-                                             , EActions "act1" $ c' [act| x := x - 1 |] ]
-            | eid == "ae1b"                = [ EActions "act0" $ c' [act| y := y + 1 |] 
-                                             , EActions "act1" $ c' [act| x := x - 1 |] ]
+            | eid == "ae1a"                = [ EActions "act0" (lis 108,c' [act| y := y + 1 |]) 
+                                             , EActions "act1" (lis 164,c' [act| x := x - 1 |]) ]
+            | eid == "ae1b"                = [ EActions "act0" (lis 136,c' [act| y := y + 1 |]) 
+                                             , EActions "act1" (lis 192,c' [act| x := x - 1 |]) ]
             | eid == "ce0a"                = [ ECoarseSched "sch1" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
             | eid == "ce0b"                = [ ECoarseSched "sch0" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
-            | eid == "ce1" && mid == "m1"  = [ EActions "act0" $ c' [act| y := y + 1 |] 
+            | eid == "ce1" && mid == "m1"  = [ EActions "act0" (lis 108 <> lis 136,c' [act| y := y + 1 |]) 
                                              , make' EWitness "x" (WitEq xvar $ c' [expr|x - 1|]) ]
             | otherwise = []
 
@@ -518,9 +525,7 @@ case6 = return $ do
         li = LI "file.ext" 1 1
         ms = M.fromList [("m0",()),("m1",())]
         ch = ScheduleChange 
-                (M.singleton "sch0" ()) 
                 (M.singleton "sch1" ()) 
-                (M.singleton "sch2" ()) 
                 ("prog1", prog1) 
         cSchRef = runMap' $ do
             "m0" ## M.empty
@@ -554,9 +559,7 @@ result6 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result5
             | mid == "m1" = makeMachineP4' m [PLiveRule "prog0" (makeRule' Monotonicity prog1 "prog1" prog1)]
             | otherwise   = makeMachineP4' m []
         ch = ScheduleChange 
-                (M.singleton "sch0" ()) 
                 (M.singleton "sch1" ()) 
-                (M.singleton "sch2" ()) 
                 ("prog1", prog1) 
         prog1 = LeadsTo [] (c [expr|x \le y|]) (c [expr|x = y|])
         c  = ctx $ do
@@ -574,7 +577,7 @@ case7 = return $ do
                   command "evguard" [text "ae0", text "grd0", text "x = 0"]
                   command "evbcmeq" [text "ae1a", text "act0", text "y", text "y+1"]
         ms1 = makeLatex "file.ext" $ do       
-                  command "replace" [text "ae0",text "sch0",text "sch1",text "sch2",text "prog1",text "saf0"]
+                  command "replace" [text "ae0",text "sch1",text "prog1",text "saf0"]
                   command "replacefine" [text "ae0",text "prog1"]
                   command "refine" [text "prog0",text "monotonicity",text "prog1",text ""]
                   --command "removeguard" [text "ce0b",text "grd0"]
@@ -642,9 +645,7 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
         ae0sched = create $ do
                         old .= ae0Evt
                         c_sched_ref .= [replace ("prog1",pprop)
-                                          & remove .~ singleton "sch0" ()
-                                          & add    .~ singleton "sch1" ()
-                                          & keep   .~ singleton "sch2" () ]
+                                          & add    .~ singleton "sch1" () ]
                         f_sched_ref .= Just ("prog1",pprop) 
         ae0Evt = create $ do
             coarse_sched .= M.fromList 

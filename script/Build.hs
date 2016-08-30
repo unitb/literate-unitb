@@ -24,6 +24,8 @@ import System.Process
 
 import Text.Printf.TH
 
+import Utilities.Config
+
 data CompileMode = Make | CompileFile
 
 data CompileFlags = CompileFlags
@@ -54,9 +56,9 @@ option cp x name = fromRight x $ do
 
 tool :: BuildTool
 tool = unsafePerformIO $ do
-    home <- getHomeDirectory
+    homeSetting <- homeSettingPath
     cp <- gatherConfig 
-            [ home </> "Literate Unit-B/build.setting"
+            [ homeSetting </> "build.setting"
             , "./build.setting" ]
     return $ option cp Cabal "buildTool"
 

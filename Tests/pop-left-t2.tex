@@ -1,0 +1,567 @@
+
+\documentclass[12pt]{amsart}
+\usepackage[margin=0.5in]{geometry} 
+  % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{calculational}
+\usepackage{ulem}
+\usepackage{hyperref}
+\usepackage{unitb}
+
+\newcommand{\REQ}{\text{REQ}}
+\newcommand{\OBJ}{\mathcal{O}bj}
+\newcommand{\Addr}{\mathcal{P}tr}
+\newcommand{\link}{\textit{LINK}}
+\newcommand{\trash}{\textit{TRASH}}
+\newcommand{\shared}{\textit{SHARED}}
+\newcommand{\State}{\mathcal{S}tate}
+\newcommand{\cEmpty}{\text{``empty''}}
+\newcommand{\cNonEmpty}{\text{``non-empty''}}
+\newcommand{\cInit}{\text{``init''}}
+\newcommand{\cPopped}{\text{``popped''}}
+\newcommand{\cBot}{\text{``idle''}}
+
+\begin{document}
+
+\tableofcontents
+
+\section{m0}
+\input{pop-left/machine_m0}
+\begin{machine}{m0}
+    \with{functions}
+    \with{sets}
+    \[ \newset{\Addr_0} \]
+    \[ \constant{ dummy : \Addr_0} \]
+    \[ \constant{ \bot : \OBJ_0} \]
+    \[ \definition
+        {\Addr}{ \Addr_0 \setminus \{ dummy \} } \]
+    \[ \definition
+        {\OBJ}{ \OBJ_0 \setminus \{ \bot \} } \]
+    \[ \definition
+        {\Node}{ [ 'item : \OBJ_0 \setminus \{ \bot \} ] } \]
+    \[\newset{\OBJ_0}\]
+
+shared:
+    \[ \variable{ LH, RH : \Addr_0 } \]
+    \[ \variable{ free : \set [\Addr_0] } \]
+    \[ \variable{ ver : \Int } \]
+    \[ \variable{ result : \OBJ_0 } \]
+    \[ \variable{ \link, \trash : \Addr_0 \pfun 
+        \{ 'item : \OBJ_0 
+         , 'left : \Addr_0
+         , 'right : \Addr_0  \} } \]
+
+private:
+    \[ \variable{ popL,remL : \Bool } \]
+    \[ \variable{ resL : \OBJ_0 } \]
+
+\begin{align*}
+  \initialization{m0:init0}{ LH = dummy } \\
+  \initialization{m0:init1}{ RH = dummy } \\
+  \initialization{m0:init2}{ free = \Addr } \\
+  \initialization{m0:init3}{ ver = 0 } \\
+  \initialization{m0:init4}{ result = \bot } \\
+  \initialization{m0:init5}{ \link = \emptyfun } \\
+  \initialization{m0:init6}{ \trash = \emptyfun } \\
+  \initialization{m0:init7}{ popL = \false } \\
+  \initialization{m0:init8}{ remL = \false } \\
+  \initialization{m0:init9}{ resL = \bot } \\
+\end{align*}
+
+internal:
+\newevent{add:popL}{req\_popL}
+\newevent{hdl:popL:empty}{hdl\_popL\_empty}
+\newevent{hdl:popL:one}{hdl\_popL\_one}
+\newevent{hdl:popL:more}{hdl\_popL\_more}
+\newevent{returnL}{returnL}
+
+\begin{align*}
+    \evguard{add:popL}{m0:grd0}{\neg popL} \\
+    \evbcmeq{add:popL}{m0:act0}{popL}{\true} \\
+    \cschedule{returnL}{m0:sch0}{remL} \\
+    \evbcmeq{returnL}{m0:act0}{result}{resL} \\
+    \evbcmeq{returnL}{m0:act1}{remL}{\false} \\    
+\end{align*}
+
+\begin{align*}
+  \theorem{m0:thm0:ASM}{ LH \in \dom.\link \bunion \{ dummy \} } \\
+  \theorem{m0:thm1:ASM}{ RH \in \dom.\link \bunion \{ dummy \} } \\
+  \theorem{m0:thm2:ASM}{ \neg LH \in \dom.\trash  } \\
+  \theorem{m0:thm3:ASM}{ \neg RH \in \dom.\trash  } \\
+  \invariant{m0:inv0}{ free \subseteq \Addr }
+\end{align*}
+
+\[ \indices{hdl:popL:empty}{ v : \Int } \]
+\[ \indices{hdl:popL:one}{ v : \Int } \]
+\[ \indices{hdl:popL:more}{ v : \Int } \]
+
+\begin{align*}
+  \cschedule{hdl:popL:empty}{m0:sch0}{v = ver} \\
+  \cschedule{hdl:popL:one}{m0:sch0}{v = ver} \\
+  \cschedule{hdl:popL:more}{m0:sch0}{v = ver} \\
+  \cschedule{hdl:popL:empty}{m0:sch1}{popL} \\
+  \cschedule{hdl:popL:one}{m0:sch1}{popL} \\
+  \cschedule{hdl:popL:more}{m0:sch1}{popL} \\
+  \cschedule{hdl:popL:empty}{m0:sch2}{LH = dummy} \\
+  \cschedule{hdl:popL:one}{m0:sch2}{\neg LH = dummy} \\
+  \cschedule{hdl:popL:more}{m0:sch2}{\neg LH = dummy} \\
+  \cschedule{hdl:popL:one}{m0:sch3}{LH = RH} \\
+  \cschedule{hdl:popL:more}{m0:sch3}{\neg LH = RH} \\
+  \evbcmeq{hdl:popL:empty}{m0:act0}
+    {ver}{ver + 1} \\
+  \evbcmeq{hdl:popL:one}{m0:act0}
+    {ver}{ver + 1} \\
+  \evbcmeq{hdl:popL:more}{m0:act0}
+    {ver}{ver + 1} \\
+  \evbcmeq{hdl:popL:empty}{m0:act1}
+    {popL}{\false} \\
+  \evbcmeq{hdl:popL:one}{m0:act1}
+    {popL}{\false} \\
+  \evbcmeq{hdl:popL:more}{m0:act1}
+    {popL}{\false} \\
+  \evbcmeq{hdl:popL:empty}{m0:act2}
+    {remL}{\true} \\
+  \evbcmeq{hdl:popL:one}{m0:act2}
+    {remL}{\true} \\
+  \evbcmeq{hdl:popL:more}{m0:act2}
+    {remL}{\true} \\
+  \evbcmeq{hdl:popL:empty}{m0:act3}
+    {resL}{\bot} \\
+  \evbcmeq{hdl:popL:one}{m0:act3}
+    {resL}{\link.LH.'item} \\
+  \evbcmeq{hdl:popL:more}{m0:act3}
+    {resL}{\link.LH.'item} \\
+  \evbcmeq{hdl:popL:one}{m0:act4}
+    {\trash}{\trash \1| LH \fun \link.LH} \\
+  \evbcmeq{hdl:popL:more}{m0:act4}
+    {\trash}{\trash \1| LH \fun \link.LH} \\
+  \evbcmeq{hdl:popL:one}{m0:act5}
+    {\link}{ \{LH\} \domsub \link } \\
+  \evbcmeq{hdl:popL:more}{m0:act5}
+    {\link}{ \{LH\} \domsub \link } \\
+  \evbcmeq{hdl:popL:one}{m0:act6}
+    {LH}{ dummy } \\
+  \evbcmeq{hdl:popL:one}{m0:act7}
+    {RH}{ dummy } \\
+  \evbcmeq{hdl:popL:more}{m0:act6}
+    {LH}{ \link.LH.'right } \\
+\end{align*}
+
+external:
+\newevent{ext:pushL:empty}{EXT\_pushL\_empty}
+\newevent{ext:pushL:non:empty}{EXT\_pushL\_non\_empty}
+\newevent{ext:pushR:empty}{EXT\_pushR\_empty}
+\newevent{ext:pushR:non:empty}{EXT\_pushR\_non\_empty}
+\newevent{ext:popL:empty}{EXT\_popL\_empty}
+\newevent{ext:popL:one}{EXT\_popL\_one}
+\newevent{ext:popL:more}{EXT\_popL\_more}
+\newevent{ext:popR:empty}{EXT\_popR\_empty}
+\newevent{ext:popR:one}{EXT\_popR\_one}
+\newevent{ext:popR:more}{EXT\_popR\_more}
+\newevent{ext:return}{EXT\_return}
+
+\paragraph{pushL --- empty}
+
+\begin{align*}
+  \param{ext:pushL:empty}{x : \OBJ_0 } \\
+  \param{ext:pushL:empty}{n : \Addr_0 } \\
+\end{align*}
+
+\begin{align*}
+  \evguard{ext:pushL:empty}{m0:grd0}{LH = dummy } \\
+  \evguard{ext:pushL:empty}{m0:grd1}{x \in \OBJ } \\
+  \evguard{ext:pushL:empty}{m0:grd2}{n \in free } \\
+  \evbcmeq{ext:pushL:empty}{m0:act0}
+      {ver}{ver + 1} \\
+  \evbcmeq{ext:pushL:empty}{m0:act1}
+      {free}{free \setminus \{ n \} } \\
+  \evbcmeq{ext:pushL:empty}{m0:act2}
+      {\link}{\link \1| n \fun 
+          \left[ \begin{array}{l}
+            'item := x, \\
+            'left := dummy, \\
+            'right := dummy
+          \end{array} \right] } \\
+  \evbcmeq{ext:pushL:empty}{m0:act3}
+      {LH}{n} \\
+  \evbcmeq{ext:pushL:empty}{m0:act4}
+      {RH}{n} \\
+\end{align*}
+
+\paragraph{pushL --- non-empty}
+
+
+\begin{align*}
+  \param{ext:pushL:non:empty}{x : \OBJ_0 } \\
+  \param{ext:pushL:non:empty}{n : \Addr_0 } \\
+\end{align*}
+
+\begin{align*}
+  \evguard{ext:pushL:non:empty}
+    {m0:grd0}{ \neg LH = dummy } \\
+  \evguard{ext:pushL:non:empty}
+    {m0:grd1}{x \in \OBJ } \\
+  \evguard{ext:pushL:non:empty}
+    {m0:grd2}{n \in free } \\
+  \evbcmeq{ext:pushL:non:empty}{m0:act0}
+      {ver}{ver + 1} \\
+  \evbcmeq{ext:pushL:non:empty}{m0:act1}
+      {free}{free \setminus \{ n \} } \\
+  \evbcmeq{ext:pushL:non:empty}{m0:act2}
+      {\link}{\link \1| n \fun 
+          \left[ \begin{array}{l}
+            'item := x, \\
+            'left := dummy, \\
+            'right := LH
+          \end{array} \right] } \\
+  \evbcmeq{ext:pushL:non:empty}{m0:act3}
+      {LH}{n} \\
+  \evbcmeq{ext:pushL:non:empty}{m0:act4}
+      {\link}{ \link \1| LH \fun 
+        (\link.LH) [ 'left := n ] } \\
+\end{align*}
+
+\paragraph{pushR --- empty}
+
+
+\begin{align*}
+  \param{ext:pushR:empty}{x : \OBJ_0 } \\
+  \param{ext:pushR:empty}{n : \Addr_0 } \\
+\end{align*}
+
+\begin{align*}
+  \evguard{ext:pushR:empty}
+      {m0:grd0}{RH = dummy } \\
+  \evguard{ext:pushR:empty}
+      {m0:grd1}{x \in \OBJ } \\
+  \evguard{ext:pushR:empty}
+      {m0:grd2}{n \in free } \\
+  \evbcmeq{ext:pushR:empty}{m0:act0}
+      {ver}{ver + 1} \\
+  \evbcmeq{ext:pushR:empty}{m0:act1}
+      {free}{free \setminus \{ n \} } \\
+  \evbcmeq{ext:pushR:empty}{m0:act2}
+      {\link}{\link \1| n \fun 
+          \left[ \begin{array}{l}
+            'item := x, \\
+            'left := dummy,
+            'right := dummy
+          \end{array} \right] } \\
+  \evbcmeq{ext:pushR:empty}{m0:act3}
+      {LH}{n} \\
+  \evbcmeq{ext:pushR:empty}{m0:act4}
+      {RH}{n} \\
+\end{align*}
+
+\paragraph{pushR --- non-empty}
+
+\begin{align*}
+  \param{ext:pushR:non:empty}{x : \OBJ_0 } \\
+  \param{ext:pushR:non:empty}{n : \Addr_0 } \\
+\end{align*}
+
+\begin{align*}
+  \evguard{ext:pushR:non:empty}
+    {m0:grd0}{ \neg RH = dummy } \\
+  \evguard{ext:pushR:non:empty}
+    {m0:grd1}{x \in \OBJ } \\
+  \evguard{ext:pushR:non:empty}
+    {m0:grd2}{n \in free } \\
+  \evbcmeq{ext:pushR:non:empty}{m0:act0}
+      {ver}{ver + 1} \\
+  \evbcmeq{ext:pushR:non:empty}{m0:act1}
+      {free}{free \setminus \{ n \} } \\
+  \evbcmeq{ext:pushR:non:empty}{m0:act2}
+      {\link}{\link \1| n \fun 
+          \left[ \begin{array}{l}
+            'item := x, \\
+            'left := RH,
+            'right := dummy
+          \end{array} \right] } \\
+  \evbcmeq{ext:pushR:non:empty}{m0:act3}
+      {RH}{n} \\
+  \evbcmeq{ext:pushR:non:empty}{m0:act4}
+      {\link}{ \link \1| RH \fun 
+        (\link.RH) [ 'right := n ] } \\
+\end{align*}
+
+\paragraph{popL --- empty}
+
+\begin{align*}
+  \evguard{ext:popL:empty}
+      {m0:grd0}{LH = dummy} \\
+  \evbcmeq{ext:popL:empty}{m0:act0}
+      {ver}{ver + 1}
+\end{align*}
+
+\paragraph{popL --- one}
+
+\begin{align*}
+  \evguard{ext:popL:one}
+      {m0:grd0}{\neg LH = dummy} \\
+  \evguard{ext:popL:one}
+      {m0:grd1}{LH = RH} \\
+  \evbcmeq{ext:popL:one}{m0:act0}
+      {ver}{ver + 1} \\
+  \evbcmeq{ext:popL:one}{m0:act1}
+      {\link}{ \{LH\} \domsub \link } \\
+  \evbcmeq{ext:popL:one}{m0:act2}
+      {LH}{ dummy } \\
+  \evbcmeq{ext:popL:one}{m0:act3}
+      {RH}{ dummy } \\
+  \evbcmeq{ext:popL:one}{m0:act4}
+      {\trash}{ \trash \1| LH \fun \link.LH } \\
+\end{align*}
+
+\paragraph{popL --- more}
+
+\begin{align*}
+  \evguard{ext:popL:more}
+      {m0:grd0}{\neg LH = dummy} \\
+  \evguard{ext:popL:more}
+      {m0:grd1}{\neg LH = RH} \\
+  \evbcmeq{ext:popL:more}{m0:act0}
+      {ver}{ver + 1} \\
+  \evbcmeq{ext:popL:more}{m0:act1}
+      {\link}{ \{LH\} \domsub \link } \\
+  \evbcmeq{ext:popL:more}{m0:act2}
+      {LH}{ \link.LH.'right } \\
+  \evbcmeq{ext:popL:more}{m0:act3}
+      {\trash}{ \trash \1| LH \fun \link.LH } \\
+\end{align*}
+
+\paragraph{popR --- empty}
+
+\begin{align*}
+  \evguard{ext:popR:empty}
+      {m0:grd0}{RH = dummy} \\
+  \evbcmeq{ext:popR:empty}{m0:act0}
+      {ver}{ver + 1}
+\end{align*}
+
+\paragraph{popR --- one}
+
+\begin{align*}
+  \evguard{ext:popR:one}
+      {m0:grd0}{\neg RH = dummy} \\
+  \evguard{ext:popR:one}
+      {m0:grd1}{LH = RH} \\
+  \evbcmeq{ext:popR:one}{m0:act0}
+      {ver}{ver + 1} \\
+  \evbcmeq{ext:popR:one}{m0:act1}
+      {\link}{ \{RH\} \domsub \link } \\
+  \evbcmeq{ext:popR:one}{m0:act2}
+      {LH}{ dummy } \\
+  \evbcmeq{ext:popR:one}{m0:act3}
+      {RH}{ dummy } \\
+  \evbcmeq{ext:popR:one}{m0:act4}
+      {\trash}{ \trash \1| RH \fun \link.RH } \\
+\end{align*}
+
+\paragraph{popR --- more}
+
+\begin{align*}
+  \evguard{ext:popR:more}
+      {m0:grd0}{\neg RH = dummy} \\
+  \evguard{ext:popR:more}
+      {m0:grd1}{\neg LH = RH} \\
+  \evbcmeq{ext:popR:more}{m0:act0}
+      {ver}{ver + 1} \\
+  \evbcmeq{ext:popR:more}{m0:act1}
+      {\link}{ \{RH\} \domsub \link } \\
+  \evbcmeq{ext:popR:more}{m0:act2}
+      {RH}{ \link.RH.'left } \\
+  \evbcmeq{ext:popR:more}{m0:act3}
+      {\trash}{ \trash \1| RH \fun \link.RH } \\
+\end{align*}
+
+\paragraph{return}
+
+\end{machine}
+\section{m1}
+
+\input{pop-left/machine_m1}
+
+\begin{machine}{m1}
+  \refines{m0}
+  \[ \newset{\State} \]
+  \[ \constant{\cInit : \State} \]
+  \[ \constant{\cBot : \State} \]
+  \[ \constant{\cPopped : \State} \]
+  \[ \constant{\cEmpty : \State} \]
+  \[ \constant{\cNonEmpty : \State} \]
+  \[ \assumption{m0:asm0}{ \neg \cInit = \cBot } \]
+  \[ \assumption{m0:asm1}{ \neg \cInit = \cEmpty } \]
+  \[ \assumption{m0:asm2}{ \neg \cInit = \cNonEmpty } \]
+  \[ \assumption{m0:asm3}{ \neg \cInit = \cPopped } \]
+  \[ \assumption{m0:asm4}{ \neg \cBot = \cEmpty } \]
+  \[ \assumption{m0:asm5}{ \neg \cBot = \cNonEmpty } \]
+  \[ \assumption{m0:asm6}{ \neg \cBot = \cPopped } \]
+  \[ \assumption{m0:asm7}{ \neg \cEmpty = \cNonEmpty } \]
+  \[ \assumption{m0:asm8}{ \neg \cEmpty = \cPopped } \]
+  \[ \assumption{m0:asm9}{ \neg \cNonEmpty = \cPopped } \]
+  \[ \variable{lh : \Addr_0} \]
+  \[ \variable{rh : \Addr_0} \]
+  \[ \variable{state : \State} \]
+  \begin{align*}
+    \initialization{m1:init0}
+      { lh = dummy } \\
+    \initialization{m1:init1}
+      { rh = dummy } \\
+    \initialization{m1:init2}
+      { state = \cBot } \\
+  \end{align*}
+
+\newevent{read:LH}{read\_LH}
+
+\begin{align*}
+  \cschedule{read:LH}{m1:sch0}
+    {state \in \{ \cInit, \cNonEmpty \} } \\
+  \cschedule{read:LH}{m1:sch1}
+    { \neg LH = dummy } \\
+  \evbcmeq{read:LH}{m1:act0}
+    {lh}{LH} \\
+  \evbcmeq{read:LH}{m1:act1}
+    {state}{ \ifelse{LH = dummy}{\cEmpty}{\cNonEmpty} } \\
+  \evbcmeq{read:LH}{m1:act2}
+    {ver}{ \ifelse{LH = dummy}{ver + 1}{ver} } \\
+\end{align*}
+
+\subsection{Invariants}
+
+\begin{align*}
+  \invariant{m1:inv0}
+    {state = \cBot & \3\equiv \neg popL \land \neg remL} \\
+  % \invariant{m1:inv1}
+  %   {state = \cInit & \3\implies popL} \\
+  % \invariant{m1:inv2}
+  %   {state = \cNonEmpty & \3\implies popL \land \neg lh = dummy} \\
+  \invariant{m1:inv3}
+    {popL & \3\equiv state \in \{\cInit,\cNonEmpty\}} \\
+  \invariant{m1:inv4}
+    { state = \cPopped & \3\implies \left( 
+      \begin{array}{ll}
+         & remL \\
+         \land & lh \in \dom.\trash \\
+         \land & \trash.lh.'item = resL
+       \end{array} \right) } \\
+  \invariant{m1:inv5}
+    { remL &\3\equiv state \in \{ \cPopped, \cEmpty \} } \\
+  \invariant{m1:inv7}
+    { \qforall{p}{p \in \dom.\link}{\link.p.'item \in \OBJ} } \\
+  \invariant{m1:inv6}
+    { state = \cEmpty & \3\equiv remL \land resL = \bot } \\
+\end{align*}
+
+\subsection{State}
+
+\removevar{popL,remL,resL}
+
+\removeguard{add:popL}{m0:grd0}
+\removeact{add:popL}{m0:act0}
+\begin{align*}
+  \evguard{add:popL}{m1:grd0}
+    { state = \cBot } \\
+  \evbcmeq{add:popL}{m1:act0}
+    {state}{ \cInit } \\
+\end{align*}
+
+\removeact{hdl:popL:empty}{m0:act1}
+\removeact{hdl:popL:empty}{m0:act2}
+\removeact{hdl:popL:empty}{m0:act3}
+\removecoarse{hdl:popL:empty}{m0:sch1}
+\begin{align*}
+  &\cschedule{hdl:popL:empty}{m1:sch0}
+    { state \in \{ \cInit, \cNonEmpty \} } \\
+  &\evbcmeq{hdl:popL:empty}{m1:act0}
+    { state }{ \ifelse{ LH = dummy }{\cEmpty}{\cNonEmpty} } \\
+\end{align*}
+
+\removeact{hdl:popL:more}{m0:act1}
+\removeact{hdl:popL:more}{m0:act2}
+\removeact{hdl:popL:more}{m0:act3}
+\removecoarse{hdl:popL:more}{m0:sch0}{popL}
+\removecoarse{hdl:popL:more}{m0:sch1}{popL}
+\removeind{hdl:popL:more}{v}
+\witness{hdl:popL:more}{v}{v = ver}
+\begin{align*}
+  &\cschedule{hdl:popL:more}{m1:sch0}
+    { state = \cNonEmpty } \\
+  &\cschedule{hdl:popL:more}{m1:sch1}
+    { lh = LH } \\
+  &\evbcmeq{hdl:popL:more}{m1:act0}
+    { state }{ \cPopped } \\
+  % &\evbcmeq{hdl:popL:more}{m1:act0}
+  %   { remL }{ \true } \\
+\end{align*}
+
+\replace{hdl:popL:more}{m1:sch0,m1:sch1}{m1:prog0}
+\replace{hdl:popL:one}{m1:sch0,m1:sch1}{m1:prog0}
+\begin{align*}
+  \progress{m1:prog0}
+    {v = ver \1\land \neg LH = dummy 
+        \1\land state \in \{ \cInit, \cNonEmpty \} }
+    { (LH = lh \1\land \neg LH = dummy \1\land state = \cNonEmpty)
+      \1\lor \neg v = ver}
+  \refine{m1:prog0}{ensure}{read:LH}{}
+  % \progress{m1:prog0}
+  %   {v = ver \1\land \neg LH = dummy 
+  %       \1\land state \in \{ \cInit, \cNonEmpty \} }
+  %   { (LH = lh \1\land \neg LH = dummy \1\land state = \cNonEmpty)
+  %     \1\lor \neg v = ver}
+  % \refine{m1:prog1}{ensure}{read:LH}{}
+\end{align*}
+\[ \dummy{v : \Int} \]
+
+\removeact{hdl:popL:one}{m0:act1}
+\removeact{hdl:popL:one}{m0:act2}
+\removeact{hdl:popL:one}{m0:act3}
+\removecoarse{hdl:popL:one}{m0:sch0}
+\removecoarse{hdl:popL:one}{m0:sch1}
+\removeind{hdl:popL:one}{v}
+\witness{hdl:popL:one}{v}{v = ver}
+\begin{align*}
+  &\cschedule{hdl:popL:one}{m1:sch0}
+    { state = \cNonEmpty } \\
+  &\cschedule{hdl:popL:one}{m1:sch1}
+    { lh = LH } \\
+  &\evbcmeq{hdl:popL:one}{m1:act0}
+    { state }{ \cPopped } \\
+\end{align*}
+
+\[ \splitevent{returnL}{returnL:empty,returnL:non:empty} \]
+% \begin{align*}
+    \refiningevent{returnL}{returnL:empty}{returnL\_empty} \\
+    \refiningevent{returnL}{returnL:non:empty}{returnL\_non\_empty}  \\
+% \end{align*}
+\hide{
+\removeact{returnL:empty}{m0:act0}
+\removeact{returnL:empty}{m0:act1}
+\removecoarse{returnL:empty}{m0:sch0}
+\removeact{returnL:non:empty}{m0:act0}
+\removeact{returnL:non:empty}{m0:act1}
+\removecoarse{returnL:non:empty}{m0:sch0}}
+% \replace{returnL}{m0:sch0}{m1:sch}{}{}
+\begin{align*}
+  \cschedule{returnL:empty}{m1:sch0}{state = \cEmpty} \\
+  \evbcmeq{returnL:empty}{m1:act0}{state}{\cBot} \\
+  \evbcmeq{returnL:empty}{m1:act1}{result}{\bot} \\
+  \cschedule{returnL:non:empty}{m1:sch0}{state = \cPopped} \\
+  \evbcmeq{returnL:non:empty}{m1:act0}{state}{\cBot} \\
+  \evbcmeq{returnL:non:empty}{m1:act1}{result}{\trash.lh.'item} \\
+\end{align*}
+
+\removeinit{m0:init7}
+\removeinit{m0:init8}
+\removeinit{m0:init9}
+\begin{align*}
+  \initwitness{resL}{resL = \bot} \\
+  \initwitness{remL}{remL = \false}\\
+  \initwitness{popL}{popL = \false}
+\end{align*}
+
+\subsection{Delete ver}
+
+\end{machine}
+
+\end{document}

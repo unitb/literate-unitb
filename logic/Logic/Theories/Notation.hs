@@ -12,8 +12,8 @@ import Logic.Theories.SetTheory
 import Control.Lens
 
 import qualified Data.Array as A
-import           Data.List as L ( map )
-import           Data.Map as M hiding ( foldl )
+import           Data.List as L ( map, foldl' )
+import           Data.Map as M hiding ( foldl' )
 import           Data.IORef
 
 import System.IO.Unsafe
@@ -21,7 +21,7 @@ import System.IO.Unsafe
 import qualified Utilities.Graph as G ( (!) )
 
 notations :: Notation
-notations = flip precede logical_notation $ foldl combine empty_notation
+notations = flip precede logical_notation $ foldl' combine empty_notation
     [ functional_notation
     , arith
     , function_notation

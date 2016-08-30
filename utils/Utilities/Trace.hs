@@ -154,7 +154,7 @@ beforeAfter' :: NFData a => String -> a -> a
 beforeAfter' msg = beforeAfter msg.force
 
 beforeAfterT :: Foldable f => String -> f a -> f a
-beforeAfterT msg t = beforeAfter msg $ F.foldl f (0 :: Int) t `seq` t
+beforeAfterT msg t = beforeAfter msg $ F.foldl' f (0 :: Int) t `seq` t
     where
         f n x = beforeAfter (printf "| %s, %d" msg n) x `seq` (n+1)
 

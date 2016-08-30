@@ -23,6 +23,7 @@ import Z3.Z3
 import Control.Arrow hiding (right,left)
 import Control.Concurrent
 import Control.Exception
+import Control.Exception.Lens
 import Control.Lens
 import Control.Precondition ((!))
 
@@ -95,6 +96,9 @@ verifyFiles = verifyFilesWith (return ())
 verify :: FilePath -> Int -> IO POResult
 verify = verifyWith (return ())
 
+verifyOnly :: FilePath -> String -> Int -> IO POResult
+verifyOnly fp lbl = verifyFilesOnlyWith (return ()) (label lbl ==) (pure fp)
+
 verifyWith :: State Sequent a
            -> FilePath 
            -> Int 
@@ -105,13 +109,20 @@ verifyFilesWith :: State Sequent a
                 -> NonEmpty FilePath
                 -> Int 
                 -> IO POResult
-verifyFilesWith opt files i = makeReport' empty $ do
+verifyFilesWith opt = verifyFilesOnlyWith opt (const True)
+
+verifyFilesOnlyWith :: State Sequent a
+                    -> (Label -> Bool)
+                    -> NonEmpty FilePath
+                    -> Int 
+                    -> IO POResult
+verifyFilesOnlyWith opt keep files i = makeReport' empty $ do
     b <- liftIO $ mapM doesFileExist files
     if and b then do
         ms <- EitherT $ fst <$> many_file_obligations' files
         if i < size ms then do
             let (m,pos) = snd $ i `elemAt` ms
-            r <- lift $ try (str_verify_machine_with opt m)
+            r <- lift $ trying id (str_verify_machine_with (\lbl s -> guard (keep lbl) >> Just (execState opt s)) m)
             case r of
                 Right (s,_,_) -> return (s, pos)
                 Left e -> return (show (e :: SomeException),pos)
@@ -215,7 +226,7 @@ find_errors path = do
                 | hide_error_path = L.replace (p ++ ":") "error "
                 | otherwise       = id
         return $ either 
-            (hide . unlines . L.map report)
+            (hide . intercalate "\n" . L.map ((++ "\n") . report))
             (const $ "no errors")
             m
     else return $ [printf|file does not exist: %s|] path
@@ -246,10 +257,10 @@ verify_thy path name = makeReport' empty $ do
         if exists then do
             r <- EitherT $ snd <$> list_file_obligations' path
             let pos = snd $ r ! name
-            res <- lift $ try (verify_all pos)
+            res <- lift $ trying id (verify_all pos)
             case res of
                 Right res -> return (unlines $ L.map (\(k,r) -> success r ++ pretty k) $ toAscList res, pos)
-                Left e -> return (show (e :: SomeException),pos)
+                Left e -> return (show e,pos)
         else return ([printf|file does not exist: %s|] path,empty)
     where
         success True  = "  o  "
@@ -263,6 +274,13 @@ get_system path = do
             <$> parse_system path
     else left $ [printf|file does not exist: %s|] path
 
+get_system' :: FilePath -> EitherT [Error] IO System
+get_system' path = do
+    exists <- liftIO $ doesFileExist path
+    let li = LI "get_system'" 1 1
+    if exists then do
+        EitherT $ parse_system path
+    else left $ [Error ([printf|file does not exist: %s|] path) li]
 
 lookup :: (Pre,Monad m,Ixed f,Show (Index f)) => Index f -> f -> EitherT [Error] m (IxValue f)
 lookup k m = maybe (left $ errorTrace [$__FILE__] ?loc (show k)) return $ m^?ix k
@@ -271,4 +289,3 @@ edit :: FilePath -> IO ()
 edit str = do
     readProcess "edit" [] str
     return ()
-

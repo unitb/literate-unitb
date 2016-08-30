@@ -10,6 +10,7 @@ module Logic.Proof.POGenerator
     , Logic.Proof.POGenerator.definitions
     , Logic.Proof.POGenerator.functions 
     , set_syntactic_props
+    , setTimeout
     , existential, tracePOG )
 where
 
@@ -43,11 +44,12 @@ import Utilities.Table
 import Utilities.Trace
 
 data POParam = POP 
-    { _pOParamContext :: Context
+    { _pOParamContext  :: Context
     , tag :: DList Label
+    , _pOParamTimeout  :: Maybe Float
     , _pOParamNameless :: DList Expr
     , _pOParamNamed :: Table Label Expr
-    , _pOParamSynProp :: SyntacticProp
+    , _pOParamSynProp  :: SyntacticProp
     } deriving (Generic)
 
 makeFields ''POParam
@@ -104,11 +106,11 @@ existential vs (POGen cmd) = do
         with (_context st) 
             $ emit_exist_goal [] vs ss'
 
-emit_goal' :: (Functor m, Monad m, HasExpr expr) 
+emit_goal' :: (Functor m, Monad m, HasExpr expr, Pre) 
            => [Label] -> expr -> POGenT m ()
 emit_goal' lbl g = emit_goal lbl $ getExpr g
 
-emit_goal :: (Functor m, Monad m) 
+emit_goal :: (Functor m, Monad m, Pre) 
           => [Label] -> Expr -> POGenT m ()
 emit_goal lbl g = POGen $ do
     tag   <- asks tag 
@@ -119,7 +121,12 @@ emit_goal lbl g = POGen $ do
                    (D.toList $ param^.nameless)
                    (param^.named)
                    g
-    tell $ D.singleton (composite_label $ D.apply tag lbl, po)
+               & applyTimeout (param^.timeout)
+    unless (g == ztrue) $
+        tell $ D.singleton (composite_label $ D.apply tag lbl, po)
+
+setTimeout :: Float -> POCtx ()
+setTimeout = POCtx . assign timeout . Just
 
 set_syntactic_props :: SyntacticProp -> POCtx ()
 set_syntactic_props s = POCtx $ synProp .= s

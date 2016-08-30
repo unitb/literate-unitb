@@ -39,6 +39,7 @@ import Logic.Expr
 
     -- Libraries
 import Control.DeepSeq
+import qualified Control.Invariant as I
 import Control.Lens
 import Control.Monad
 import Control.Precondition
@@ -99,7 +100,7 @@ data Notation = Notation
     } deriving (Eq,Generic,Show)
 
 instance ZoomEq Notation where
-    (.==) = (===)
+    (.==) = (I.===)
 instance PrettyPrintable Notation where
     pretty _ = "<notation>" 
 
@@ -221,7 +222,7 @@ data BinOperator = BinOperator InternalName Name Flipping Fun
     deriving (Typeable,Generic,Eq,Ord,Show)
 
 instance ZoomEq BinOperator where
-    (.==) = (===)
+    (.==) = (I.===)
 
 instance PrettyPrintable BinOperator where
     pretty (BinOperator x y _ _) = pretty (x,y) -- format str x y
@@ -272,7 +273,7 @@ assoc_table :: Notation -> Matrix Operator Assoc
 assoc_table ops 
 --      | not $ L.null complete = error $ "assoc': all new operators are not declared: " ++ show complete
         | not $ L.null cycles   = error $ "assoc': cycles exist in the precedence graph" ++ show cycles
-        | otherwise   = foldl (G.unionWith join) (G.empty NoAssoc)
+        | otherwise   = foldl' (G.unionWith join) (G.empty NoAssoc)
                   [ G.map (f LeftAssoc) pm :: Matrix Operator Assoc
                   , G.map (f RightAssoc) $ G.transpose pm
                   , G.map (f LeftAssoc) $ G.mapKeys g lm
@@ -306,6 +307,7 @@ functional_notation = with_assoc empty_notation
                      [ [apply]
                      , [pair_op]
                      , [equal] ]]
+    , _commands    = [ Command [tex|\ifelse|] [smt|ite|] 3 ite_fun ]
     , _left_assoc  = [[apply],[pair_op]]
     , _right_assoc = []
     , _relations   = []

@@ -226,12 +226,12 @@ instance (Ord a, Arbitrary a) => Arbitrary (SortedList a) where
         return $ SL $ sort xs
 
 prop_valueOnSorted :: (Ord a,Show a) => [SortedList a] -> Property
-prop_valueOnSorted xs = unions ys === OL.nub (foldl OL.union [] ys)
+prop_valueOnSorted xs = unions ys === OL.nub (foldl' OL.union [] ys)
     where 
         ys = map unSL xs
 
 prop_value :: (Ord a,Show a) => [[a]] -> Property
-prop_value xs = unions ys === OL.nub (foldl OL.union [] ys)
+prop_value xs = unions ys === OL.nub (foldl' OL.union [] ys)
     where 
         ys = map id xs
 

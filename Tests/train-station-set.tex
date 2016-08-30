@@ -3,7 +3,7 @@
 \usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
 \usepackage{bsymb}
 \usepackage{unitb}
-\usepackage{calculation}
+\usepackage{calculational}
 \usepackage{ulem}
 \usepackage{hyperref}
 \normalem
@@ -155,7 +155,7 @@ This takes care of \eqref{m1:saf1}
 \end{align*}
 \subsubsection{Side conditions}
 In order to take care of the schedulability of \ref{m0:leave}, we need to strengthen the coarse schedule by adding \ref{c1}. The side conditions for schedule replacement requires us to prove \ref{m1:prog0} and \ref{m1:saf3} in order to prove refinement.
-\replace{m0:leave}{}{lv:c1}{lv:c0}{m1:prog0}{m1:saf3}
+\replace{m0:leave}{lv:c1}{m1:prog0}{m1:saf3}
 
 \begin{align*}
 \cschedule{m0:leave}{lv:c1}
@@ -276,7 +276,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 %
 \subsection{Design}
 %
-\replace{m1:movein}{}{mi:c0}{mi:c1,mi:c2}{m2:prog0}{m2:saf0}
+\replace{m1:movein}{mi:c0}{m2:prog0}{m2:saf0}
 \begin{align*}
 \progress{m2:prog0}
 	{\true}
@@ -495,7 +495,7 @@ In order to prove \ref{m1:moveout}, we need a need progress property, to make su
 	\cschedule{m1:moveout}{m3:mo:sch0}{ loc.t \in osgn }
 \end{align*}
 
-\replace{m1:moveout}{}{m3:mo:sch0}{c1}{m3:prog0}{m3:saf0}
+\replace{m1:moveout}{m3:mo:sch0}{m3:prog0}{m3:saf0}
 	% it works because the PO is trivial p |-> true
 \replacefine{m1:moveout}{m3:prog0} \removefine{m1:moveout}{mo:f0}
 \removeguard{m1:moveout}{mo:g3}

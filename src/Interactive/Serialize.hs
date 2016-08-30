@@ -280,9 +280,16 @@ dump_pos file pos = do
         let fn     = file ++ ".state"
         writeFormat seqFileFormat fn pos
 
-dump_z3 :: Maybe Label -> FilePath -> Table Key (Seq,Maybe Bool) -> IO ()
+data DumpCmd = Only Label | All | AllFailed
+    deriving (Eq,Show)
+
+dump_z3 :: DumpCmd -> FilePath -> Table Key (Seq,Maybe Bool) -> IO ()
 dump_z3 pat file pos = dump file (M.map fst 
-        $ M.filterWithKey (const . matches) 
+        $ M.filterWithKey matches
         $ mapKeys snd pos)
     where
-        matches = maybe (const True) (==) pat
+        matches :: Label -> (Seq,Maybe Bool) -> Bool
+        matches lbl1 (_,res) = case pat of
+            Only lbl0 -> lbl0 == lbl1
+            All       -> True
+            AllFailed -> res == Just False

@@ -11,10 +11,12 @@ main :: IO ()
 main = do
     home <- getEnv "HOME"
     let sty = [ "bsymb.sty" 
-              , "calculation.sty" 
+              , "calculational.sty" 
               , "eventB.sty" 
               , "unitb.sty" ]
         src  = "Tests"
-        path = home </> "Library/texmf/tex/"
+        path = home </> "Library/texmf/tex/latex"
+        -- path = home </> "texmf/tex/latex/"
+    createDirectoryIfMissing True path
     forM_ sty $ \fn -> do
         copyFile (src </> fn) (path </> fn)

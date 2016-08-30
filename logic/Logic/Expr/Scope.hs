@@ -90,9 +90,9 @@ areVisible ln vars' e = do
     vs <- foldMap view ln 
     let pre  = [printf|\n%s\n free vars = %s\n declared  = %s\n diff      = %s|]
                 (stackTrace' [$__FILE__] ?loc "Scope error")
-                (show $ Pretty <$> M.toList vars)
-                (show $ Pretty <$> M.toList vs)
-                (show $ Pretty <$> M.toList (vars `M.difference` vs))
+                (show $ Pretty <$> M.keys vars)
+                (show $ Pretty <$> M.keys vs)
+                (show $ Pretty <$> M.keys (vars `M.difference` vs))
         vars = symbol_table vars'
     if vars `isSubmapOf` vs
         then return []

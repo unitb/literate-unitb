@@ -21,8 +21,10 @@ import Logic.Names
     -- Library
 import Control.Applicative hiding (Const)
 import Control.DeepSeq
-import Control.Monad.Reader
+import qualified Control.Invariant as I
 import Control.Monad.Identity
+import Control.Monad.Reader
+import Control.Monad.State
 import Control.Lens hiding (rewrite,Context,elements
                            ,Const,Context',List,rewriteM
                            ,Traversable1(..))
@@ -61,23 +63,23 @@ type Expr' = AbsExpr InternalName Type FOQuantifier
 type UntypedExpr = GenExpr Name () GenericType HOQuantifier
 
 data GenExpr n t a q = 
-        Word (AbsVar n t) 
-        | Record (RecordExpr (GenExpr n t a q))
-        | Lit Value t
-        | FunApp (AbsFun n a) [GenExpr n t a q]
-        | Binder q [AbsVar n t] (GenExpr n t a q) (GenExpr n t a q) t
-        | Cast (GenExpr n t a q) a
-        | Lift (GenExpr n t a q) a
+        Word !(AbsVar n t) 
+        | Record !(RecordExpr (GenExpr n t a q))
+        | Lit !Value !t
+        | FunApp !(AbsFun n a) ![GenExpr n t a q]
+        | Binder !q ![AbsVar n t] !(GenExpr n t a q) !(GenExpr n t a q) !t
+        | Cast !(GenExpr n t a q) !a
+        | Lift !(GenExpr n t a q) !a
     deriving (Eq,Ord,Typeable,Data,Generic,Show,Functor,Foldable,Traversable)
-type RecFields expr = Table Name expr
+type RecFields expr = Table Field expr
 
 data RecordExpr expr =
-        RecLit (RecFields expr)
-        | RecUpdate expr (RecFields expr)
-        | FieldLookup expr Name
+        RecLit !(RecFields expr)
+        | RecUpdate !expr !(RecFields expr)
+        | FieldLookup !expr !Field
     deriving (Eq,Ord,Typeable,Data,Generic,Show,Functor,Foldable,Traversable)
 
-data Value = RealVal Double | IntVal Int
+data Value = RealVal !Double | IntVal !Int
     deriving (Eq,Ord,Generic,Typeable,Data,Show)
 
 instance PrettyPrintable Value where
@@ -85,7 +87,7 @@ instance PrettyPrintable Value where
     pretty (IntVal v)  = show v
 
 instance ZoomEq Value where
-    (.==) = (===)
+    (.==) = (I.===)
 
 instance (ZoomEq n,ZoomEq t,ZoomEq a,ZoomEq q) => ZoomEq (GenExpr n t a q) where
 instance (Arbitrary t,Arbitrary n,Arbitrary a,Arbitrary q,TypeSystem t,IsQuantifier q) 
@@ -94,30 +96,43 @@ instance (Arbitrary t,Arbitrary n,Arbitrary a,Arbitrary q,TypeSystem t,IsQuantif
         inductive $ \arb -> 
             [ Word   <$> arbitrary' 
             , Lit    <$> arbitrary' <*> arbitrary'
-            , FunApp <$> arbitrary' <*> listOf' arb
-            , Binder <$> arbitrary' <*> arbitrary' <*> arb <*> arb <*> arbitrary'
+            , funApp <$> arbitrary' <*> listOf' arb
+            , binder <$> arbitrary' <*> arbitrary' <*> arb <*> arb <*> arbitrary'
             , Cast   <$> arb <*> arbitrary'
             , Lift   <$> arb <*> arbitrary'
-            , Record <$> (arb & _Wrapped.mapped %~ arbitraryRecord)
             ]
     shrink = genericShrink
 
-arbitraryRecord :: Gen expr
+arbitraryRecord :: (RecordExpr expr -> expr)
+                -> Gen expr
                 -> Gen (RecordExpr expr)
-arbitraryRecord arb = oneof 
-      [ RecLit <$> arbitraryFields arb
-      , RecUpdate <$> arb <*> arbitraryFields arb
-      , FieldLookup <$> arb <*> arbitrary ]
+arbitraryRecord mkExpr arb = oneof 
+      [ rec
+      -- , RecUpdate <$> arb <*> arbitraryFields arb
+      , FieldLookup <$> (mkExpr <$> rec) <*> arbitrary ]
+    where
+      recLit = RecLit <$> arbitraryFields arb
+      recUpd e = RecUpdate e <$> arbitraryFields arb
+      updateOnce = StateT $ fmap ((),) . recUpd . mkExpr
+      rec = do
+        n <- choose (0,2)
+        execStateT (replicateM n updateOnce) =<< recLit
 
 arbitraryFields :: (Arbitrary k,Ord k)
                 => Gen a -> Gen (M.Map k a)
-arbitraryFields arb = M.fromList <$> listOf (liftA2 (,) arbitrary arb) 
+arbitraryFields arb = M.fromList <$> fields
+    where
+      fields = do
+          n <- choose (0,3) 
+          replicateM n 
+              $ liftM2 (,) arbitrary arb
 
 instance (ZoomEq expr) 
         => ZoomEq (RecordExpr expr) where
 
-instance (Arbitrary expr) => Arbitrary (RecordExpr expr) where
-    arbitrary = arbitraryRecord arbitrary
+instance (Arbitrary t,Arbitrary n,Arbitrary a,Arbitrary q,TypeSystem t,IsQuantifier q) 
+        => Arbitrary (RecordExpr (GenExpr n t a q)) where
+    arbitrary = arbitraryRecord Record arbitrary
     shrink = genericShrink
 
 instance Functor1 (GenExpr a b) where
@@ -133,6 +148,16 @@ instance (Hashable n,Hashable t,Hashable a,Hashable q)
 
 instance (Hashable expr) => Hashable (RecordExpr expr) where
 
+binder :: q -> [AbsVar n t]
+       -> GenExpr n t a q
+       -> GenExpr n t a q
+       -> t
+       -> GenExpr n t a q
+binder q = Binder q . evalList
+
+funApp :: AbsFun n a -> [GenExpr n t a q] -> GenExpr n t a q
+funApp fun = FunApp fun . evalList
+
 {-# INLINE traverseRecExpr #-}
 traverseRecExpr :: Traversal (RecordExpr expr) (RecordExpr expr')
                              expr expr'
@@ -146,8 +171,8 @@ instance Traversable1 (GenExpr a b) where
     traverse1 _ (Lit v t)  = pure $ Lit v t
     traverse1 f (Cast e t) = Cast <$> traverse1 f e <*> f t
     traverse1 f (Lift e t) = Lift <$> traverse1 f e <*> f t
-    traverse1 f (FunApp fun e) = liftA2 FunApp (traverse f fun) ((traverse.traverse1) f e)
-    traverse1 f (Binder a b c d e) = Binder a b <$> traverse1 f c 
+    traverse1 f (FunApp fun e) = liftA2 funApp (traverse f fun) ((traverse.traverse1) f e)
+    traverse1 f (Binder a b c d e) = binder a b <$> traverse1 f c 
                                                 <*> traverse1 f d 
                                                 <*> pure e
     traverse1 f (Record x) = Record <$> traverseRecExpr (traverse1 f) x
@@ -157,9 +182,9 @@ instance Traversable2 (GenExpr a) where
     traverse2 f (Lit v t)  = Lit v <$> f t
     traverse2 f (Cast e t) = Cast <$> traverse2 f e <*> pure t
     traverse2 f (Lift e t) = Lift <$> traverse2 f e <*> pure t
-    traverse2 f (FunApp fun e) = FunApp fun 
+    traverse2 f (FunApp fun e) = funApp fun 
                                         <$> (traverse.traverse2) f e
-    traverse2 f (Binder a b c d e) = Binder a <$> (traverse.traverse) f b
+    traverse2 f (Binder a b c d e) = binder a <$> (traverse.traverse) f b
                                               <*> traverse2 f c 
                                               <*> traverse2 f d
                                               <*> f e
@@ -170,8 +195,8 @@ instance Traversable3 GenExpr where
     traverse3 _ (Lit v t) = pure $ Lit v t
     traverse3 f (Cast e t) = Cast <$> traverse3 f e <*> pure t
     traverse3 f (Lift e t) = Lift <$> traverse3 f e <*> pure t
-    traverse3 f (FunApp fun e) = FunApp <$> traverse1 f fun <*> (traverse.traverse3) f e
-    traverse3 f (Binder a b c d e) = Binder a <$> (traverse.traverse1) f b
+    traverse3 f (FunApp fun e) = funApp <$> traverse1 f fun <*> (traverse.traverse3) f e
+    traverse3 f (Binder a b c d e) = binder a <$> (traverse.traverse1) f b
                                               <*> traverse3 f c
                                               <*> traverse3 f d
                                               <*> pure e
@@ -199,7 +224,7 @@ expSize (Lit _ _)   = 0
 expSize (Record (RecLit m)) = 1 + sum (M.map expSize m)
 expSize (Record (RecUpdate e m)) = 1 + expSize e + sum (M.map expSize m)
 expSize (Record (FieldLookup e _)) = 1 + expSize e
-expSize (FunApp _ xs) = 1 + sum (map expSize xs)
+expSize (FunApp _ xs) = 1 + sum (fmap expSize xs)
 expSize (Binder _ _ r t _) = 1 + expSize r + expSize t
 expSize (Cast e _) = 1 + expSize e
 expSize (Lift e _) = 1 + expSize e
@@ -276,8 +301,8 @@ instance ( IsName n
         => HasGenExpr (GenExpr n t a q) where
     type ExprT (GenExpr n t a q)  = GenExpr n t a q
     asExpr = id
-    ztrue  = FunApp true_fun []
-    zfalse = FunApp false_fun []
+    ztrue  = funApp true_fun []
+    zfalse = funApp false_fun []
     zword  = Word
 
 class ( IsGenExpr expr, AnnotT expr ~ TypeT expr )
@@ -313,12 +338,12 @@ typeOfRecord (RecUpdate x m) = recordTypeOfFields $
               M.map type_of m `M.union` fromJust' (type_of x^?fieldTypes) 
 typeOfRecord (FieldLookup x field) = fromJust' (type_of x^?fieldTypes.ix field)
 
-fieldTypes :: TypeSystem t => Prism' t (Table Name t)
+fieldTypes :: TypeSystem t => Prism' t (Table Field t)
 fieldTypes =  _FromSort.swapped.below _RecordSort
             . iso (\(ts,m) -> m & unsafePartsOf traverse .~ ts) 
                   (\m -> (M.elems m,() <$ m))
 
-recordTypeOfFields :: (Typed e, t ~ TypeOf e,TypeSystem t) => Table Name e -> t
+recordTypeOfFields :: (Typed e, t ~ TypeOf e,TypeSystem t) => Table Field e -> t
 recordTypeOfFields m = make_type (RecordSort $ () <$ m) $ type_of <$> M.elems m
 
 ztuple_type :: TypeSystem t => [t] -> t
@@ -334,11 +359,12 @@ ztuple [x0,x1]      = pair x0 $ pair x1 unit    -- FunApp (Fun [tx, txs] "pair" 
 ztuple (x0:x1:xs)   = pair x0 $ ztuple (x1:xs)  -- FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
 
 unit :: (TypeSystem t,IsName n) => AbsExpr n t q
-unit = FunApp (mkConstant "null" null_type) []
+unit = funApp (mkConstant "null" null_type) []
 
 pair :: (IsName n,TypeSystem t,IsQuantifier q) => AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
-pair x y = FunApp (mk_fun [] (fromString'' "pair") [t0,t1] $ pair_type t0 t1) [x,y]
+pair x y = funApp fun [x,y]
     where
+        fun = mk_fun [] (fromString'' "pair") [t0,t1] $ pair_type t0 t1
         t0 = type_of x
         t1 = type_of y
 
@@ -393,8 +419,14 @@ type Def = AbsDef Name GenericType HOQuantifier
 
 type Def' = AbsDef InternalName GenericType FOQuantifier
 
-data AbsDef n t q = Def [t] n [AbsVar n t] t (AbsExpr n t q)
+data AbsDef n t q = Def ![t] !n ![AbsVar n t] !t !(AbsExpr n t q)
     deriving (Eq,Ord,Generic,Typeable,Data,Functor,Foldable,Traversable,Show)
+
+makeDef :: [t] -> n 
+        -> [AbsVar n t] -> t 
+        -> AbsExpr n t q
+        -> AbsDef n t q
+makeDef ps n args t e = Def (evalList ps) n (evalList args) t e
 
 instance HasScope Def where
     scopeCorrect' (Def _tp _n args _t e) = withVars args $ scopeCorrect' e
@@ -406,14 +438,14 @@ instance Foldable1 (AbsDef n) where
 instance Foldable2 AbsDef where
 
 instance Traversable1 (AbsDef n) where
-    traverse1 f (Def a b c d e) = Def
+    traverse1 f (Def a b c d e) = makeDef
         <$> traverse f a
         <*> pure b 
         <*> (traverse.traverse) f c 
         <*> f d 
         <*> typesOf' f e
 instance Traversable2 AbsDef where
-    traverse2 f (Def a b c d e) = Def a 
+    traverse2 f (Def a b c d e) = makeDef a 
         <$> f b
         <*> (traverse.traverse1) f c
         <*> pure d 
@@ -428,12 +460,15 @@ z3Def :: Pre
       -> String
       -> [Var] -> Type -> Expr
       -> Def
-z3Def ts n = Def ts (z3Name n)
+z3Def ts n = makeDef ts (z3Name n)
 
 lookupFields :: ( IsName n,TypeSystem t,TypeSystem a
+                , Pre
                 , TypeAnnotationPair t a,IsQuantifier q) 
-             => GenExpr n t a q -> Table Name (GenExpr n t a q)
-lookupFields e = fromJust' $ type_of e^?fieldTypes.to (imap $ \f _ -> Record $ FieldLookup e f)
+             => GenExpr n t a q -> Table Field (GenExpr n t a q)
+lookupFields e = fromJust' $ type_of e^?fieldTypes.to fieldLookupMap
+    where
+      fieldLookupMap = imap $ \f _ -> Record $ FieldLookup e f
 
 instance ( ZoomEq t
          , ZoomEq n
@@ -469,11 +504,11 @@ instance (TypeSystem a, TypeSystem t
     as_tree' (Record (RecUpdate x m))  = 
         as_tree' (Record $ RecLit $ m `M.union` lookupFields x)
     as_tree' (Record (FieldLookup x field)) =
-        List <$> sequenceA [pure $ Str $ render field, as_tree' x]
+        List <$> sequenceA [pure $ Str $ accessor field, as_tree' x]
     as_tree' (Word (Var xs _))    = return $ Str $ render xs
     as_tree' (Lit xs _)         = return $ Str $ pretty xs
     as_tree' (FunApp f@(Fun _ _ _ _ t _) [])
-            | isLifted f =List <$> sequence   
+            | isLifted f = List <$> sequence   
                                [ List 
                                  <$> (map Str ["_","map"] ++) 
                                  <$> mapM as_tree' [t]
@@ -504,8 +539,8 @@ instance (TypeSystem a, TypeSystem t
     rewriteM f (Record e)        = Record <$> traverseRecExpr f e
     rewriteM f (Lift e t)    = Lift <$> f e <*> pure t
     rewriteM f (Cast e t)    = Cast <$> f e <*> pure t
-    rewriteM f (FunApp g xs) = FunApp g <$> traverse f xs
-    rewriteM f (Binder q xs r x t)  = Binder q xs <$> f r <*> f x <*> pure t
+    rewriteM f (FunApp g xs) = funApp g <$> traverse f xs
+    rewriteM f (Binder q xs r x t)  = binder q xs <$> f r <*> f x <*> pure t
 
 rewriteExpr :: (t0 -> t1)
             -> (q0 -> q1)
@@ -525,10 +560,10 @@ rewriteExprM' fT fA fQ fE e =
             Word v -> Word <$> fvar v
             Lit v t -> Lit v <$> fT t
             FunApp f args -> 
-                FunApp <$> ffun f
+                funApp <$> ffun f
                        <*> traverse fE args
             Binder q vs re te t ->
-                Binder <$> fQ q 
+                binder <$> fQ q 
                        <*> traverse fvar vs 
                        <*> fE re
                        <*> fE te
@@ -596,7 +631,7 @@ merge m0 m1 = M.unionWithKey f m0 m1
 
 merge_all :: (M.IsKey map k, Eq a, Show k, Show a,M.IsMap map)
           => [map k a] -> map k a
-merge_all ms = foldl (M.unionWithKey f) M.empty ms
+merge_all ms = foldl' (M.unionWithKey f) M.empty ms
     where
         f k x y
             | x == y    = x
@@ -678,7 +713,7 @@ primeOnly vs = freeVarsOf %~ pr
              | otherwise               = v
 
 defExpr :: Lens' (AbsDef n t q) (AbsExpr n t q) 
-defExpr f (Def ps n args rt e) = Def ps n args rt <$> f e
+defExpr f (Def ps n args rt e) = makeDef ps n args rt <$> f e
 
 funOf :: (TypeSystem t, IsQuantifier q, IsName n) 
       => AbsDef n t q -> AbsFun n t

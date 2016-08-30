@@ -109,23 +109,16 @@ event6_evt = empty_event {
         c' = Word var_c'
 
 path6 :: FilePath
-path6    = "Tests/integers.tex"
+path6    = [path|Tests/integers.tex|]
 
 case6 :: IO (Either [Error] [RawMachineAST])
 case6    = (traverse.traverse %~ fmap getExpr.view' syntax) <$> parse path6
 
 result7 :: String
 result7 = unlines 
-    [ "  o  m0/INIT/FIS/a"
-    , "  o  m0/INIT/FIS/b"
-    , "  o  m0/INIT/FIS/c"
-    , "  o  m0/INIT/FIS/n"
-    , "  o  m0/INIT/INV/inv0"
+    [ "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/INV/inv2"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
-    , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
     , "  o  m0/evt/FIS/c@prime"
@@ -154,23 +147,15 @@ result7 = unlines
     , "  o  m0/evt/INV/inv2/step 2"
     , "  o  m0/evt/INV/inv2/step 3"
     , "  o  m0/evt/INV/inv2/step 4"
-    , "  o  m0/evt/WD/ACT/a0"
-    , "  o  m0/evt/WD/ACT/a1"
-    , "  o  m0/evt/WD/ACT/a2"
-    , "  o  m0/evt/WD/ACT/a3"
-    , "  o  m0/evt/WD/C_SCH"
-    , "  o  m0/evt/WD/F_SCH"
-    , "  o  m0/evt/WD/GRD"
-    , "  o  m0/evt/WWD"
-    , "passed 46 / 46"
+    , "passed 31 / 31"
     ]
 
 case7 :: IO (String, Table Label Sequent)
 case7 = do
     verify path6 0
 
-path8 :: String
-path8   = "Tests/integers_t8.tex"
+path8 :: FilePath
+path8   = [path|Tests/integers_t8.tex|]
 
 result8 :: String
 result8 = unlines
@@ -186,6 +171,7 @@ result8 = unlines
     , "(define-sort set (a) (Array a Bool))"
     , "(declare-const x Int)"
     , "(assert (not (exists ( (x Int) ) (and true (= x x)))))"
+    , "(assert (not true))"
     , "(check-sat-using (or-else (then qe smt)"
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
@@ -230,7 +216,7 @@ case9 = do
 
 proof_kind :: Proof -> String
 proof_kind (ByCalc _) = "calc"
-proof_kind (Easy _) = "easy"
+proof_kind (Easy _ _) = "easy"
 proof_kind (ByCases _ _) = "cases"
 proof_kind (ByParts _ _) = "parts"
 proof_kind (FreeGoal _ _ _ _ _) = "free goal"
@@ -241,7 +227,7 @@ proof_kind (Assume _ _ _ _) = "assume"
 proof_kind (Definition _ _ _) = "definition"
 
 path10 :: FilePath
-path10   = "Tests/integers_t10.tex"
+path10   = [path|Tests/integers_t10.tex|]
 
 result10 :: String
 result10 = unlines

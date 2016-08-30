@@ -11,7 +11,7 @@ import Document.Pipeline
 import Document.Phase.Types
 import Document.Phase.Parameters
 import Document.Scope
-import Document.Visitor (M,runM,left,hoistEither)
+import Document.Visitor (M,runM,left,hoistEither,bind,bind_all)
 
 import Latex.Parser
 
@@ -26,7 +26,9 @@ import Control.Applicative
 import Control.Arrow hiding (ArrowChoice(..))
 import Control.CoApplicative
 import Control.Lens as L hiding ((<.>))
+import Control.Lens.HierarchyTH
 
+import Control.Monad.Except (MonadError)
 import Control.Monad.Reader.Class 
 import Control.Monad.Reader (Reader,runReader) 
 import Control.Monad.State
@@ -51,7 +53,7 @@ import Test.QuickCheck as QC hiding (label,collect)
 import Text.Printf.TH
 
 import Utilities.Graph (cycles,SCC(..))
-import Utilities.Error
+import Utilities.Error (myError)
 import Utilities.Syntactic
 import Utilities.Table 
 
@@ -287,11 +289,12 @@ evtMergeAdded :: (HasMachineP1 phase, M.IsKey Table label,AEvtType phase ~ CEvtT
               -> Getting (Table label a) (AEvtType phase) (Table label a)
               -> Getter phase (Table label a)
 evtMergeAdded = eventDifference $ \old new -> new `M.difference` M.unions (NE.toList old)
-evtMergeDel :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
+evtMergeDel :: (HasMachineP1 phase, M.IsKey Table label,AEvtType phase ~ CEvtType phase)
             => EventId
-            -> Getting (Table Label a) (AEvtType phase) (Table Label a)
-            -> Getter phase (Table Label (a,NonEmpty SkipOrEvent))
-evtMergeDel = eventDifferenceWithId M.difference 
+            -> Getting (Table label a) (AEvtType phase) (Table label a)
+            -- -> Getter phase (Table label (a,NonEmpty SkipOrEvent))
+            -> Getter phase (Table label a)
+evtMergeDel eid ln = eventDifferenceWithId M.difference eid ln . to (fmap fst)
 evtMergeKept :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
              => EventId
              -> Getting (Table Label a) (AEvtType phase) (Table Label a)
@@ -312,6 +315,11 @@ evtSplits union eid ln = to $ \m -> readGraph (m^.pEventRef) $ do
             return $ r <$ eid
         return $ rights rs
 
+evtSplitConcrete :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase,Pre)
+                 => EventId
+                 -> Getting (Table Label a) (AEvtType phase) (Table Label a)
+                 -> Getter phase [Table Label a]
+evtSplitConcrete = evtSplits $ flip const
 evtSplitAdded :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase,Pre)
               => EventId
               -> Getting (Table Label a) (AEvtType phase) (Table Label a)
@@ -414,6 +422,40 @@ pIndices  :: HasMachineP2 mch
           => Getter mch (Table EventId (Table Name Var))
 pIndices = pEvents . onMap eIndices
 
+get_event :: (HasMachineP1 phase,MonadReader LineInfo m,MonadError [Error] m) 
+          => phase -> Label -> m EventId
+get_event p2 ev_lbl = do
+        let evts = p2^.pEventIds
+        bind
+            ([printf|event '%s' is undeclared|] $ pretty ev_lbl)
+            $ ev_lbl `M.lookup` evts
+
+get_abstract_event :: HasMachineP1 phase => phase -> EventId -> M EventId
+get_abstract_event p2 ev_lbl = do
+        let evts = p2^.pEventSplit & M.mapKeys as_label . M.mapWithKey const
+        bind
+            ([printf|event '%s' is undeclared|] $ pretty ev_lbl)
+            $ as_label ev_lbl `M.lookup` evts
+
+get_concrete_event :: HasMachineP1 phase => phase -> EventId -> M EventId
+get_concrete_event p2 ev_lbl = do
+        let evts = p2^.pEventMerge & M.mapKeys as_label . M.mapWithKey const
+        bind
+            ([printf|event '%s' is undeclared|] $ pretty ev_lbl)
+            $ as_label ev_lbl `M.lookup` evts
+
+get_events :: ( Traversable f
+              , MonadReader r m
+              , Syntactic r
+              , HasMachineP2 mch
+              , MonadError [Error] m)
+           => mch -> f Label -> m (f EventId)
+get_events p2 ev_lbl = do
+            let evts = p2^.pEventIds
+            bind_all ev_lbl
+                ([printf|event '%s' is undeclared|] . pretty)
+                $ (`M.lookup` evts)
+
 --pParams   :: HasMachineP2 mch
 --          => Getter mch (Map EventId (Map String Var))
 --pParams = pEvents . onMap eParams
@@ -431,15 +473,15 @@ eIndParams = to $ \e -> (e^.eParams) `M.union` (e^.eIndices)
 
 pEventRenaming :: HasMachineP1 mch
                => Getter mch (Table EventId [EventId])
-pEventRenaming = pEventRef . to (g . f) -- to (M.fromListWith (++) . f)
+pEventRenaming = pEventRef . to (g . f) 
     where
         g :: Table SkipOrEvent (NonEmpty SkipOrEvent)
           -> Table EventId [EventId]
-        g = asList %~ MM.mapMaybe (\(x,y) -> rightToMaybe $ (,) <$> x <*> y)
-                          . L.map (second $ sequence . NE.toList)
+        g = asListWith const %~ MM.mapMaybe (\(x,y) -> rightToMaybe $ (,) <$> x <*> y)
+                                   . L.map (second $ sequence . NE.toList)
         f g = readGraph g $ do
             vs <- getLeftVertices
-            fmap M.fromList $ forM vs $ \v -> 
+            fmap (M.fromListWith (<>)) $ forM vs $ \v -> do
                 (,) <$> leftKey v 
                     <*> (T.mapM (rightKey . G.target) =<< successors v)
 
@@ -467,10 +509,15 @@ class ( IsMachine p
 instance ( IsMachine p
           , HasMachineP1 p
           , HasMachineP2' (MchType p)
-          , HasEventP2 (AEvtType p)
-          , HasEventP2 (CEvtType p)
+          , HasEventP2  (AEvtType p)
+          , HasEventP2  (CEvtType p)
           , HasTheoryP2 (ThyType p) ) 
     => HasMachineP2 p where
+
+instance HasMachineP1' MachineP2RawDef' where
+    machineP1' = $(oneLens '_p1)
+instance HasMachineP2' MachineP2RawDef' where
+    machineP2' = id
 
 class ( IsMachine p
       , HasMachineP3' (MchType p)
@@ -516,13 +563,13 @@ inheritWith' :: M.IsKey Table k
              -> (conc -> abstr -> conc)
              -> Hierarchy k 
              -> Table k base -> Table k conc
-inheritWith' decl inh (++) (Hierarchy _xs es) m = m2 -- _ $ L.foldl f (M.map decl m) xs
+inheritWith' decl inh (++) (Hierarchy _xs es) m = m2 -- _ $ L.foldl' f (M.map decl m) xs
     where
         m1 = M.map decl m
         prec k = do
             p <- M.lookup k es 
             inh k <$> p `M.lookup` m2
-        m2 = M.mapWithKey (\k c -> fromMaybe c ((c ++) <$> (prec k))) m1
+        m2 = M.mapWithKey (\k c -> maybe c (c ++) (prec k)) m1
 
 inheritWithAlt :: M.IsKey Table k 
              => (base -> conc) 
@@ -530,7 +577,7 @@ inheritWithAlt :: M.IsKey Table k
              -> (conc -> abstr -> conc)
              -> Hierarchy k 
              -> Table k base -> Table k conc
-inheritWithAlt decl inh (++) (Hierarchy xs es) m = L.foldl f (M.map decl m) xs
+inheritWithAlt decl inh (++) (Hierarchy xs es) m = L.foldl' f (M.map decl m) xs
     where
         f m v = case v `M.lookup` es of 
                  Just u -> M.adjustWithKey (app $ m ! u) v m
@@ -560,6 +607,7 @@ topological_order :: Pipeline MM
                      (Hierarchy MachineId)
 topological_order = Pipeline empty_spec empty_spec $ \es' -> do
         let es = M.map fst es'
+            lis :: Map MachineId LineInfo
             lis = convertMap $ M.map snd es'
             cs = cycles $ M.toList es
         vs <- triggerM =<< sequence <$> mapM (cycl_err_msg lis) cs
@@ -567,11 +615,14 @@ topological_order = Pipeline empty_spec empty_spec $ \es' -> do
     where
         struct = "refinement structure" :: String
         cycle_msg = msg struct
+        cycl_err_msg :: MonadWriter [Error] m 
+                     => Map MachineId LineInfo 
+                     -> SCC MachineId -> m (Maybe MachineId)
         cycl_err_msg _ (AcyclicSCC v) = return $ Just v
         cycl_err_msg lis (CyclicSCC vs) = do
-            tell [MLError cycle_msg 
-                $ L.map (first pretty) $ M.toList $ 
-                lis `M.intersection` fromList' vs ] 
+            tell [MLError cycle_msg $ nonEmpty'
+                $ L.map (first pretty) $ M.toList
+                $ lis `M.intersection` fromList' vs ] 
             return Nothing -- (error "topological_order")
         msg = [printf|A cycle exists in the %s|]
 
@@ -588,13 +639,15 @@ inherit2 :: (Scope s,HasMachineP1 phase)
          -> MTable [(t, s)]
 inherit2 phase = inheritWith'
             id
-            (\m -> concatMap $ second' $ \s -> make_inherited' s >>= rename_events (names ! m))
+            (\m -> concatMap $ second' (make_inherited' >=> rename_events (names ! m)))
             (++)
     where
         names = M.map (view pEventRenaming) phase
         make_inherited' = MM.maybeToList . make_inherited
-        second' = runKleisli . second . Kleisli
         _ = MM.mapMaybe :: (a -> Maybe a) -> [a] -> [a]
+
+second' :: Monad m => (a -> m b) -> (d, a) -> m (d, b)
+second' = runKleisli . second . Kleisli
 
 inheritEvents :: Hierarchy MachineId
               -> Table MachineId [(Label, (EventId, [EventId]), t1)]

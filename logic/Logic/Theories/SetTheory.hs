@@ -26,12 +26,12 @@ import Utilities.MapSyntax
 import Utilities.Table
 
 as_array :: TypeSystem t => t -> Name -> AbsExpr Name t q
-as_array t x = FunApp (mk_lifted_fun [] x [] t) []
+as_array t x = funApp (mk_lifted_fun [] x [] t) []
 
 map_array :: Name -> Type -> [ExprP] -> ExprP
 map_array name t xs = do
     xs <- sequence xs
-    return $ FunApp (mk_lifted_fun [] name (L.map type_of xs) t) xs
+    return $ funApp (mk_lifted_fun [] name (L.map type_of xs) t) xs
 
 mzfinite :: (IsName n,IsQuantifier q)
          => ExprPG n Type q -> ExprPG n Type q
@@ -53,12 +53,12 @@ set_theory = Theory { .. }
         t0  = VARIABLE $ z3Name "t0"
         gT = GENERIC $ z3Name "t"
 
-        _theoryName = z3Name "sets"
+        _theory'Name = z3Name "sets"
         _extends = M.empty
         _consts  = M.empty
-        _theoryDummies = M.empty
+        _theory'Dummies = M.empty
         _types = M.empty
-        _theorySyntacticThm = def
+        _theory'SyntacticThm = def
             { _associative = fromList $ L.map (first z3Name)
                     [ ("intersect",zset_all)
                     , ("union",zempty_set) ]
@@ -77,7 +77,7 @@ set_theory = Theory { .. }
                      , Side (Just $ Rel subset_fun Direct) (Just $ Rel subset_fun Flipped))
                    ]
                  }
-        _defs = symbol_table
+        _theory'Defs = symbol_table
                 [ z3Def [gT] "empty-set" [] (set_type gT) 
                         $ zlift (set_type gT) zfalse
                 , z3Def [gT] "all" [] (set_type gT) 
@@ -120,9 +120,10 @@ set_theory = Theory { .. }
                      .=> (mzfinite $ s1 `zsetdiff` s2)
             $axiom $     mzfinite s1 /\ mzfinite s2
                      .=> (mzfinite $ s1 `zunion` s2)
+            $axiom $     mzfinite s2 /\ mznot (mzfinite s1)
+                     .=> mznot (mzfinite $ s1 `zsetdiff` s2)
             $axiom $ mzfinite $ zmk_set x
             $axiom $ mzfinite $ zcast (set_type t) zempty_set
-            $axiom $ zsubset s1 s2 .=> (mzfinite s2 .=> mzfinite s1)
             $axiom $ zset r1 zident .=. r1
                 -- quantifier union
             $axiom $ zunion_qu (zcast (set_type t0) zempty_set) terms .=. zempty_set
@@ -212,13 +213,14 @@ zrecord_set' = zrecord_set . runMap'
 
 zrecord_set :: Map Name ExprP
             -> ExprP
-zrecord_set m = do
-        let msg e = [printf|Expecting a set type for: %s\n  of type: %s|] 
+zrecord_set m' = do
+        let m = M.mapKeysMonotonic Field m'
+            msg e = [printf|Expecting a set type for: %s\n  of type: %s|] 
                       (pretty e) (pretty $ type_of e)
             getElements :: ExprP -> Either [String] Type
             getElements e = e >>= \e -> maybe (Left [msg e]) Right $ type_of e^?_ElementType
         (r,r_decl) <- var "r" . recordTypeOfFields <$> traverseValidation getElements m
-        let range = mzall $ mapWithKey (\field e -> zfield r field `zelem` e) m
+        let range = mzall $ mapWithKey (\field e -> zfield r field `zelem` e) m'
         zcomprehension [r_decl] range r
 
 qunion :: HOQuantifier
@@ -235,8 +237,8 @@ zset = typ_fun2 comprehension_fun
 
 zset_select = typ_fun2 (mk_fun' [] "select" [set_type gA, gA] bool)
 
-zempty_set   = Right $ FunApp zempty_set_fun []
-zset_all     = Right $ FunApp zset_all_fun []
+zempty_set   = Right $ funApp zempty_set_fun []
+zset_all     = Right $ funApp zset_all_fun []
 zsubset      = typ_fun2 subset_fun
 zsetdiff     = typ_fun2 zsetdiff_fun
 zstsubset    = typ_fun2 st_subset_fun
@@ -256,7 +258,7 @@ zpow_set_fun   = mk_fun' [gA] "pow" [set_type gA] $ set_type (set_type gA)
 
 zmk_set      = typ_fun1 (mk_fun' [gA] "mk-set" [gA] $ set_type gA)
 zpow_set     = typ_fun1 zpow_set_fun
-zset_enum (x:xs) = foldl zunion y ys 
+zset_enum (x:xs) = foldl' zunion y ys 
     where
         y  = zmk_set x
         ys = L.map zmk_set xs

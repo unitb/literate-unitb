@@ -18,7 +18,6 @@ import Logic.Expr
 import Logic.Expr.Parser
 
     -- Libraries
-import Control.Applicative
 import Control.Lens hiding (Context)
 import Control.Precondition ((!))
 
@@ -72,11 +71,16 @@ getTransient = view pTransient . getMachine
 getProgress :: RuleParserParameter -> Table Label ProgressProp
 getProgress = mapKeysMonotonic as_label . view pProgress . getMachine
 
+getNewProgress :: RuleParserParameter -> Table Label ProgressProp
+getNewProgress = mapKeysMonotonic as_label . view (pNewPropSet.progress) . getMachine
+
 getSafety :: RuleParserParameter -> Table Label SafetyProp
 getSafety = view pSafety . getMachine
 
-getGoalProp :: RuleParserParameter -> ProgressProp
-getGoalProp = liftA2 (!) getProgress getGoal
+getGoalProp :: RuleParserParameter -> M ProgressProp
+getGoalProp p = do
+    bind ([printf|goal %s is not a valid progress property|] (pretty $ getGoal p)) 
+        (M.lookup (getGoal p) (getNewProgress p))
 
 type Rule = ProofTree
 newtype RuleProxy = RuleProxy { _ruleProxyCell :: Cell1 Proxy RuleParser }
@@ -285,8 +289,8 @@ parse :: RuleParser rule
       -> RuleParserParameter
       -> M Rule
 parse rc param = do
-        let goal      = getExpr <$> getGoalProp param
-            hyps_lbls = getHypotheses param
+        goal <- fmap getExpr <$> getGoalProp param
+        let hyps_lbls = getHypotheses param
         fst <$> evalRWST (parse_rule goal rc) param hyps_lbls
 
 parse' :: RuleParserParameter
@@ -302,7 +306,7 @@ parseOne rule f = runIdentity <$> parseMany rule f
 parse_discharge :: RuleParserParameter
                 -> M Rule
 parse_discharge params = do
-    let goal = getExpr <$> getGoalProp params
+    goal <- fmap getExpr <$> getGoalProp params
     --let hyps_lbls = getHypotheses params
     --li <- ask
     --when (1 > length hyps_lbls || length hyps_lbls > 2)

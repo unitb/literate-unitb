@@ -25,7 +25,6 @@ import Control.DeepSeq
 import Control.Invariant
 import Control.Lens  hiding (indices,Context,Context',(.=))
 import Control.Monad hiding (guard)
-import Control.Monad.State
 import Control.Precondition
 
 import           Data.Default
@@ -142,18 +141,20 @@ instance Controls (MachinePO' expr) (MachinePO' expr) where
 --    check arse m = fromRight'' arse $ withPO _ _
 --    content arse = _
     --func = 
-instance HasExpr expr => HasMachineBase (MachinePO' expr) expr where
+instance (HasExpr expr,ZoomEq expr) => HasMachineBase (MachinePO' expr) expr where
     machineBase = syntax.content
-instance HasExpr expr => HasAbs_vars (MachinePO' expr) (Table Name Var) where
+instance (HasExpr expr,ZoomEq expr) => HasAbs_vars (MachinePO' expr) (Table Name Var) where
     abs_vars = machineBase.abs_vars
 instance HasName (MachinePO' expr) Name where
     name = syntax.content'.name
-instance HasExpr expr => HasMachine (Machine' expr) expr where
+instance (HasExpr expr,ZoomEq expr) => HasMachine (Machine' expr) expr where
     type Internal (Machine' expr) expr = MachinePO' expr
     empty_machine = fromSyntax . empty_machine
-instance HasExpr expr => HasMachine (MachinePO' expr) expr where
+instance (HasExpr expr,ZoomEq expr) => HasMachine (MachinePO' expr) expr where
     type Internal (MachinePO' expr) expr = MachinePO' expr
     empty_machine = view content' . fromSyntax . empty_machine
+instance (HasExpr expr,ZoomEq expr) => HasDefs (MachinePO' expr) (Map Name expr) where
+    defs = machineBase.defs
 
 instance HasExpr expr => HasInvariant (MachinePO' expr) where
     invariant m = do
@@ -212,7 +213,8 @@ withPOs ps m = fmap check' $ do
             let poBox = box $ \() -> raw_machine_pos' m
                 pos = unbox poBox
                 p = intersectionWith (\s (t,li) -> eitherToValidation $ runTactic li s t) pos ps
-                f lbl (_,li) = Error ([printf|proof obligation does not exist: %s|] $ pretty lbl) li
+                f lbl (_,li) = Error ([printf|proof obligation does not exist: %s\n\n%s|] 
+                                        (pretty lbl) (unlines $ map pretty $ M.keys pos)) li
                 errs = concat (p^.partsOf (traverse._Failure)) ++ elems (mapWithKey f $ ps `difference` pos)
                 errs' | null errs = sequenceA p
                       | otherwise = Failure errs
@@ -239,14 +241,14 @@ verify_changes m old_pos = do
             | otherwise = Just p0
 
 str_verify_machine :: HasExpr expr => Machine' expr -> IO (String,Int,Int)
-str_verify_machine = str_verify_machine_with (return ())
+str_verify_machine = str_verify_machine_with (const Just)
 
 str_verify_machine_with :: HasExpr expr 
-                        => State Sequent a
+                        => (Label -> Sequent -> Maybe Sequent)
                         -> Machine' expr 
                         -> IO (String,Int,Int)
 str_verify_machine_with opt m = do
-        let pos = execState opt <$> proof_obligation m
+        let pos = mapMaybeWithKey opt $ proof_obligation m
         xs <- verify_all pos
         format_result xs
 
