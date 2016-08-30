@@ -1,0 +1,13 @@
+# This is a sample build configuration for other languages.
+# Only use spaces to indent your .yml configuration.
+# -----
+# You can specify a custom docker image from Dockerhub as your build environment
+# image: docker-image:tag
+
+pipelines:
+  default:
+    - step:
+        script:
+          - curl -sSL https://get.haskellstack.org/ | sh
+          - stack setup
+          - stack test
