@@ -12,6 +12,9 @@ import Logic.Expr.Parser.Internal.Monad
 import Logic.Expr.Parser.Internal.Scanner
 import Logic.Expr.Parser.Internal.Setting hiding (with_vars)
 import Logic.Expr.Printable
+import           Logic.Expr.Type as T (Field)
+import qualified Logic.Expr.Type as T (Field(..))
+import Logic.Expr.TypeChecking
 import Logic.Operator
 
 import Logic.Theories.SetTheory
@@ -28,7 +31,6 @@ import           Control.Precondition
 
 import           Data.Char
 import           Data.Either
-import           Data.Either.Combinators
 import           Data.List as L
 import           Data.Map.Class as M hiding ( map )
 import qualified Data.Map.Class as M
@@ -51,10 +53,10 @@ get_notation = notation `liftM` get_params
 get_table :: Parser (Matrix Operator Assoc)
 get_table = (view struct . notation) <$> get_params
 
-get_vars :: Parser (Table Name Expr)
+get_vars :: Parser (Table Name UntypedExpr)
 get_vars = variables `liftM` get_params
 
-with_vars :: [(Name, Var)] -> Parser b -> Parser b
+with_vars :: [(Name, UntypedVar)] -> Parser b -> Parser b
 with_vars vs cmd = do
         x <- get_params
         liftP $ runParserWith (f x) $ do
@@ -214,16 +216,9 @@ oper = do
 data FunOperator = Domain | Range
     deriving Show
 
-check_types :: ExprP -> Parser Expr
-check_types e = 
-        case e of
-            Right e -> return e
-            Left xs -> fail $ [printf|type error: %s|] $ intercalate "\n" xs
-
-apply_fun_op :: Command -> Expr -> Parser Term
+apply_fun_op :: Command -> UntypedExpr -> Parser Term
 apply_fun_op (Command _ _ _ fop) x = do
-        e <- check_types $ typ_fun1 fop (Right x)
-        return $ E e
+        return $ UE $ fun1 fop x
 
 suggestion :: Name -> Table Name String -> [String]
 suggestion xs m = map (\(x,y) -> render x ++ " (" ++ y ++ ")") $ toAscList ws
@@ -234,8 +229,8 @@ suggestion xs m = map (\(x,y) -> render x ++ " (" ++ y ++ ")") $ toAscList ws
         ys' = map toLower $ render ys
     ws = M.filterWithKey p m
 
-nameLit :: Parser Name
-nameLit = getToken (_Literal._NameLit) "name literal"
+nameLit :: Parser Field
+nameLit = T.Field <$> getToken (_Literal._NameLit) "name literal"
 
 assignTok :: Parser (a -> b -> (a,b))
 assignTok = getToken _Assign ":=" >> pure (,)
@@ -243,25 +238,26 @@ assignTok = getToken _Assign ":=" >> pure (,)
 colonTok :: Parser (a -> b -> (a,b))
 colonTok = getToken _Colon ":" >> pure (,)
 
-binding :: Parser (Expr -> LineInfo -> a) -> Parser (Name,a)
+binding :: Parser (UntypedExpr -> LineInfo -> a) -> Parser (Field,a)
 binding = binding' expr
 
 binding' :: Parser term
          -> Parser (term -> LineInfo -> a) 
-         -> Parser (Name,a)
+         -> Parser (Field,a)
 binding' term tok = do
     li <- liftP get_line_info
     liftM2 (,) nameLit (tok <*> term <*> pure li)
 
 data Term = 
         Cmd Command 
-        | Field Name
-        | E Expr
+        | Field Field
+        -- | E Expr
+        | UE UntypedExpr
     deriving (Show)
 
 instance PrettyPrintable Term where
     pretty (Cmd c)   = [printf|Command: %s|] (pretty c)
-    pretty (E e)     = [printf|Expr:  %s|] (pretty e)
+    pretty (UE ue)   = [printf|UntypedExpr:  %s|] (pretty ue)
     pretty (Field n) = [printf|Field: %s|] (pretty n)
 
 term :: Parser Term
@@ -275,22 +271,22 @@ term = do
                 if n == 1 then do
                     tryP (read_listP [Open Curly])
                         (\_ -> do
-                            e <- expr
+                            ue <- expr
                             read_listP [Close Curly]
-                            e <- check_types $ typ_fun1 f (Right e)
-                            return $ E e)
+                            ue <- return $ fun1 f ue
+                            return $ UE ue)
                         (return $ Cmd c)
                 else do
                     args <- replicateM n $
                         brackets Curly expr
-                    e <- check_types $ check_type f (map Right args)
-                    return $ E e
-        , E <$> recordSetOrLit
+                    return $ UE $ FunApp f args
+        , UE <$> recordSetOrLit
         , do    quant <- from quants 
                 ns <- brackets Curly
                     $ sep1P word_or_command comma
-                ctx <- get_context
-                let vs = dummy_types ns ctx
+                _ctx <- get_context
+                let vs :: [UntypedVar]
+                    vs = Var <$> ns <*> pure ()
                 with_vars (zip ns vs) $ do
                     read_listP [Open Curly]
                     r <- tryP (read_listP [Close Curly]) 
@@ -299,39 +295,27 @@ term = do
                             read_listP [Close Curly]
                             return r)
                     t <- brackets Curly expr
-                    let vars = used_var r `S.union` used_var t
-                        v_type = id -- L.filter ((1 <) . S.size . snd) 
-                                    $ zip3 ns vs
-                                    $ map f ns 
-                        f = (`S.filter` vars) . (. view name) . (==)
-                    ts <- forM v_type $ \(x,(Var x' t),xs) -> do
-                        let ys = L.map var_type $ S.toList xs
-                        t' <- maybe 
-                            (fail $ [printf|Inconsistent type for %s: %s|] 
-                                    (render x)
-                                    $ intercalate "," $ map pretty ys)
-                            return
-                            $ foldM common gA ys
-                        t' <- if t' == gA 
-                            then return t
-                            else return t'
-                        return (x, Var x' t')
-                    let ts' = M.map Word $ fromList ts
-                        r' = substitute ts' r
-                        t' = substitute ts' t
+                    let _vars = used_var r `S.union` used_var t
+                        ts :: [(Name, UntypedVar)]
+                        ts = zip ns vs
+                        _f = (`S.filter` _vars) . (. view name) . (==)
+                    let ts' :: Table Name UntypedExpr
+                        ts' = M.map Word $ fromList ts
+                        r' :: UntypedExpr
+                        t' :: UntypedExpr
+                        r' = substitute' ts' r
+                        t' = substitute' ts' t
                         vs' = map snd ts
-                    E <$> check_types (zquantifier quant vs' (Right r') (Right t'))
+                    UE <$> return (Binder quant vs' r' t' ())
         , do    from oftype
                 e <- brackets Curly expr
                 t <- brackets Curly type_t
-                case zcast t (Right e) of
-                    Right new_e -> return $ E new_e
-                    Left msg -> fail $ unlines msg
+                return $ UE $ Cast Parse e t
         , attempt $ do    
                 xs' <- word_or_command
                 vs <- get_vars
                 case M.lookup xs' vs of
-                    Just e -> return $ E e
+                    Just ue -> return $ UE ue
                     Nothing -> fail ""
         , do    xs <- attempt word_or_command
                 vs <- get_vars
@@ -347,28 +331,30 @@ term = do
                             "\nPerhaps you meant:\n"
                       ++ intercalate "\n" sug else "")
         , do    xs <- attempt number
-                return $ E $ zint $ read xs
+                return $ UE $ zint $ read xs
         , do    Field <$> nameLit
         ]
 
-recordSetOrLit :: Parser Expr
+recordSetOrLit :: Parser UntypedExpr
 recordSetOrLit = do
         attempt open_square
-        check_types =<< choose_la 
-            [ attempt close_square >> return (zrecord M.empty)
+        choose_la
+            [ attempt close_square >> return (Record (RecLit M.empty) (record_type M.empty))
             , do li  <- liftP get_line_info
                  n   <- nameLit
                  sep <- choose_la [True <$ attempt assignTok, False <$ attempt colonTok]
-                 e   <- expr
-                 if sep 
-                    then rec_lit =<< ((n,(e,li)):) <$> parseTail lit
-                    else rec_set =<< ((n,(e,li)):) <$> parseTail set
+                 ue  <- expr
+                 if sep
+                    then rec_lit =<< ((n,(ue,li)):) <$> parseTail lit
+                    else rec_set =<< ((n,(ue,li)):) <$> parseTail set
             ]
     where
         set = binding colonTok
         lit = binding assignTok
-        rec_lit m = zrecord . M.map Right <$> validateFields m
-        rec_set m = zrecord_set . M.map Right <$> validateFields m
+        rec_lit m = Record <$> (RecLit <$> validateFields m)
+                           <*> pure ()
+        rec_set m = Record <$> (RecSet <$> validateFields m)
+                           <*> pure ()
         parseTail field = choose_la 
             [ attempt close_square >> return []
             , do getToken _Comma ","
@@ -377,12 +363,12 @@ recordSetOrLit = do
                  return xs
             ]
 
-validateFields :: [(Name, (expr,LineInfo))] -> Parser (Table Name expr)
+validateFields :: [(Field, (expr,LineInfo))] -> Parser (Table Field expr)
 validateFields xs = raiseErrors $ traverseWithKey f xs'
     where
         xs' = fromListWith (<>) $ xs & mapped._2 %~ pure
         f _ ((x,_):|[]) = Success x
-        f k xs = Failure [MLError (msg $ render k) $ xs & mapped._1 .~ " - "]
+        f k xs = Failure [MLError (msg $ pretty k) $ xs & mapped._1 .~ " - "]
         msg = [printf|Multiple record entry with label '%s'|]
         raiseErrors :: Validation [Error] a -> Parser a
         raiseErrors = either (liftP . Scanner . const . Left) 
@@ -391,7 +377,7 @@ validateFields xs = raiseErrors $ traverseWithKey f xs'
 recordType :: Parser Type
 recordType = do
         let field = binding' type_t colonTok
-            field :: Parser (Name, (Type, LineInfo))
+            field :: Parser (Field, (Type, LineInfo))
         attempt open_curly
         xs <- choose_la 
             [ attempt close_curly >> return []
@@ -401,7 +387,7 @@ recordType = do
             ]
         record_type <$> validateFields xs
 
-recordFields :: Parser (Name,(a,LineInfo)) -> Parser (Table Name a)
+recordFields :: Parser (Field,(a,LineInfo)) -> Parser (Table Field a)
 recordFields field = do
         attempt open_square
         xs <- choose_la 
@@ -412,10 +398,13 @@ recordFields field = do
             ]
         validateFields xs
 
+        -- | \dummy{ x : \Int }
+        -- | \qforall{y}{}{f.y}
+        -- | \qforall{f,x}{f.x \le 3}
 dummy_types :: [Name] -> Context -> [Var]
 dummy_types vs (Context _ _ _ _ dums) = map f vs
     where
-        f x = maybe (Var x gA) id $ M.lookup x dums
+        f x = fromMaybe (Var x gA) $ M.lookup x dums
 
 number :: Parser String
 number = getToken (_Literal._NumLit) "number"
@@ -438,8 +427,8 @@ open_curly = read_listP [Open QuotedCurly]
 close_curly :: Parser [ExprToken]
 close_curly = read_listP [Close QuotedCurly]
 
-applyRecUpdate :: [Map Name Expr] -> Term -> Parser Term
-applyRecUpdate rUpd (E e) = fmap E . check_types $ foldl' (zrec_update') (Right e) (fmap Right <$> rUpd)
+applyRecUpdate :: [Map Field UntypedExpr] -> Term -> Parser Term
+applyRecUpdate rUpd (UE ue) = return $ UE $ foldl (fmap (`Record` ()) . RecUpdate) ue rUpd
 applyRecUpdate xs e@(Cmd op)
         | L.null xs = return e
         | otherwise = fail $ "Cannot apply a record update to an operator: " ++ pretty op
@@ -447,11 +436,11 @@ applyRecUpdate xs e@(Field op)
         | L.null xs = return e
         | otherwise = fail $ "Cannot apply a record update to a record field: " ++ pretty op
 
-expr :: Parser Expr
+expr :: Parser UntypedExpr
 expr = do
         r <- read_term []
         case r of
-            E e -> return e
+            UE ue -> return ue
             Cmd op -> fail $ [printf|unapplied functional operator: %s|] (pretty op)
             Field n -> fail $ [printf|record field out of context: %s|] (pretty n)
     where
@@ -461,17 +450,17 @@ expr = do
             us <- liftHOF many unary
             choose_la 
                 [ do    attempt open_brack
-                        e <- expr
+                        ue <- expr
                         close_brack
                         rUpd <- manyP (recordFields $ binding assignTok)
                         add_context "parsing (" $
-                            read_op xs us =<< applyRecUpdate rUpd (E e)
+                            read_op xs us =<< applyRecUpdate rUpd (UE ue)
                 , do    attempt open_curly
                         rs <- sep1P expr comma
                         close_curly
-                        e <- check_types $ zset_enum $ map Right rs
+                        ue <- return $ zset_enum' rs
                         add_context "parsing \\{" $
-                            read_op xs us $ E e 
+                            read_op xs us $ UE ue
                 ,   add_context ("ready for <term>: " ++ show xs) $
                         do  t  <- term
                             rUpd <- manyP (recordFields $ binding assignTok)
@@ -542,10 +531,10 @@ binds x0 x1 = do
 
 apply_unary :: UnaryOperator -> Term -> Parser Term
 apply_unary op e = do
-        case e of 
-            E e -> do
-                x2 <- check_types $ mk_unary op e
-                return $ E x2
+        case e of
+            UE ue -> do
+                x2 <- return $ mk_unary' op ue
+                return $ UE x2
             Cmd oper -> fail $ err_msg (pretty oper) (pretty op)
             Field n  -> fail $ err_msg_2 (pretty n) (pretty op)
     where
@@ -555,21 +544,21 @@ apply_unary op e = do
 apply_op :: BinOperator -> Term -> Term -> Parser Term
 apply_op op x0 x1 = do
         case x1 of
-            E e1 -> do
+            UE ue1 -> do
                 case x0 of
-                    E e0 -> do
-                        e2 <- check_types $ mk_expr op e0 e1
-                        return $ E e2
+                    UE ue0 -> do
+                        ue2 <- return $ mk_expr' op ue0 ue1
+                        return $ UE ue2
                     Cmd oper ->
                         if op == apply then
-                            apply_fun_op oper e1
+                            apply_fun_op oper ue1
                         else fail $ err_msg (pretty oper) (pretty op)
                     Field n -> fail $ err_msg_2 (pretty n) (pretty op)
             Cmd e1  -> 
                 fail $ err_msg (pretty e1) (pretty op)
             Field n 
                 | op == apply -> case x0 of
-                    E e0 -> E <$> check_types (zfield (Right e0) n)
+                    UE ue0 -> UE <$> return ((`Record` ()) $ FieldLookup ue0 n)
                     Field n -> fail $ err_msg_2 (pretty n) (pretty op)
                     Cmd cmd -> fail $ err_msg (pretty cmd) (pretty op)
                 | otherwise   -> fail $ err_msg_2 (pretty n) (pretty op)
@@ -579,16 +568,16 @@ apply_op op x0 x1 = do
 
 parse_expression :: ParserSetting
                  -> StringLi
-                 -> Either [Error] Expr
+                 -> Either [Error] UntypedExpr
 parse_expression set i@(StringLi input _) = do
         let n = set^.language
             li = line_info i
         toks <- read_tokens (scan_expr $ Just n)
             input li
-        e   <- read_tokens 
+        ue  <- read_tokens
             (runParser' set expr) 
             toks li
-        return $ normalize_generics $ flattenConnectors e
+        return ue
 
 parse_oper :: Monad m 
            => Notation
@@ -614,17 +603,11 @@ parse_expr :: ParserSetting
            -> StringLi
            -> Either [Error] DispExpr
 parse_expr set xs = do
-        let li  = line_info xs
-        x  <- parse_expression set xs
-        typed_x  <- case set^.expected_type of
-            Just t -> mapBoth 
-                (\xs -> map (`Error` li) xs) 
-                (normalize_generics) $ zcast t $ Right x
-            Nothing -> return x
-        let x = normalize_generics typed_x
-        unless (L.null $ ambiguities x) $ Left 
-            $ map (\x -> Error (msg (pretty x) (pretty $ type_of x)) li)
-                $ ambiguities x
-        return $ DispExpr (flatten xs) x
+        x <- parse_expression set xs
+        typed_x <- checkTypes (set^.expected_type) (contextOf set) x xs
+        unless (L.null $ ambiguities typed_x) $ Left 
+            $ map (\x' -> Error (msg (pretty x') (pretty $ type_of x')) (line_info xs))
+                $ ambiguities typed_x
+        return $ DispExpr (flatten xs) (flattenConnectors typed_x)
     where
         msg   = [printf|type of %s is ill-defined: %s|]

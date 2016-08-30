@@ -237,7 +237,10 @@
 |  |  |  +- test2: verify m2
 |  |  |  +- test3: verify m3
 |  |  |  +- test4: quantified union
-|  |  +- [ Success: 5 / 5 ]
+|  |  |  *** FAILED ***
+src/Document/Tests/TerminationDetection.hs:14:7
+./Logic/UnitTest.hs:42:35
+|  |  +- [ Success: 4 / 5 ]
 |  |  +- Parser
 |  |  |  +- test0: verify m0
 |  |  |  +- test1: verify m1
@@ -245,12 +248,14 @@
 |  |  |  +- test3: spontaneous events
 |  |  +- [ Success: 4 / 4 ]
 |  |  +- QuickCheck spec of machine parser
+|  |  *** FAILED ***
+src/Document/Test.hs:51:8
 |  |  +- the parser is exception free
 |  |  +- conformance of instances to type class axioms
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
 |  |  +- variable scope, properties
-|  +- [ Success: 200 / 200 ]
+|  +- [ Success: 198 / 200 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -292,10 +297,12 @@
 |  |  |  +- QuasiQuotes with proof monads and assumptions
 |  |  |  +- Records lookup syntax
 |  |  |  +- Proofs with record lookup
-|  |  +- [ Success: 33 / 33 ]
+|  |  |  +- Testing the parser (\qforall{x,y}{}{x = y})
+|  |  |  +- Testing the parser (\neg (-2) = 2)
+|  |  +- [ Success: 35 / 35 ]
 |  |  +- 6: unless with except and split event
 |  |  +- 7: QuickCheck names
-|  +- [ Success: 41 / 41 ]
+|  +- [ Success: 43 / 43 ]
 |  +- latex parser
 |  |  +- quickcheck
 |  |  +- sample.tex
@@ -364,17 +371,17 @@
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 295 / 295 ]
++- [ Success: 295 / 297 ]
 Data.Map.Base
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-   38926 total
+   39122 total
     1160 src/UnitB/PO.hs
      873 src/Document/Phase/Expressions.hs
+     828 logic/Logic/Expr/Expr.hs
      804 src/Document/Phase.hs
      795 src/Document/Visitor.lhs
-     780 logic/Logic/Expr/Expr.hs
-Run time: 2m 33s
+Run time: 2m 32s

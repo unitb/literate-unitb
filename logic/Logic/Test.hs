@@ -2,11 +2,12 @@
 module Logic.Test where
 
     -- Modules
-import Logic.Expr
+import Logic.Expr hiding (field)
 import Logic.Expr.Const
 import Logic.Expr.Parser
 import Logic.Proof.Monad
 import Logic.QuasiQuote hiding (var)
+import Logic.Theories
 import Logic.Theory
 import Logic.Theories.SetTheory
 
@@ -33,6 +34,7 @@ import Test.QuickCheck.Report
 import Test.UnitTest hiding (name)
 
 import Utilities.MapSyntax
+import Utilities.Syntactic
 
 left :: Type -> Type
 left  = suffix_generics "1"
@@ -218,6 +220,8 @@ test = test_cases "genericity"
         , aCase "QuasiQuotes with proof monads and assumptions" case20 result20
         , aCase "Records lookup syntax" case21 result21
         , aCase "Proofs with record lookup" case22 result22
+        , aCase "Testing the parser (\\qforall{x,y}{}{x = y})" case23 result23
+        , aCase "Testing the parser (\\neg (-2) = 2)" case24 result24
         ]
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
@@ -352,8 +356,8 @@ case10 = return $ z3_code $ runSequent $ do
         let t = record_type $ runMap' $ do
                 x ## int
                 b ## bool
-            x = [smt|x|]
-            b = [smt|b|]
+            x = [field|x|]
+            b = [field|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
         assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
@@ -388,12 +392,12 @@ case11 = return $ z3_code $ runSequent $ do
         let t = record_type $ runMap' $ do
                 x ## int
                 b ## bool
-            x = [smt|x|]
-            b = [smt|b|]
+            x = Field [smt|x|]
+            b = Field [smt|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
         assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
-        assume $ v2 `zelem` zrecord_set' (x ## zmk_set 7 >> b ## zcast (set_type bool) zset_all)
+        assume $ v2 `zelem` mk_zrecord_set (x ## zmk_set 7 >> b ## zcast (set_type bool) zset_all)
         check $ v1 .=. v2
 
 result11 :: String
@@ -673,12 +677,12 @@ case12 = discharge ("case12") $ runSequent $ do
         let t = record_type $ runMap' $ do
                 x ## int
                 b ## bool
-            x = [smt|x|]
-            b = [smt|b|]
+            x = Field [smt|x|]
+            b = Field [smt|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
         assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
-        assume $ v2 `zelem` zrecord_set' (x ## zmk_set 7 >> b ## zmk_set mztrue)
+        assume $ v2 `zelem` mk_zrecord_set (x ## zmk_set 7 >> b ## zmk_set mztrue)
         check $ v1 .=. v2
 
 result12 :: Validity
@@ -693,8 +697,8 @@ case13 = do
 result13 :: Expr
 result13 = fromRight' $ zrecord' (foo ## 7 >> bar ## zset_enum [1,2])
     where
-        foo = [smt|foo|]
-        bar = [smt|bar|]
+        foo = Field [smt|foo|]
+        bar = Field [smt|bar|]
 
 case14 :: IO Expr
 case14 = return $ getExpr $ c [expr| r [ 'foo := 7, 'bar := \{ 1,2 \} ] |]
@@ -706,8 +710,8 @@ case14 = return $ getExpr $ c [expr| r [ 'foo := 7, 'bar := \{ 1,2 \} ] |]
                 x ## int
                 bar ## bool
         r = [smt|r|]
-        x = [smt|x|]
-        bar = [smt|bar|]
+        x = [field|x|]
+        bar = [field|bar|]
 
 result14 :: Expr
 result14 = fromRight' $ zrec_update r (foo ## 7 >> bar ## zset_enum [1,2])
@@ -716,9 +720,9 @@ result14 = fromRight' $ zrec_update r (foo ## 7 >> bar ## zset_enum [1,2])
                     [ (bar,bool)
                     , (x,int) ]
         r'  = [smt|r|]
-        x   = [smt|x|]
-        foo = [smt|foo|]
-        bar = [smt|bar|]
+        x   = [field|x|]
+        foo = [field|foo|]
+        bar = [field|bar|]
 
     -- empty record literal
 case15 :: IO Expr
@@ -741,8 +745,8 @@ case16 = return $ getExpr $ c [expr| r [ 'foo := 7 ] [ 'bar := \{ 1,2 \} ] |]
                 x ## int
                 bar ## bool
         r = [smt|r|]
-        x = [smt|x|]
-        bar = [smt|bar|]
+        x = [field|x|]
+        bar = [field|bar|]
 
 result16 :: Expr
 result16 = fromRight' $ zrec_update (zrec_update r (foo ## 7)) (bar ## zset_enum [1,2])
@@ -751,9 +755,9 @@ result16 = fromRight' $ zrec_update (zrec_update r (foo ## 7)) (bar ## zset_enum
                     [ (bar,bool)
                     , (x,int) ]
         r'  = [smt|r|]
-        x   = [smt|x|]
-        foo = [smt|foo|]
-        bar = [smt|bar|]
+        x   = [field|x|]
+        foo = [field|foo|]
+        bar = [field|bar|]
 
 -- field lookup
 -- record set
@@ -767,13 +771,20 @@ case17 = do
                 decls %= M.union (symbol_table 
                     [Var r t
                     ,Var intV $ set_type int])
+                free_dummies .= True
+                dum_ctx %= insert_symbol (Var r t')
         t = record_type $ runMap' $ do
                 x ## int
                 bar ## bool
+        t' = record_type $ runMap' $ do
+                x ## int
+                foo ## int
+                bar ## set_type int
         r = [smt|r|]
-        x = [smt|x|]
+        x = [field|x|]
         intV = [tex|\Int|]
-        bar = [smt|bar|]
+        bar = [field|bar|]
+        foo = [field|foo|]
 
 
 result17 :: Expr
@@ -782,14 +793,14 @@ result17 = fromRight' $ rec `zelem` set
         zint_set = Right $ Word $ Var intV $ set_type int
         intV = [tex|\Int|]
         rec = zrec_update r (foo ## 7 >> bar ## zset_enum [1,2])
-        set = zrecord_set' (do foo ## zint_set; x ## zint_set; bar ## zpow_set zint_set)
+        set = mk_zrecord_set (do foo ## zint_set; x ## zint_set; bar ## zpow_set zint_set)
         r' = [smt|r|]
         r  = Right $ Word $ Var r' $ record_type $ M.fromList 
                     [ (bar,bool)
                     , (x,int) ]
-        x = [smt|x|]
-        bar = [smt|bar|]
-        foo = [smt|foo|]
+        x = [field|x|]
+        bar = [field|bar|]
+        foo = [field|foo|]
 
 case18 :: IO Validity
 case18 = discharge("case13") $ runSequent $ do
@@ -827,29 +838,58 @@ case21 = return $ getExpr $ c [expr| r.'x = 7 |]
                 x ## int
                 bar ## bool
         r = [smt|r|]
-        x = [smt|x|]
-        bar = [smt|bar|]
+        x = [field|x|]
+        bar = [field|bar|]
 
 result21 :: Expr
-result21 = Record (FieldLookup r (Field x))  `zeq` zint 7
+result21 = Record (FieldLookup r x) int  `zeq` zint 7
     where
         r  = Word $ Var r' $ record_type $ M.fromList 
                     [ (bar,bool)
                     , (x,int) ]
         r'  = [smt|r|]
-        x   = [smt|x|]
-        bar = [smt|bar|]
+        x   = [field|x|]
+        bar = [field|bar|]
 
 case22 :: IO Validity
 case22 = discharge "case22" $ runSequent $ do
     let t = record_type $ runMap' $ do
                 x ## bool
                 bar ## int
-        x   = [smt|x|]
-        bar = [smt|bar|]
+        x   = [field|x|]
+        bar = [field|bar|]
     declare "r" t
     assumeQ [expr| r = [ 'x := \true, 'bar := 7 ] |]
     checkQ  [expr| r.'bar = 8 |]
 
 result22 :: Validity
 result22 = Invalid
+
+case23 :: IO UntypedExpr
+case23 = return $ either show_error id $ untypedExpression
+    where
+        expr = "\\qforall{x,y}{}{x = y}"
+        stringLi = asStringLi (mkLI expr) expr
+        setting = theory_setting basic_theory
+        untypedExpression = parse_expression setting stringLi
+        show_error = \x -> error ("couldn't parse expression:\n" ++ show_err x)
+
+result23 :: UntypedExpr
+result23 = zforall [x',y'] ztrue (fun2 (zeq_fun gA) x y)
+    where
+        x' = z3Var "x" ()
+        y' = z3Var "y" ()
+        x = Word x'
+        y = Word y'
+
+case24 :: IO UntypedExpr
+case24 = return $ either show_error id $ untypedExpression
+    where
+        expr = "\\neg (-2) = 2"
+        stringLi = asStringLi (mkLI expr) expr
+        setting = theory_setting' preludeTheories
+        untypedExpression = parse_expression setting stringLi
+        show_error = \x -> error ("couldn't parse expression:\n" ++ show_err x)
+
+result24 :: UntypedExpr
+result24 = znot (fun2 (zeq_fun gA) (zopp $ zint 2) (zint 2))

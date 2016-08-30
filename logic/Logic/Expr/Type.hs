@@ -284,10 +284,10 @@ set_sort = make DefSort "\\set" "set" [[smt|a|]] (array gA bool)
 set_type :: TypeSystem t => t -> t
 set_type t = make_type set_sort [t]
 
-record_sort :: Table Name t -> Sort
-record_sort fields = RecordSort $ M.mapKeys Field $ () <$ fields
+record_sort :: Table Field t -> Sort
+record_sort fields = RecordSort $ () <$ fields
 
-record_type :: TypeSystem t => Table Name t -> t
+record_type :: TypeSystem t => Table Field t -> t
 record_type fields = make_type (record_sort fields) (M.elems fields)
 
 _ElementType :: TypeSystem t => Prism' t t
@@ -320,13 +320,13 @@ instance Arbitrary Sort where
     shrink = genericShrink
 
 gA :: GenericType
-gA = GENERIC $ [smt|a|]
+gA = GENERIC [smt|a|]
 
 gB :: GenericType
-gB = GENERIC $ [smt|b|]
+gB = GENERIC [smt|b|]
 
 gC :: GenericType
-gC = GENERIC $ [smt|c|]
+gC = GENERIC [smt|c|]
 
 z3Sort :: Pre 
        => String -> String -> Int -> Sort

@@ -20,7 +20,7 @@ import Document.Tests.TrainStation  as TS
 import Document.Tests.TrainStationRefinement  as TSRef
 import Document.Tests.TrainStationSets  as TSS
 import Logic.Expr
-import Logic.Test as T
+import Logic.Test as Logic
 import Z3.Test as Z3
 import Document.Phase.Test as Ph
 import Document.Test as Doc
@@ -102,6 +102,7 @@ main = timeIt $ void $ do
     return $ print =<< run_test_cases check_axioms
     return $ run_test_cases Def.test_case
     return $ run_test_cases T.test_case
+    return $ run_test_cases Logic.test_case
     -- timeout (60 * 1000000) $ do
     return $ run_test_cases UB.test_case
     -- return $ print =<< Lines.run_tests

@@ -42,14 +42,21 @@ type OneExpr n t q = AbsExpr n t q -> AbsExpr n t q
 
 type TwoExpr n t q = AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
 
+type TwoGenExpr n t a q = GenExpr n t a q -> GenExpr n t a q -> GenExpr n t a q
+
 fun1 :: ( TypeSystem t )
-     => AbsFun n t 
-     -> AbsExpr n t q -> AbsExpr n t q
+     => AbsFun n a
+     -> GenExpr n t a q -> GenExpr n t a q
 fun1 f x           = funApp f [x]
 fun2 :: ( TypeSystem t  )
-     => AbsFun n t -> AbsExpr n t q
-     -> AbsExpr n t q -> AbsExpr n t q
+     => AbsFun n a -> GenExpr n t a q
+     -> GenExpr n t a q -> GenExpr n t a q
 fun2 f x y         = funApp f [x,y]
+
+fun2' :: ( TypeSystem t  )
+     => AbsFun n a -> GenExpr n t a q
+     -> GenExpr n t a q -> GenExpr n t a q
+fun2' f x y         = FunApp f [x,y]
 
 no_errors2 :: ( TypeSystem t 
               , IsQuantifier q )
@@ -65,21 +72,24 @@ toErrors li m = case m of
 not_fun :: (TypeSystem2 t,IsName n) => AbsFun n t
 not_fun = mk_fun [] [smt|not|] [bool] bool
 
-znot :: (TypeSystem2 t, IsQuantifier q,IsName n) => OneExpr n t q
+znot :: (TypeSystem2 t, IsQuantifier q,IsName n,TypeSystem2 a) 
+     => GenExpr n t a q
+     -> GenExpr n t a q
 znot e = case e of 
             FunApp f [x]
                 | f == not_fun -> x
                 | otherwise    -> fun1 not_fun e
             e' -> fun1 not_fun e'
     -- znot         = fun1 mznot
-zimplies :: (TypeSystem2 t, IsQuantifier q,IsName n) => TwoExpr n t q
-zimplies x y = ($typeCheck) $ mzimplies (Right x) (Right y)
+zimplies :: (TypeSystem2 t, IsQuantifier q,IsName n,TypeSystem a,TypeAnnotationPair t a,TypeSystem2 a) 
+         => TwoGenExpr n t a q
+zimplies x y = runIdentity $ mzimplies' (liftA2 $ fun2 implies_fun) (pure x) (pure y)
 zand :: (TypeSystem2 t, IsQuantifier q,IsName n) => TwoExpr n t q
 zand x y     = zall [x, y]
 zor :: (TypeSystem2 t, IsQuantifier q,IsName n) => TwoExpr n t q
 zor x y      = zsome [x, y]
 
-zeq_fun :: IsName n => Type -> AbsFun n Type
+zeq_fun :: (IsName n,TypeSystem t) => t -> AbsFun n t
 zeq_fun t    = mk_fun [] [smt|=|] [t, t] bool
 
 zeq_symb :: (IsQuantifier q,IsName n) => TwoExpr n Type q
@@ -87,8 +97,8 @@ zeq_symb     = no_errors2 mzeq_symb
 mzeq_symb :: IsName n => TwoExprP n Type q
 mzeq_symb    = typ_fun2 $ mk_fun [gA] [smt|eq|] [gA, gA] bool
 
-zeq :: (IsQuantifier q,IsName n)
-    => AbsExpr n Type q -> AbsExpr n Type q -> AbsExpr n Type q
+zeq :: (IsQuantifier q,IsName n,TypeSystem t)
+    => AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
 zeq x y = provided (type_of x == type_of y) $ funApp (zeq_fun $ type_of x) [x,y]
 mzeq :: IsName n => TwoExprP n Type q
 mzeq         = typ_fun2 (zeq_fun gA)
@@ -104,8 +114,10 @@ zfollows     = fun2 $ mk_fun [] [smt|follows|] [bool,bool] bool
 and_fun :: (IsName n,TypeSystem t) => Int -> AbsFun n t
 and_fun n = mk_fun [] [smt|and|] (replicate n bool) bool
 
-zall :: (TypeSystem2 t, IsQuantifier q, Foldable list,IsName n) 
-     => list (AbsExpr n t q) -> AbsExpr n t q
+zall :: ( TypeSystem t, TypeSystem a
+        , TypeAnnotationPair t a
+        , IsQuantifier q, Foldable list,IsName n)
+     => list (GenExpr n t a q) -> GenExpr n t a q
 zall xs'      = 
         case xs of
             []  -> ztrue
@@ -142,11 +154,9 @@ zsome xs'      =
         f x
             | x == zfalse = []
             | otherwise   = [x]
-zforall :: (TypeSystem2 t, IsQuantifier q,IsName n)
+zforall :: (TypeSystem2 t, IsQuantifier q,IsName n, Eq a, TypeAnnotationPair t a, TypeSystem2 a)
         => [AbsVar n t] 
-        -> AbsExpr n t q
-        -> AbsExpr n t q
-        -> AbsExpr n t q
+        -> TwoGenExpr n t a q
 zforall [] x y  = zimplies x y
 zforall vs x w@(Binder q us y z _) 
     | q == qForall = if x == ztrue
@@ -190,7 +200,7 @@ zjust :: IsName n => OneExprP n Type q
 zjust      = typ_fun1 (mk_fun [] [smt|Just|] [gA] (maybe_type gA))
 
 znothing :: IsName n => ExprPG n Type q
-znothing   = Right $ Cast (funApp (mk_fun [] [smt|Nothing|] [] $ maybe_type gA) []) (maybe_type gA)
+znothing   = Right $ Cast CodeGen (funApp (mk_fun [] [smt|Nothing|] [] $ maybe_type gA) []) (maybe_type gA)
 
 mznot :: (TypeSystem2 t,IsName n) => OneExprP n t q
 mznot me       = do
@@ -199,16 +209,20 @@ mznot me       = do
             FunApp f [x] 
                 | f == not_fun -> typ_fun1 not_fun (Right x)
             e -> typ_fun1 not_fun (Right e)
-mzimplies :: (TypeSystem2 t,IsName n) => TwoExprP n t q
-mzimplies mx my = do
+mzimplies :: (TypeSystem2 t,IsName n,IsQuantifier q)
+          => ExprPG n t q -> ExprPG n t q -> ExprPG n t q
+mzimplies = mzimplies' (typ_fun2 implies_fun)
+mzimplies' :: (Monad m,TypeAnnotationPair t a,TypeSystem2 t,IsName n,IsQuantifier q,TypeSystem2 a)
+           => (m (GenExpr n t a q) -> m (GenExpr n t a q) -> m (GenExpr n t a q))
+           -> m (GenExpr n t a q) -> m (GenExpr n t a q) -> m (GenExpr n t a q)
+mzimplies' mkImplies mx my = do
         x <- mx
         y <- my
-        if      x == ztrue  then Right y
-        else if y == ztrue  then Right ztrue
-        else if x == zfalse then Right ztrue
-        else if y == zfalse then Right $ znot x
-        else typ_fun2 implies_fun 
-                (Right x) (Right y)
+        if      x == ztrue  then pure $ y
+        else if y == ztrue  then pure $ ztrue
+        else if x == zfalse then pure $ ztrue
+        else if y == zfalse then pure $ znot x
+        else mkImplies (pure x) (pure y)
 
 implies_fun :: (IsName n,TypeSystem t) => AbsFun n t
 implies_fun = mk_fun [] [smt|=>|] [bool,bool] bool
@@ -291,7 +305,7 @@ zplus        = fun2 $ mk_fun [] [smt|+|] [int,int] int
 zminus :: (IsName n,TypeSystem2 t )=> AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
 zminus       = fun2 $ mk_fun [] [smt|-|] [int,int] int
 
-zopp :: (IsName n,TypeSystem2 t )=> AbsExpr n t q -> AbsExpr n t q
+zopp :: (IsName n,TypeSystem2 t,TypeSystem a )=> GenExpr n t a q -> GenExpr n t a q
 zopp         = fun1 $ mk_fun [] [smt|-|] [int] int
 
 ztimes :: (IsName n,TypeSystem2 t )=> AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
@@ -303,10 +317,10 @@ zpow         = fun2 $ mk_fun [] [smt|^|] [int,int] int
 zselect :: IsName n => TwoExprP n Type q
 zselect      = typ_fun2 (mk_fun [] [smt|select|] [array gA gB, gA] gB)
 
-zint :: (TypeSystem2 t, Integral int) => int -> AbsExpr n t q
+zint :: (TypeSystem t, Integral int) => int -> GenExpr n t a q
 zint n       = Lit (IntVal $ fromIntegral n) int
 
-zreal :: TypeSystem2 t => Double -> AbsExpr n t q
+zreal :: TypeSystem t => Double -> AbsExpr n t q
 zreal n      = Lit (RealVal n) real
 
 mzless :: (TypeSystem2 t,IsName n) => TwoExprP n t q
@@ -342,13 +356,14 @@ mzpow         = typ_fun2 pow_fun
 (.^) :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 (.^) = mzpow
 
-pow_fun,times_fun,plus_fun,minus_fun,less_fun
+pow_fun,times_fun,plus_fun,minus_fun,less_fun,prefix_minus_fun
     :: (IsName n,TypeSystem t) => AbsFun n t
-pow_fun   = mk_fun [] [smt|^|] [int,int] int
-times_fun = mk_fun [] [smt|*|] [int,int] int
-plus_fun  = mk_fun [] [smt|+|] [int,int] int
-minus_fun = mk_fun [] [smt|-|] [int,int] int
-less_fun  = mk_fun [] [smt|<|] [int,int] bool
+pow_fun          = mk_fun [] [smt|^|] [int,int] int
+times_fun        = mk_fun [] [smt|*|] [int,int] int
+plus_fun         = mk_fun [] [smt|+|] [int,int] int
+minus_fun        = mk_fun [] [smt|-|] [int,int] int
+less_fun         = mk_fun [] [smt|<|] [int,int] bool
+prefix_minus_fun = mk_fun [] [smt|-|] [int] int
 
 mzint :: (TypeSystem2 t, Integral int) => int -> ExprPG n t q 
 mzint n       = Right $ zint n
@@ -476,9 +491,12 @@ elem_fun :: (IsName n,TypeSystem t)
          => t -> AbsFun n t
 elem_fun t = mk_fun' [t] "elem" [t,set_type t] bool
 
-zelem        = typ_fun2 (elem_fun gA)
 zelem         :: (IsQuantifier q,IsName n) 
               => ExprPG n Type q -> ExprPG n Type q -> ExprPG n Type q
+zelem        = typ_fun2 (elem_fun gA)
+
+zelem'        :: UntypedExpr -> UntypedExpr -> UntypedExpr
+zelem'       = fun2' (elem_fun gA)
 
 
 zelemUnchecked :: (TypeSystem t,IsName n,IsQuantifier q)
@@ -491,37 +509,43 @@ zelemUnchecked x s = provided (set_type (type_of x) == type_of s) $
 zident :: ExprP
 zident = Right $ funApp ident_fun []
 
-zrecord' :: MapSyntax Name (ExprPG n t q) () -> ExprPG n t q
+zrecord' :: (TypeSystem t,IsName n,IsQuantifier q) 
+         => MapSyntax Field (ExprPG n t q) () 
+         -> ExprPG n t q
 zrecord' = zrecord . runMap'
-zrecord :: M.Map Name (ExprPG n t q) -> ExprPG n t q
-zrecord = fmap (Record . RecLit . M.mapKeys Field) . traverseValidation id
-
+zrecord :: (TypeSystem t,IsName n,IsQuantifier q)
+        => M.Map Field (ExprPG n t q) 
+        -> ExprPG n t q
+zrecord m = do
+        m' <- traverseValidation id m
+        let t = record_type (type_of <$> m')
+        return $ Record (RecLit m') t
 
 zrec_update :: (TypeSystem t,IsName n,IsQuantifier q)
             => ExprPG n t q 
-            -> MapSyntax Name (ExprPG n t q) ()
+            -> MapSyntax Field (ExprPG n t q) ()
             -> ExprPG n t q
 zrec_update e = zrec_update' e . runMap'
 
 zrec_update' :: (TypeSystem t,IsName n,IsQuantifier q)
              => ExprPG n t q 
-             -> M.Map Name (ExprPG n t q)
+             -> M.Map Field (ExprPG n t q)
              -> ExprPG n t q
 zrec_update' e m = do
-    let e' = f =<< e
-        f e = case type_of e^?_FromSort._1._RecordSort of
-                Just _ -> Right e
+    let f e = case type_of e^?fieldTypes of
+                Just t -> Right (e,t)
                 _ -> Left [[printf|expecting a record type, met %s in %s|] 
                             (pretty $ type_of e)
                             (pretty e)
                             ]
-    Record <$> liftA2 RecUpdate e' (fmap (M.mapKeysMonotonic Field)
-                                                  . traverseValidation id $ m)
+    (e',t') <- f =<< e
+    m' <- traverseValidation id m
+    return $ Record (RecUpdate e' m') (record_type $ (type_of <$> m') `M.union` t')
 
 zfield :: (IsName n,TypeSystem t,IsQuantifier q) 
-       => ExprPG n t q -> Name -> ExprPG n t q
-zfield e field' = do
-    let field = Field field'
+       => ExprPG n t q -> Field -> ExprPG n t q
+zfield e field = do
+    -- let field = Field field'
     e' <- e
     let msg1 = [printf|Field lookup requires a record type:\n  in expression %s\n  of type: %s|] 
                     (pretty e')
@@ -532,9 +556,9 @@ zfield e field' = do
                     (pretty field)
                     (pretty e')
                     (pretty $ M.keys fs)
-    maybe (Left [msg2]) Right
+    t <- maybe (Left [msg2]) Right
         $ M.lookup field fs 
-    return $ Record $ FieldLookup e' field
+    return $ Record (FieldLookup e' field) t
 
 instance Num ExprP where
     (-) = mzminus

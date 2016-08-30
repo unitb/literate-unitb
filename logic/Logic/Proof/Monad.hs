@@ -30,13 +30,12 @@ runSequent (SequentM cmd) = empty_sequent
         & context %~ merge_ctx (merge_all_ctx ctx)
     where
         (g,(s,vs,asm,ctx)) = evalRWS cmd () (st,M.elems preludeTheories,M.empty)
-        st = theory_setting $ (empty_theory' "empty") { _extends =  preludeTheories }
+        st = theory_setting' preludeTheories
 
 updateSetting :: SequentM ()
 updateSetting = SequentM $ do
     ts <- use _2
-    _1 .= theory_setting (empty_theory' "empty") { _extends = 
-                symbol_table ts }
+    _1 .= theory_setting' (symbol_table ts)
     ds <- use _3
     _1.decls %= M.union ds
 

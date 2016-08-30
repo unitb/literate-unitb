@@ -21,7 +21,7 @@ is_true e@(Lit _ _) = e
 is_true (Binder Forall vs r t tt) = Binder Forall vs ztrue (is_true $ r `zimplies` t) tt
 is_true (Binder Exists vs r t tt) = Binder Exists vs ztrue (is_true $ r `zand` t) tt
 is_true (Binder (UDQuant _ _ _ _) _ _ _ _) = undefined'
-is_true (Cast e _) = is_true e
+is_true (Cast _ e _) = is_true e
 is_true (Lift e _) = is_true e
 is_true e@(FunApp fun xs) 
         | view name fun == [smt|not|]   = is_false x0
@@ -33,7 +33,7 @@ is_true e@(FunApp fun xs)
     where
         x0  = xs ! 0
         x1  = xs ! 1
-is_true e@(Record _) = e `zand` delta e
+is_true e@(Record _ _) = e `zand` delta e
 
 is_false :: Expr -> Expr
 is_false e@(Word _) = znot e
@@ -41,7 +41,7 @@ is_false e@(Lit _ _) = znot e
 is_false (Binder Forall vs r t tt) = Binder Exists vs ztrue (is_false $ r `zimplies` t) tt
 is_false (Binder Exists vs r t tt) = Binder Forall vs ztrue (is_false $ r `zand` t) tt
 is_false (Binder (UDQuant _ _ _ _) _ _ _ _) = undefined'
-is_false (Cast e _) = is_false e
+is_false (Cast _ e _) = is_false e
 is_false (Lift e _) = is_false e
 is_false e@(FunApp fun xs) 
         | view name fun == [smt|not|]   = is_true x0
@@ -53,7 +53,7 @@ is_false e@(FunApp fun xs)
     where
         x0  = xs ! 0
         x1  = xs ! 1
-is_false e@(Record _) = znot e `zand` delta e
+is_false e@(Record _ _) = znot e `zand` delta e
 
 delta :: Expr -> Expr
 delta = well_definedness
@@ -77,7 +77,7 @@ well_definedness (Binder q vs r t _) = case q of
                         fin = case finiteness q of
                                 FiniteWD -> ($typeCheck) $ mzfinite $ zcomprehension vs (Right r) (Right $ ztuple $ map Word vs)
                                 InfiniteWD -> ztrue
-well_definedness (Cast e _) = well_definedness e
+well_definedness (Cast _ e _) = well_definedness e
 well_definedness (Lift e _) = well_definedness e
 well_definedness (FunApp fun xs) 
         | view name fun == [smt|and|]   = linearRecurse zall zsome id
@@ -106,4 +106,4 @@ well_definedness (FunApp fun xs)
         x1' = Right x1
         x2  = xs ! 2
         (as,bs) = partition ((ztrue ==) . well_definedness) xs
-well_definedness (Record e) = zall $ e^.partsOf (traverseRecExpr.to well_definedness)
+well_definedness (Record e _) = zall $ e^.partsOf (traverseRecExpr.to well_definedness)
