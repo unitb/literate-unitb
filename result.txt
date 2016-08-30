@@ -237,10 +237,7 @@
 |  |  |  +- test2: verify m2
 |  |  |  +- test3: verify m3
 |  |  |  +- test4: quantified union
-|  |  |  *** FAILED ***
-src/Document/Tests/TerminationDetection.hs:14:7
-./Logic/UnitTest.hs:42:35
-|  |  +- [ Success: 4 / 5 ]
+|  |  +- [ Success: 5 / 5 ]
 |  |  +- Parser
 |  |  |  +- test0: verify m0
 |  |  |  +- test1: verify m1
@@ -255,7 +252,7 @@ src/Document/Test.hs:51:8
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
 |  |  +- variable scope, properties
-|  +- [ Success: 198 / 200 ]
+|  +- [ Success: 199 / 200 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -371,7 +368,7 @@ src/Document/Test.hs:51:8
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 295 / 297 ]
++- [ Success: 296 / 297 ]
 Data.Map.Base
 
 ***************
@@ -384,4 +381,4 @@ Lines of Haskell code:
      828 logic/Logic/Expr/Expr.hs
      804 src/Document/Phase.hs
      795 src/Document/Visitor.lhs
-Run time: 2m 32s
+Run time: 2m 29s

@@ -101,7 +101,6 @@ main = timeIt $ void $ do
     return $ printQuickCheckResult MSpec.run_spec
     return $ print =<< run_test_cases check_axioms
     return $ run_test_cases Def.test_case
-    return $ run_test_cases T.test_case
     return $ run_test_cases Logic.test_case
     -- timeout (60 * 1000000) $ do
     return $ run_test_cases UB.test_case
