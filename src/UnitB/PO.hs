@@ -335,7 +335,7 @@ init_fis_po m =
         with 
             (do _context (assert_ctx m) 
                 POG.variables det_vars
-                named_hyps $ snd <$> det_act)
+                named_hyps $ uncurry (zeq . Word) <$> det_act)
             (emit_exist_goal [init_fis_lbl] 
                 (M.ascElems $ nonDet_vars) 
                 (M.ascElems $ new_act))

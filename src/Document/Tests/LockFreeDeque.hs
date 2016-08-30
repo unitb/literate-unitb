@@ -144,6 +144,8 @@ test = test_cases
                 case51 result51
             , stringCase "test 52, deleted variables are not primed"
                 case52 result52
+            , stringCase "test 53, bad rendering of expressions"
+                case53 result53
             ]            
 
 path0 :: FilePath
@@ -504,3 +506,9 @@ path52 = [path|Tests/pop-left-t13.tex|]
 
 case52 :: IO String
 case52 = proof_obligation path52 "m2/read:LH/SAF/LIVE/m2:prog0/ensure" 2
+
+path53 :: FilePath
+path53 = [path|Tests/pop-left-t14.tex|]
+
+case53 :: IO String
+case53 = proof_obligation path53 "m1/INIT/FIS/sl$trash" 1
