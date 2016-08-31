@@ -245,14 +245,12 @@
 |  |  |  +- test3: spontaneous events
 |  |  +- [ Success: 4 / 4 ]
 |  |  +- QuickCheck spec of machine parser
-|  |  *** FAILED ***
-src/Document/Test.hs:51:8
 |  |  +- the parser is exception free
 |  |  +- conformance of instances to type class axioms
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
 |  |  +- variable scope, properties
-|  +- [ Success: 199 / 200 ]
+|  +- [ Success: 200 / 200 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -368,17 +366,17 @@ src/Document/Test.hs:51:8
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 296 / 297 ]
++- [ Success: 297 / 297 ]
 Data.Map.Base
 
 ***************
-*** FAILURE ***
+*** SUCCESS ***
 ***************
 Lines of Haskell code:
-   39122 total
+   39132 total
     1160 src/UnitB/PO.hs
      873 src/Document/Phase/Expressions.hs
      828 logic/Logic/Expr/Expr.hs
      804 src/Document/Phase.hs
      795 src/Document/Visitor.lhs
-Run time: 2m 29s
+Run time: 2m 16s
