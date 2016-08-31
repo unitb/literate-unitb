@@ -272,8 +272,14 @@ zsetdiff_fun   = mk_fun' [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA
 zintersect_fun = mk_fun' [] "intersect" [set_type gA,set_type gA] $ set_type gA
 zcompl_fun     = mk_fun' [gA] "compl" [set_type gA] $ set_type gA
 zempty_set_fun = mk_fun' [gA] "empty-set" [] $ set_type gA
-zset_all_fun   = mk_fun' [gA] "all" [] $ set_type gA
+zset_all_fun   = zset_all_fun' gA
 zpow_set_fun   = mk_fun' [gA] "pow" [set_type gA] $ set_type (set_type gA)
+
+zset_all_fun' :: Type -> Fun
+zset_all_fun' t = mk_fun' [t] "all" [] $ set_type t
+
+zset_all' :: Type -> ExprP
+zset_all' t = Right $ FunApp (zset_all_fun' t) []
 
 zmk_set      = typ_fun1 (mk_fun' [gA] "mk-set" [gA] $ set_type gA)
 zmk_set'     = fun1 (mk_fun' [gA] "mk-set" [gA] $ set_type gA)

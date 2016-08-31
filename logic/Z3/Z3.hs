@@ -6,6 +6,7 @@ module Z3.Z3
     , Satisfiability ( .. )
     , discharge_all
     , discharge, verify
+    , dischargeBoth
     , Context
     , entailment
     , var_decl 
@@ -32,6 +33,7 @@ where
 import Logic.Expr hiding ((</>))
 import Logic.Expr.Declaration
 import Logic.Proof
+import Logic.Proof.Monad
 
 import Z3.Version
 
@@ -332,6 +334,17 @@ tryDischarge t fT lbl code = do
                 left Nothing
             Left xs -> do
                 left $ Just $ "discharge: " ++ xs
+
+dischargeBoth :: HasExpr expr
+              => Label
+              -> SequentWithWD' expr
+              -> IO (Maybe Validity)
+dischargeBoth lbl pos = do
+    wdValidity <- discharge' Nothing lbl (_wd pos)
+    if wdValidity /= Valid then
+        return Nothing
+    else
+        Just <$> discharge' Nothing lbl (getExpr <$> _goal pos)
 
 discharge' :: Maybe Int      -- Timeout in seconds
            -> Label

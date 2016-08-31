@@ -1,0 +1,12 @@
+/static StaticR Static appStatic
+
+/favicon.ico FaviconR GET
+/robots.txt RobotsR GET
+
+/ HomeR GET
+
+/goal GoalR POST
+/preset PresetR POST
+/render RenderR POST
+/formPng FormPngR POST
+/formPdf FormPdfR POST

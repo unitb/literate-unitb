@@ -7,6 +7,7 @@ import Logic.Expr.Const
 import Logic.Expr.Parser
 import Logic.Proof.Monad
 import Logic.QuasiQuote hiding (var)
+import Logic.Test.Stable
 import Logic.Theories
 import Logic.Theory
 import Logic.Theories.SetTheory
@@ -352,7 +353,7 @@ instance Typed Integer where
     type_of = id
 
 case10 :: IO String
-case10 = return $ z3_code $ runSequent $ do
+case10 = return $ z3_code $ _goal $ runSequent' $ do
         let t = record_type $ runMap' $ do
                 x ## int
                 b ## bool
@@ -360,329 +361,40 @@ case10 = return $ z3_code $ runSequent $ do
             b = [field|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
-        assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
-        assume $ v2 .=. zrec_update v1 (x ## 7)
+        assume "v1: x:=7, b:=true" $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
+        assume "v2: v1[x:=7]" $ v2 .=. zrec_update v1 (x ## 7)
         check $ v1 .=. v2
-
-result10 :: String
-result10 = unlines
-    [ "(set-option :auto-config false)"
-    , "(set-option :smt.timeout 3000)"
-    , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
-    , "(declare-datatypes () ( (Null null) ))"
-    , "(declare-datatypes (a1 a2)"
-    , "                   ( (Record-b-x (Record-b-x (@@field@@_b a1) (@@field@@_x a2))) ))"
-    , "; comment: we don't need to declare the sort Bool"
-    , "; comment: we don't need to declare the sort Int"
-    , "(declare-const v1 (Record-b-x Bool Int))"
-    , "(declare-const v2 (Record-b-x Bool Int))"
-    , "(assert (= v1 (Record-b-x true 7)))"
-    , "(assert (= v2 (Record-b-x (@@field@@_b v1) 7)))"
-    , "(assert (not (= v1 v2)))"
-    , "(check-sat-using (or-else (then qe smt)"
-    , "                          (then simplify smt)"
-    , "                          (then skip smt)"
-    , "                          (then (using-params simplify :expand-power true) smt)))"
-    ]
 
 case11 :: IO String
-case11 = return $ z3_code $ runSequent $ do
+case11 = return $ z3_code $ _goal $ runSequent' $ do
         include set_theory
         include basic_theory
         let t = record_type $ runMap' $ do
                 x ## int
                 b ## bool
-            x = Field [smt|x|]
-            b = Field [smt|b|]
+            x = [field|x|]
+            b = [field|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
-        assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
-        assume $ v2 `zelem` mk_zrecord_set (x ## zmk_set 7 >> b ## zcast (set_type bool) zset_all)
+        assume "v1: x:=7, b:=true" $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
+        assume "v2 \\in ['x : {7}, 'b : (all:\\Bool)]" $ v2 `zelem`
+                    mk_zrecord_set (x ## zmk_set 7 >> b ## zcast (set_type bool) zset_all)
         check $ v1 .=. v2
 
-result11 :: String
-result11 = unlines
-    [ "(set-option :auto-config false)"
-    , "(set-option :smt.timeout 3000)"
-    , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
-    , "(declare-datatypes () ( (Null null) ))"
-    , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
-    , "(declare-datatypes (a1 a2)"
-    , "                   ( (Record-b-x (Record-b-x (@@field@@_b a1) (@@field@@_x a2))) ))"
-    , "; comment: we don't need to declare the sort Bool"
-    , "; comment: we don't need to declare the sort Int"
-    , "(define-sort set (a) (Array a Bool))"
-    , "(declare-const v1 (Record-b-x Bool Int))"
-    , "(declare-const v2 (Record-b-x Bool Int))"
-    , "(declare-fun const@Open@@Record-b-x@@Bool@@Int@Close@Open@@Record-b-x@@Bool@@Int@Close"
-    , "             ( (Record-b-x Bool Int) )"
-    , "             (Array (Record-b-x Bool Int) (Record-b-x Bool Int)))"
-    , "(declare-fun finite@@Bool ( (set Bool) ) Bool)"
-    , "(declare-fun finite@@Int ( (set Int) ) Bool)"
-    , "(declare-fun finite@Open@@Record-b-x@@Bool@@Int@Close"
-    , "             ( (set (Record-b-x Bool Int)) )"
-    , "             Bool)"
-    , "(declare-fun ident@Open@@Record-b-x@@Bool@@Int@Close"
-    , "             ()"
-    , "             (Array (Record-b-x Bool Int) (Record-b-x Bool Int)))"
-    , "(declare-fun mk-set@@Bool (Bool) (set Bool))"
-    , "(declare-fun mk-set@@Int (Int) (set Int))"
-    , "(declare-fun mk-set@Open@@Record-b-x@@Bool@@Int@Close"
-    , "             ( (Record-b-x Bool Int) )"
-    , "             (set (Record-b-x Bool Int)))"
-    , "(declare-fun set@Open@@Record-b-x@@Bool@@Int@Close@Open@@Record-b-x@@Bool@@Int@Close"
-    , "             ( (set (Record-b-x Bool Int))"
-    , "               (Array (Record-b-x Bool Int) (Record-b-x Bool Int)) )"
-    , "             (set (Record-b-x Bool Int)))"
-    , "(declare-fun @@lambda@@_0"
-    , "             ( (set Bool)"
-    , "               (set Int) )"
-    , "             (set (Record-b-x Bool Int)))"
-    , "(define-fun all@@Bool"
-    , "            ()"
-    , "            (set Bool)"
-    , "            ( (as const (set Bool))"
-    , "              true ))"
-    , "(define-fun all@@Int () (set Int) ( (as const (set Int)) true ))"
-    , "(define-fun all@Open@@Record-b-x@@Bool@@Int@Close"
-    , "            ()"
-    , "            (set (Record-b-x Bool Int))"
-    , "            ( (as const (set (Record-b-x Bool Int)))"
-    , "              true ))"
-    , "(define-fun compl@@Bool"
-    , "            ( (s1 (set Bool)) )"
-    , "            (set Bool)"
-    , "            ( (_ map not)"
-    , "              s1 ))"
-    , "(define-fun compl@@Int"
-    , "            ( (s1 (set Int)) )"
-    , "            (set Int)"
-    , "            ( (_ map not)"
-    , "              s1 ))"
-    , "(define-fun compl@Open@@Record-b-x@@Bool@@Int@Close"
-    , "            ( (s1 (set (Record-b-x Bool Int))) )"
-    , "            (set (Record-b-x Bool Int))"
-    , "            ( (_ map not)"
-    , "              s1 ))"
-    , "(define-fun elem@@Bool"
-    , "            ( (x Bool)"
-    , "              (s1 (set Bool)) )"
-    , "            Bool"
-    , "            (select s1 x))"
-    , "(define-fun elem@@Int"
-    , "            ( (x Int)"
-    , "              (s1 (set Int)) )"
-    , "            Bool"
-    , "            (select s1 x))"
-    , "(define-fun elem@Open@@Record-b-x@@Bool@@Int@Close"
-    , "            ( (x (Record-b-x Bool Int))"
-    , "              (s1 (set (Record-b-x Bool Int))) )"
-    , "            Bool"
-    , "            (select s1 x))"
-    , "(define-fun empty-set@@Bool"
-    , "            ()"
-    , "            (set Bool)"
-    , "            ( (as const (set Bool))"
-    , "              false ))"
-    , "(define-fun empty-set@@Int"
-    , "            ()"
-    , "            (set Int)"
-    , "            ( (as const (set Int))"
-    , "              false ))"
-    , "(define-fun empty-set@Open@@Record-b-x@@Bool@@Int@Close"
-    , "            ()"
-    , "            (set (Record-b-x Bool Int))"
-    , "            ( (as const (set (Record-b-x Bool Int)))"
-    , "              false ))"
-    , "(define-fun set-diff@@Bool"
-    , "            ( (s1 (set Bool))"
-    , "              (s2 (set Bool)) )"
-    , "            (set Bool)"
-    , "            (intersect s1 ( (_ map not) s2 )))"
-    , "(define-fun set-diff@@Int"
-    , "            ( (s1 (set Int))"
-    , "              (s2 (set Int)) )"
-    , "            (set Int)"
-    , "            (intersect s1 ( (_ map not) s2 )))"
-    , "(define-fun set-diff@Open@@Record-b-x@@Bool@@Int@Close"
-    , "            ( (s1 (set (Record-b-x Bool Int)))"
-    , "              (s2 (set (Record-b-x Bool Int))) )"
-    , "            (set (Record-b-x Bool Int))"
-    , "            (intersect s1 ( (_ map not) s2 )))"
-    , "(define-fun st-subset@@Bool"
-    , "            ( (s1 (set Bool))"
-    , "              (s2 (set Bool)) )"
-    , "            Bool"
-    , "            (and (subset s1 s2) (not (= s1 s2))))"
-    , "(define-fun st-subset@@Int"
-    , "            ( (s1 (set Int))"
-    , "              (s2 (set Int)) )"
-    , "            Bool"
-    , "            (and (subset s1 s2) (not (= s1 s2))))"
-    , "(define-fun st-subset@Open@@Record-b-x@@Bool@@Int@Close"
-    , "            ( (s1 (set (Record-b-x Bool Int)))"
-    , "              (s2 (set (Record-b-x Bool Int))) )"
-    , "            Bool"
-    , "            (and (subset s1 s2) (not (= s1 s2))))"
-    , "(assert (forall ( (x Bool)"
-    , "                  (y Bool) )"
-    , "                (! (= (elem@@Bool x (mk-set@@Bool y)) (= x y))"
-    , "                   :pattern"
-    , "                   ( (elem@@Bool x (mk-set@@Bool y)) ))))"
-    , "(assert (forall ( (x Int)"
-    , "                  (y Int) )"
-    , "                (! (= (elem@@Int x (mk-set@@Int y)) (= x y))"
-    , "                   :pattern"
-    , "                   ( (elem@@Int x (mk-set@@Int y)) ))))"
-    , "(assert (forall ( (x (Record-b-x Bool Int))"
-    , "                  (y (Record-b-x Bool Int)) )"
-    , "                (! (= (elem@Open@@Record-b-x@@Bool@@Int@Close x (mk-set@Open@@Record-b-x@@Bool@@Int@Close y))"
-    , "                      (= x y))"
-    , "                   :pattern"
-    , "                   ( (elem@Open@@Record-b-x@@Bool@@Int@Close x (mk-set@Open@@Record-b-x@@Bool@@Int@Close y)) ))))"
-    , "(assert (forall ( (r1 (set (Record-b-x Bool Int)))"
-    , "                  (term (Array (Record-b-x Bool Int) (Record-b-x Bool Int)))"
-    , "                  (y (Record-b-x Bool Int)) )"
-    , "                (! (= (elem@Open@@Record-b-x@@Bool@@Int@Close y"
-    , "                                                              (set@Open@@Record-b-x@@Bool@@Int@Close@Open@@Record-b-x@@Bool@@Int@Close r1 term))"
-    , "                      (exists ( (x (Record-b-x Bool Int)) )"
-    , "                              (and (elem@Open@@Record-b-x@@Bool@@Int@Close x r1)"
-    , "                                   (= (select term x) y))))"
-    , "                   :pattern"
-    , "                   ( (elem@Open@@Record-b-x@@Bool@@Int@Close y"
-    , "                                                             (set@Open@@Record-b-x@@Bool@@Int@Close@Open@@Record-b-x@@Bool@@Int@Close r1 term)) ))))"
-    , "(assert (forall ( (r1 (set (Record-b-x Bool Int)))"
-    , "                  (term (Array (Record-b-x Bool Int) (Record-b-x Bool Int)))"
-    , "                  (y (Record-b-x Bool Int)) )"
-    , "                (! (= (= (set@Open@@Record-b-x@@Bool@@Int@Close@Open@@Record-b-x@@Bool@@Int@Close r1 term)"
-    , "                         (mk-set@Open@@Record-b-x@@Bool@@Int@Close y))"
-    , "                      (forall ( (x (Record-b-x Bool Int)) )"
-    , "                              (=> (elem@Open@@Record-b-x@@Bool@@Int@Close x r1)"
-    , "                                  (= (select term x) y))))"
-    , "                   :pattern"
-    , "                   ( (set@Open@@Record-b-x@@Bool@@Int@Close@Open@@Record-b-x@@Bool@@Int@Close r1 term)"
-    , "                     (mk-set@Open@@Record-b-x@@Bool@@Int@Close y) ))))"
-    , "(assert (forall ( (s1 (set Bool))"
-    , "                  (s2 (set Bool)) )"
-    , "                (! (=> (finite@@Bool s1)"
-    , "                       (finite@@Bool (set-diff@@Bool s1 s2)))"
-    , "                   :pattern"
-    , "                   ( (finite@@Bool (set-diff@@Bool s1 s2)) ))))"
-    , "(assert (forall ( (s1 (set Int))"
-    , "                  (s2 (set Int)) )"
-    , "                (! (=> (finite@@Int s1)"
-    , "                       (finite@@Int (set-diff@@Int s1 s2)))"
-    , "                   :pattern"
-    , "                   ( (finite@@Int (set-diff@@Int s1 s2)) ))))"
-    , "(assert (forall ( (s1 (set (Record-b-x Bool Int)))"
-    , "                  (s2 (set (Record-b-x Bool Int))) )"
-    , "                (! (=> (finite@Open@@Record-b-x@@Bool@@Int@Close s1)"
-    , "                       (finite@Open@@Record-b-x@@Bool@@Int@Close (set-diff@Open@@Record-b-x@@Bool@@Int@Close s1 s2)))"
-    , "                   :pattern"
-    , "                   ( (finite@Open@@Record-b-x@@Bool@@Int@Close (set-diff@Open@@Record-b-x@@Bool@@Int@Close s1 s2)) ))))"
-    , "(assert (forall ( (s1 (set Bool))"
-    , "                  (s2 (set Bool)) )"
-    , "                (! (=> (and (finite@@Bool s1) (finite@@Bool s2))"
-    , "                       (finite@@Bool (union s1 s2)))"
-    , "                   :pattern"
-    , "                   ( (finite@@Bool (union s1 s2)) ))))"
-    , "(assert (forall ( (s1 (set Int))"
-    , "                  (s2 (set Int)) )"
-    , "                (! (=> (and (finite@@Int s1) (finite@@Int s2))"
-    , "                       (finite@@Int (union s1 s2)))"
-    , "                   :pattern"
-    , "                   ( (finite@@Int (union s1 s2)) ))))"
-    , "(assert (forall ( (s1 (set (Record-b-x Bool Int)))"
-    , "                  (s2 (set (Record-b-x Bool Int))) )"
-    , "                (! (=> (and (finite@Open@@Record-b-x@@Bool@@Int@Close s1)"
-    , "                            (finite@Open@@Record-b-x@@Bool@@Int@Close s2))"
-    , "                       (finite@Open@@Record-b-x@@Bool@@Int@Close (union s1 s2)))"
-    , "                   :pattern"
-    , "                   ( (finite@Open@@Record-b-x@@Bool@@Int@Close (union s1 s2)) ))))"
-    , "(assert (forall ( (s1 (set Bool))"
-    , "                  (s2 (set Bool)) )"
-    , "                (! (=> (and (finite@@Bool s2) (not (finite@@Bool s1)))"
-    , "                       (not (finite@@Bool (set-diff@@Bool s1 s2))))"
-    , "                   :pattern"
-    , "                   ( (finite@@Bool (set-diff@@Bool s1 s2)) ))))"
-    , "(assert (forall ( (s1 (set Int))"
-    , "                  (s2 (set Int)) )"
-    , "                (! (=> (and (finite@@Int s2) (not (finite@@Int s1)))"
-    , "                       (not (finite@@Int (set-diff@@Int s1 s2))))"
-    , "                   :pattern"
-    , "                   ( (finite@@Int (set-diff@@Int s1 s2)) ))))"
-    , "(assert (forall ( (s1 (set (Record-b-x Bool Int)))"
-    , "                  (s2 (set (Record-b-x Bool Int))) )"
-    , "                (! (=> (and (finite@Open@@Record-b-x@@Bool@@Int@Close s2)"
-    , "                            (not (finite@Open@@Record-b-x@@Bool@@Int@Close s1)))"
-    , "                       (not (finite@Open@@Record-b-x@@Bool@@Int@Close (set-diff@Open@@Record-b-x@@Bool@@Int@Close s1 s2))))"
-    , "                   :pattern"
-    , "                   ( (finite@Open@@Record-b-x@@Bool@@Int@Close (set-diff@Open@@Record-b-x@@Bool@@Int@Close s1 s2)) ))))"
-    , "(assert (forall ( (x Bool) )"
-    , "                (! (finite@@Bool (mk-set@@Bool x))"
-    , "                   :pattern"
-    , "                   ( (finite@@Bool (mk-set@@Bool x)) ))))"
-    , "(assert (forall ( (x Int) )"
-    , "                (! (finite@@Int (mk-set@@Int x))"
-    , "                   :pattern"
-    , "                   ( (finite@@Int (mk-set@@Int x)) ))))"
-    , "(assert (forall ( (x (Record-b-x Bool Int)) )"
-    , "                (! (finite@Open@@Record-b-x@@Bool@@Int@Close (mk-set@Open@@Record-b-x@@Bool@@Int@Close x))"
-    , "                   :pattern"
-    , "                   ( (finite@Open@@Record-b-x@@Bool@@Int@Close (mk-set@Open@@Record-b-x@@Bool@@Int@Close x)) ))))"
-    , "(assert (finite@@Bool empty-set@@Bool))"
-    , "(assert (finite@@Int empty-set@@Int))"
-    , "(assert (finite@Open@@Record-b-x@@Bool@@Int@Close empty-set@Open@@Record-b-x@@Bool@@Int@Close))"
-    , "(assert (forall ( (r1 (set (Record-b-x Bool Int))) )"
-    , "                (! (= (set@Open@@Record-b-x@@Bool@@Int@Close@Open@@Record-b-x@@Bool@@Int@Close r1 ident@Open@@Record-b-x@@Bool@@Int@Close)"
-    , "                      r1)"
-    , "                   :pattern"
-    , "                   ( (set@Open@@Record-b-x@@Bool@@Int@Close@Open@@Record-b-x@@Bool@@Int@Close r1 ident@Open@@Record-b-x@@Bool@@Int@Close) ))))"
-    , "(assert (forall ( (x (Record-b-x Bool Int))"
-    , "                  (y (Record-b-x Bool Int)) )"
-    , "                (! (= (select (const@Open@@Record-b-x@@Bool@@Int@Close@Open@@Record-b-x@@Bool@@Int@Close x)"
-    , "                              y)"
-    , "                      x)"
-    , "                   :pattern"
-    , "                   ( (select (const@Open@@Record-b-x@@Bool@@Int@Close@Open@@Record-b-x@@Bool@@Int@Close x)"
-    , "                             y) ))))"
-    , "(assert (forall ( (x (Record-b-x Bool Int)) )"
-    , "                (! (= (select ident@Open@@Record-b-x@@Bool@@Int@Close x)"
-    , "                      x)"
-    , "                   :pattern"
-    , "                   ( (select ident@Open@@Record-b-x@@Bool@@Int@Close x) ))))"
-    , "(assert (= v1 (Record-b-x true 7)))"
-    , "(assert (elem@Open@@Record-b-x@@Bool@@Int@Close v2"
-    , "                                                (set@Open@@Record-b-x@@Bool@@Int@Close@Open@@Record-b-x@@Bool@@Int@Close (@@lambda@@_0 all@@Bool (mk-set@@Int 7))"
-    , "                                                                                                                         ident@Open@@Record-b-x@@Bool@@Int@Close)))"
-    , "(assert (forall ( (@@fv@@_0 (set Bool))"
-    , "                  (@@fv@@_1 (set Int))"
-    , "                  (@@bv@@_0 (Record-b-x Bool Int)) )"
-    , "                (! (= (elem@Open@@Record-b-x@@Bool@@Int@Close @@bv@@_0 (@@lambda@@_0 @@fv@@_0 @@fv@@_1))"
-    , "                      (and (elem@@Bool (@@field@@_b @@bv@@_0) @@fv@@_0)"
-    , "                           (elem@@Int (@@field@@_x @@bv@@_0) @@fv@@_1)))"
-    , "                   :pattern"
-    , "                   ( (elem@Open@@Record-b-x@@Bool@@Int@Close @@bv@@_0 (@@lambda@@_0 @@fv@@_0 @@fv@@_1)) ))))"
-    , "(assert (not (= v1 v2)))"
-    , "(check-sat-using (or-else (then qe smt)"
-    , "                          (then simplify smt)"
-    , "                          (then skip smt)"
-    , "                          (then (using-params simplify :expand-power true) smt)))"
-    ]
-
 case12 :: IO Validity
-case12 = discharge ("case12") $ runSequent $ do
+case12 = discharge ("case12") $ _goal $ runSequent' $ do
         include set_theory
         include basic_theory
         let t = record_type $ runMap' $ do
                 x ## int
                 b ## bool
-            x = Field [smt|x|]
-            b = Field [smt|b|]
+            x = [field|x|]
+            b = [field|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
-        assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
-        assume $ v2 `zelem` mk_zrecord_set (x ## zmk_set 7 >> b ## zmk_set mztrue)
+        assume "v1: x:=7, b:=true" $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
+        assume "v2 \\in ['x : {7}, 'b : {true}]" $
+                v2 `zelem` mk_zrecord_set (x ## zmk_set 7 >> b ## zmk_set mztrue)
         check $ v1 .=. v2
 
 result12 :: Validity
@@ -790,10 +502,8 @@ case17 = do
 result17 :: Expr
 result17 = fromRight' $ rec `zelem` set
     where
-        zint_set = Right $ Word $ Var intV $ set_type int
-        intV = [tex|\Int|]
         rec = zrec_update r (foo ## 7 >> bar ## zset_enum [1,2])
-        set = mk_zrecord_set (do foo ## zint_set; x ## zint_set; bar ## zpow_set zint_set)
+        set = mk_zrecord_set (do foo ## zset_all' int; x ## zset_all' int; bar ## zpow_set (zset_all' int))
         r' = [smt|r|]
         r  = Right $ Word $ Var r' $ record_type $ M.fromList 
                     [ (bar,bool)
@@ -803,7 +513,7 @@ result17 = fromRight' $ rec `zelem` set
         foo = [field|foo|]
 
 case18 :: IO Validity
-case18 = discharge("case13") $ runSequent $ do
+case18 = discharge("case13") $ _goal $ runSequent' $ do
     declare "x" int
     checkQ $ [expr| x = x |]
 
@@ -811,7 +521,7 @@ result18 :: Validity
 result18 = Valid
 
 case19 :: IO Validity
-case19 = discharge("case14") $ runSequent $ do
+case19 = discharge("case14") $ _goal $ runSequent' $ do
     declare "x" int
     include set_theory
     checkQ $ [expr| x \in \{x\} |]
@@ -820,9 +530,9 @@ result19 :: Validity
 result19 = Valid
 
 case20 :: IO Validity
-case20 = discharge("case15") $ runSequent $ do
+case20 = discharge("case15") $ _goal $ runSequent' $ do
     declare "x" int
-    assumeQ $ [expr| x = x |]
+    assumeQ "x = x" [expr| x = x |]
     checkQ $ [expr| \neg x = x |]
 
 result20 :: Validity
@@ -852,14 +562,14 @@ result21 = Record (FieldLookup r x) int  `zeq` zint 7
         bar = [field|bar|]
 
 case22 :: IO Validity
-case22 = discharge "case22" $ runSequent $ do
+case22 = discharge "case22" $ _goal $ runSequent' $ do
     let t = record_type $ runMap' $ do
                 x ## bool
                 bar ## int
         x   = [field|x|]
         bar = [field|bar|]
     declare "r" t
-    assumeQ [expr| r = [ 'x := \true, 'bar := 7 ] |]
+    assumeQ "r = [ 'x := \true, 'bar := 7 ]" [expr| r = [ 'x := \true, 'bar := 7 ] |]
     checkQ  [expr| r.'bar = 8 |]
 
 result22 :: Validity

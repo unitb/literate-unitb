@@ -1,0 +1,50 @@
+h1 {
+    text-align: center;
+    margin-bottom: 30px
+}
+footer {
+    text-align: center
+}
+.input-sm {
+    margin-left: 20px
+}
+
+.fluid-container {
+    display: flex;
+    margin-top: 15px;
+}
+
+.icon-right-margin {
+    margin-right: 3px;
+}
+
+.icon-left-margin {
+    margin-left: 3px;
+}
+
+.#{declPrefix}, .#{asmPrefix} {
+    margin-top: 10px;
+}
+
+.ce-lbl {
+    background-color: #fff;
+    min-width: 60px;
+}
+
+@media (max-width: 1199px) {
+  .col-lg-6 {
+    margin-top:20px;
+  }
+}
+
+##{resultBarId} samp {
+    white-space: pre;
+}
+
+[data-toggle="collapse"] {
+    cursor: pointer;
+}
+
+.table > tbody > tr > td { 
+    vertical-align: middle;
+}
