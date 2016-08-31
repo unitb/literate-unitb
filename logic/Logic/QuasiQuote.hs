@@ -56,6 +56,13 @@ carrier = QuasiQuoter
     , quoteDec  = undefined
     , quoteType = undefined }
 
+field :: QuasiQuoter
+field = QuasiQuoter
+    { quoteExp  = \str -> [| Field $(quoteExp smt str) |]
+    , quotePat  = undefined
+    , quoteDec  = undefined
+    , quoteType = undefined }
+
 type Parser a = Loc -> ParserSetting -> String -> a
 
 parseParts :: (a -> b -> c) 
@@ -132,14 +139,16 @@ ctxWith :: [Theory]
         -> (ParserSetting -> b) -> b
 ctxWith xs cmd f = f r
     where
-        r = execState cmd (theory_setting $ (empty_theory' "empty") { _extends = 
-                symbol_table $ xs ++ M.elems preludeTheories } )
+        r = execState cmd (theory_setting' (symbol_table $ xs ++ M.elems preludeTheories))
 
 ctx :: State ParserSetting a 
     -> (ParserSetting -> b) -> b
 ctx = ctxWith []
 
 instance (Lift n,Lift t) => Lift (AbsVar n t) where
+    lift = genericLift
+
+instance Lift CastType where
     lift = genericLift
 
 instance (Lift t,Lift a,Lift q,Lift n) => Lift (GenExpr n t a q) where

@@ -4,7 +4,7 @@
 module Logic.Expr.Genericity 
     ( TypeSystem2(..)
     , typ_fun1, typ_fun2, typ_fun3
-    , common, check_type
+    , common, check_type, check_type'
     , unify, normalize_generics
     , ambiguities, suffix_generics
     , specialize
@@ -71,14 +71,14 @@ rewrite_types xs e = -- typesOf %~ suffix_generics tag
         Lit v t         -> Lit v t'
           where
             t'          = ft t
-        Cast e t -> Cast (rewrite_types xs e) (suffix_generics xs t)
+        Cast b e t -> Cast b (rewrite_types xs e) (suffix_generics xs t)
         Lift e t -> Lift (rewrite_types xs e) (suffix_generics xs t)
         FunApp f args -> funApp f' new_args
           where
             f'          = substitute_types ft f
             new_args    = map fe args
         Binder q vs r term t -> rewrite (rewrite_types xs) (Binder q vs r term (ft t))
-        Record e -> Record $ e & traverseRecExpr %~ rewrite_types xs
+        Record e t -> Record (e & traverseRecExpr %~ rewrite_types xs) (ft t)
     where
         fe          = rewrite_types xs
         ft          = suffix_generics xs
@@ -88,14 +88,28 @@ class TypeSystem t => TypeSystem2 t where
                => [AbsExpr n t q] 
                -> AbsFun n t 
                -> Maybe (AbsExpr n t q) 
+    check_args xs f = check_args' (\f xs _ -> funApp f xs) f xs
+    check_args' :: (IsQuantifier q,IsName n)
+                => (AbsFun n t -> [AbsExpr n t q] -> [t] -> AbsExpr n t q)
+                -> AbsFun n t 
+                -> [AbsExpr n t q]
+                -> Maybe (AbsExpr n t q) 
     zcast :: (IsQuantifier q,IsName n)
           => t -> ExprPG n t q
           -> ExprPG n t q
 
+instance TypeSystem2 () where
+    check_args' f fun xp = do
+            let ts = fun^.arguments
+            guard (length xp == length ts)
+            return $ f fun xp ts
+    zcast _ = id
+
 instance TypeSystem2 FOType where
-    check_args xp f@(Fun _ _ _ ts _ _) = do
-            guard (map type_of xp == ts)
-            return $! funApp f xp
+    check_args' f fun xp = do
+            let ts = fun^.arguments
+            guard (fmap type_of xp == ts)
+            return $ f fun xp ts
     zcast t me = do
             e <- me
             let { err_msg = intercalate "\n"
@@ -109,7 +123,7 @@ instance TypeSystem2 FOType where
             return e
 
 instance TypeSystem2 GenericType where
-    check_args xp (Fun gs name lf ts t wd) = do
+    check_args' f (Fun gs name lf ts t wd) xp = do
             let n       = length ts
             guard (n == length ts)
             let args    = zipWith rewrite_types (map show [1..n]) xp
@@ -125,7 +139,7 @@ instance TypeSystem2 GenericType where
                 us    = L.map (ft "1") ts
                 u     = ft "1" t
                 args2 = map (fe "2") args
-                expr = funApp (Fun gs2 name lf us u wd) $ args2 
+                expr = f (Fun gs2 name lf us u wd) args2 us
             return expr
     zcast t me = do
             e <- me
@@ -148,17 +162,30 @@ check_type :: (IsQuantifier q,IsName n)
            => AbsFun n Type 
            -> [ExprPG n Type q] 
            -> ExprPG n Type q
-check_type f@(Fun _ n _ ts t _) mxs = do
+check_type = check_type' $ \fun xs _ -> funApp fun xs
+
+check_type' :: (IsQuantifier q,IsName n)
+            => (AbsFun n Type
+                 -> [AbsExpr n Type q] -> [Type] -> AbsExpr n Type q)
+            -> AbsFun n Type 
+            -> [ExprPG n Type q] 
+            -> ExprPG n Type q
+check_type' f fun@(Fun _ n _ ts t _) mxs = do
         xs <- check_all mxs
-        let args = unlines $ map (\(i,x) -> unlines 
-                                    [ [printf|   argument %d:  %s|] i (pretty x)
-                                    , [printf|   type:          %s|] (pretty $ type_of x) ])
-                        (zip [0..] xs) 
-            err_msg = unlines 
-                        [ [printf|arguments of '%s' do not match its signature:|] (render n)
-                        , [printf|   signature: %s -> %s|] (pretty ts) (pretty t)
-                        , [printf|%s|] args ]
-        maybe (Left [err_msg]) Right $ check_args xs f
+        case xs of
+            [x]     -> typ_fun1 fun (Right x)
+            [x,y]   -> typ_fun2 fun (Right x) (Right y)
+            [x,y,z] -> typ_fun3 fun (Right x) (Right y) (Right z)
+            _ -> do
+                let args = unlines $ map (\(i,x) -> unlines
+                                            [ [printf|   argument %d:  %s|] i (pretty x)
+                                            , [printf|   type:          %s|] (pretty $ type_of x) ])
+                                (zip [0..] xs)
+                    err_msg = unlines
+                                [ [printf|arguments of '%s' do not match its signature:|] (render n)
+                                , [printf|   signature: %s -> %s|] (pretty ts) (pretty t)
+                                , [printf|%s|] args ]
+                maybe (Left [err_msg]) Right $ check_args' f fun xs
 
 type OneExprP n t q   = IsQuantifier q => ExprPG n t q -> ExprPG n t q
 type TwoExprP n t q   = IsQuantifier q => ExprPG n t q -> ExprPG n t q -> ExprPG n t q
@@ -247,10 +274,10 @@ strip_generics (Word v)    = do
 strip_generics (Lit m t) = do
     t  <- type_strip_generics t
     return (Lit m t)
-strip_generics (Cast e t) = do
+strip_generics (Cast b e t) = do
     e <- strip_generics e
     t <- type_strip_generics t
-    return (Cast e t)
+    return (Cast b e t)
 strip_generics (Lift e t) = do
     e <- strip_generics e
     t <- type_strip_generics t
@@ -265,7 +292,9 @@ strip_generics (Binder q vs r t et) = do
     t  <- strip_generics t
     et' <- type_strip_generics et
     return (binder q vs r t et')
-strip_generics (Record e) = Record <$> traverseRecExpr strip_generics e
+strip_generics (Record e t) = Record 
+        <$> traverseRecExpr strip_generics e
+        <*> type_strip_generics t
 
 type_strip_generics :: Type -> Maybe FOType
 type_strip_generics (Gen s ts) = do
@@ -385,11 +414,11 @@ instance (TypeSystem t', Generic Type t',IsName n) => Generic (AbsVar n Type) (A
 instance (TypeSystem t,HasGenerics t,IsName n,IsQuantifier q) => HasGenerics (AbsExpr n t q) where
     types_of (Word v)      = types_of v
     types_of (Lit _ t)   = types_of t
-    types_of (Cast e t)     = S.union (types_of t) (types_of e)
+    types_of (Cast _ e t)     = S.union (types_of t) (types_of e)
     types_of (Lift e t)     = S.union (types_of t) (types_of e)
     types_of (FunApp f xp)    = S.unions $ types_of f : map types_of xp
     types_of (Binder _ vs r xp t) = S.unions $ types_of t : types_of r : types_of xp : map types_of vs
-    types_of (Record x) = S.unions $ x^.partsOf (traverseRecExpr.to types_of)
+    types_of (Record x t) = S.unions $ types_of t : (x^.partsOf (traverseRecExpr.to types_of))
 
 instance (IsQuantifier q, Generic Type t', TypeSystem t', IsName n) 
         => Generic (AbsExpr n Type q) (AbsExpr n t' q) where
@@ -404,7 +433,7 @@ ambiguities e@(Word (Var _ t))
 ambiguities e@(Lit _ t)    
         | S.null $ generics t = []
         | otherwise           = [e]
-ambiguities e@(Cast e' t)
+ambiguities e@(Cast _ e' t)
         | not $ S.null $ generics t = [e]
         | otherwise                 = ambiguities e'
 ambiguities e@(Lift e' t)
@@ -425,7 +454,10 @@ ambiguities e@(Binder _ vs r xp t) = x ++ y ++ ambiguities r ++ ambiguities xp
         y 
             | not $ S.null (generics t) = [e]
             | otherwise                 = []
-ambiguities (Record e) = concat $ e^.partsOf (traverseRecExpr.to ambiguities)
+ambiguities r@(Record e t) = x ++ concat (e^.partsOf (traverseRecExpr.to ambiguities))
+    where
+        x   | not $ S.null (generics t) = [r]
+            | otherwise                 = []
 
 common :: GenericType -> GenericType -> Maybe GenericType
 common t1 t2 = do

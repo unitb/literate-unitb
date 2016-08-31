@@ -12,7 +12,7 @@ import Logic.Theories.Arithmetic
 import Logic.Theories.FunctionTheory
 import Logic.Theories.SetTheory
 
-import UnitB.Expr
+import UnitB.Expr hiding (zelem')
 import UnitB.UnitB
 
 
@@ -50,13 +50,18 @@ f_prop_parseOk (Pretty mch,Tex tex) =
 prop_type_error :: Property
 prop_type_error = forAll (liftM snd mch_with_type_error) f_prop_type_error
 
-f_prop_type_error :: Tex -> Bool
-f_prop_type_error (Tex tex) = either (all is_type_error) (const False) (all_machines tex) 
+f_prop_type_error :: Tex -> Property
+f_prop_type_error (Tex tex) = 
+        either (\m -> counterexample (show_err m) $ all is_type_error m) (const $ property False) (all_machines tex) 
 
 prop_expr_parser :: ExprNotation -> Property
-prop_expr_parser (ExprNotation ctx n e) = e' === parse_expression parser (withLI $ showExpr n $ asExpr e)
+prop_expr_parser (ExprNotation ctx n e) = 
+        counterexample text $
+        counterexample (pretty ctx) $
+        e' === parse (withLI text)
     where
-        parser = setting_from_context n ctx
+        text = showExpr n $ getExpr e
+        parse  = fmap getExpr . parse_expr (setting_from_context n ctx & expected_type .~ Nothing)
         e' = Right e
         li = LI "" 0 0
         withLI xs = StringLi (map (\x -> (x,li)) xs) li
@@ -84,7 +89,11 @@ instance Arbitrary ExprNotation where
                     M.empty M.empty 
         return $ ExprNotation 
                     ctx basic_notation e
-    shrink = genericShrink
+    shrink (ExprNotation ctx n e) = mapMaybe (validScope n) . genericShrink $ (ctx,e)
+        where
+            validScope n (ctx,e)
+                | used_var' e `M.isSubmapOf` (ctx^.constants) = Just (ExprNotation ctx n e)
+                | otherwise = Nothing
 
 data MachineInput = MachineInput RawMachine [LatexNode]
 
@@ -92,6 +101,7 @@ is_type_error :: Error -> Bool
 is_type_error e = 
             "type error:" `L.isInfixOf` msg
         ||  "expected type:" `L.isInfixOf` msg
+        ||  "signature:" `L.isInfixOf` msg
     where
         msg = message e
 

@@ -90,3 +90,7 @@ mkSetting notat sorts plVar prVar dumVar = (default_setting notat)
 
 theory_setting :: Theory -> ParserSetting
 theory_setting th = (setting_from_context (th_notation th) (theory_ctx th))
+
+theory_setting' :: Table Name Theory -> ParserSetting
+theory_setting' theories = theory_setting $ (empty_theory' "empty")
+    { _extends = theories }

@@ -292,10 +292,12 @@
 |  |  |  +- QuasiQuotes with proof monads and assumptions
 |  |  |  +- Records lookup syntax
 |  |  |  +- Proofs with record lookup
-|  |  +- [ Success: 33 / 33 ]
+|  |  |  +- Testing the parser (\qforall{x,y}{}{x = y})
+|  |  |  +- Testing the parser (\neg (-2) = 2)
+|  |  +- [ Success: 35 / 35 ]
 |  |  +- 6: unless with except and split event
 |  |  +- 7: QuickCheck names
-|  +- [ Success: 41 / 41 ]
+|  +- [ Success: 43 / 43 ]
 |  +- latex parser
 |  |  +- quickcheck
 |  |  +- sample.tex
@@ -364,17 +366,17 @@
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 295 / 295 ]
++- [ Success: 297 / 297 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38926 total
+   39132 total
     1160 src/UnitB/PO.hs
      873 src/Document/Phase/Expressions.hs
+     828 logic/Logic/Expr/Expr.hs
      804 src/Document/Phase.hs
      795 src/Document/Visitor.lhs
-     780 logic/Logic/Expr/Expr.hs
-Run time: 2m 33s
+Run time: 2m 16s

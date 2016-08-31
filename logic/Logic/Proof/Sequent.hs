@@ -158,11 +158,11 @@ checkScopesAux e@(FunApp fn args) = do
 checkScopesAux (Binder _ vs r t _) =
     local (over constants $ M.union $ symbol_table vs) $ do
         mapM_ checkScopesAux [r,t]
-checkScopesAux (Cast e _) = do
+checkScopesAux (Cast _ e _) = do
     checkScopesAux e
 checkScopesAux (Lift e _) = do
     checkScopesAux e
-checkScopesAux (Record e) = do
+checkScopesAux (Record e _) = do
     mapMOf_ traverseRecExpr checkScopesAux e
 
 makeSequent :: Pre

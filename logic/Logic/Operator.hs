@@ -21,6 +21,7 @@ module Logic.Operator
     , implies, follows, equiv
     , combine, precede
     , mk_expr, mk_unary
+    , mk_expr', mk_unary'
         -- Lenses
     , new_ops 
     , prec 
@@ -78,8 +79,15 @@ mk_expr :: BinOperator -> Expr -> Expr -> Either [String] Expr
 mk_expr (BinOperator _ _ Flipped f) x y = flip (typ_fun2 f) (Right x) (Right y)
 mk_expr (BinOperator _ _ Direct f) x y  = typ_fun2 f (Right x) (Right y)
 
+mk_expr' :: BinOperator -> UntypedExpr -> UntypedExpr -> UntypedExpr
+mk_expr' (BinOperator _ _ Flipped f) x y = flip (fun2' f) x y
+mk_expr' (BinOperator _ _ Direct f) x y  = fun2' f x y
+
 mk_unary :: UnaryOperator -> Expr -> Either [String] Expr
 mk_unary (UnaryOperator _ _ f) x = typ_fun1 f $ Right x
+
+mk_unary' :: UnaryOperator -> UntypedExpr -> UntypedExpr
+mk_unary' (UnaryOperator _ _ f) x = fun1 f x
 
 data Assoc = LeftAssoc | RightAssoc | NoAssoc
     deriving (Show,Eq,Typeable,Generic)
@@ -88,7 +96,18 @@ data Flipping = Flipped | Direct
     deriving (Eq,Ord,Show,Generic,Typeable,Bounded,Enum)
 
 data Notation = Notation
-    { _new_ops :: [Operator]
+    { -- _new_ops a list of all the operators defined by this Notation object
+      _new_ops :: [Operator]
+      -- _prec specifies a partial order using three levels of nested lists
+      -- (can be seen as a set of independent constraints)
+      -- Example:
+      -- if _prec == [ xs , ys ], xs specifies one way in which operators have
+      -- precedence and ys specifies a different way.
+      -- And when looking at xs, it may be the case that xs == [ [*,/] , [+,-] ]
+      -- which means that * binds tighter than both + and -, and so does /
+      -- However, no precedence is implied between * and / and between + and -
+      -- In a way, they are on the same level of precedence and using them together
+      -- is ambiguous; unless they are mutually left / right associative.
     , _prec :: [[[Operator]]] 
     , _left_assoc :: [[BinOperator]]
     , _right_assoc :: [[BinOperator]]
