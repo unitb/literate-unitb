@@ -4,7 +4,7 @@
 \usepackage{bsymb}
 \usepackage{../unitb}
 % \usepackage{eventb} 
-\usepackage{calculation}
+\usepackage{calculational}
 
 \begin{document}
 	
@@ -55,7 +55,7 @@
 \end{align}\begin{description}
 \comment{\ref{inv0}}{ termination is characterized by everyone 
 	having visited }\end{description}
-\replace{term}{sch0}{sch1}{}{prog1}{saf1}
+\replace{term}{sch1}{prog1}{saf1}
 \begin{align*}
 	\safety{saf1}{vs = \Pcs}{\false}
 \end{align*}
@@ -104,7 +104,7 @@
 	\cschedule{term}{sch2}{ ts = \Pcs }
 \end{align}
 
-\replace{term}{sch1}{sch2}{}{prog4}{saf3}
+\replace{term}{sch2}{prog4}{saf3}
 
 \begin{align}
 	\safety{saf3}{ ts = \Pcs }{ \neg vs = \Pcs } \\
@@ -250,12 +250,12 @@
 \comment{vs}{set of visited processes}\end{description}
 \begin{align}
 	% \invariant{inv0}{b \2\implies& vs = \Pcs} \\
-	\evguard{term}{grd0}{ vs &= \Pcs } \\
-	\cschedule{term}{sch1}{ vs &= \Pcs }
+	% \evguard{term}{grd0}{ vs &= \Pcs } \\
+	% \cschedule{term}{sch1}{ vs &= \Pcs }
 \end{align}\begin{description}
 \comment{\ref{inv0}}{ termination is characterized by everyone 
 	having visited }\end{description}
-\replace{term}{sch0}{sch1}{}{prog1}{saf1}
+\replace{term}{sch1}{prog1}{saf1}
 \begin{align*}
 	% \safety{saf1}{vs = \Pcs}{\false}
 \end{align*}
@@ -285,7 +285,7 @@
 
 \begin{align}
 % 	\cschedule{visit}{sch0}{}
-	\evbcmeq{visit}{act1}{vs}{ vs \bunion \{ p \} }
+	% \evbcmeq{visit}{act1}{vs}{ vs \bunion \{ p \} }
 \end{align}
 
 % \removecoarse{visit}{default} % \weakento{visit}{default}{}
@@ -304,7 +304,7 @@
 % 	\cschedule{term}{sch2}{ ts = \Pcs }
 % \end{align}
 
-\replace{term}{sch1}{sch2}{}{prog4}{saf3}
+\replace{term}{sch2}{prog4}{saf3}
 
 \begin{align}
 	% \safety{saf3}{ ts = \Pcs }{ \neg vs = \Pcs } \\
@@ -357,10 +357,10 @@
 % \[ \indices{flick}{p : \Pcs} \]
 
 \begin{align}
-	\cschedule{flick}{sch0}{ cs = \emptyset } \\
-	\cschedule{flick}{sch1}{ \neg p \in ts } \\
-	\evguard{flick}{grd0}{ \neg p \in ts } \\
-	\evbcmeq{flick}{act0}{cs}{ \{ p \} }
+	% \cschedule{flick}{sch0}{ cs = \emptyset } \\
+	% \cschedule{flick}{sch1}{ \neg p \in ts } \\
+	% \evguard{flick}{grd0}{ \neg p \in ts } \\
+	% \evbcmeq{flick}{act0}{cs}{ \{ p \} }
 \end{align}
 
 % \removecoarse{flick}{default} % \weakento{flick}{default}{sch0,sch1,sch2}
@@ -373,11 +373,11 @@
 \begin{align}
 	% \invariant{inv2}{cs \subseteq vs} \\
 	% \initialization{in2}{ cs = \emptyset } \\
-	\cschedule{count}{sch0}{ \neg cs = \emptyset } \\
+	% \cschedule{count}{sch0}{ \neg cs = \emptyset } \\
 	% \cschedule{count}{sch1}{ cs \subseteq vs } \\
 	% \evguard{count}{grd0}{ cs \subseteq vs } \\
-	\evbcmeq{count}{act0}{cs}{\emptyset} \\
-	\evbcmeq{count}{act1}{ts}{ ts \bunion cs }
+	% \evbcmeq{count}{act0}{cs}{\emptyset} \\
+	% \evbcmeq{count}{act1}{ts}{ ts \bunion cs }
 \end{align}
 
 % \removecoarse{count}{default} % \weakento{count}{default}{sch0}
@@ -385,8 +385,8 @@
 \input{m2_count}
 
 \begin{align*}
-	\evguard{flick}{grd1}{p \in vs} \\
-	\cschedule{flick}{sch2}{p \in vs}
+	% \evguard{flick}{grd1}{p \in vs} \\
+	% \cschedule{flick}{sch2}{p \in vs}
 \end{align*}
 
 \input{machine_m2}
@@ -420,8 +420,8 @@
 		% \initialization{m3:in1}{ n = 0 }  \\
 		% \invariant{m3:inv4}{ \qsum{p}{p \in ts \bunion cs}{1} = n + c }\\
 		% \invariant{m3:inv6}{ ts \binter cs = \emptyset } \\
-		\evbcmeq{count}{m3:act1}{n}{n+1} \\
-		\evguard{count}{m3:grd0}{ c = 1 }
+		% \evbcmeq{count}{m3:act1}{n}{n+1} \\
+		% \evguard{count}{m3:grd0}{ c = 1 }
 	\end{align}
 	\input{machine_m3}
 \end{machine}

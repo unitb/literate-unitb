@@ -3,7 +3,7 @@
 \usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
 \usepackage{bsymb}
 \usepackage{unitb}
-\usepackage{calculation}
+\usepackage{calculational}
 \usepackage{ulem}
 \usepackage{hyperref}
 \normalem
@@ -156,7 +156,7 @@ This takes care of \eqref{m1:saf1}
 \subsubsection{Side conditions}
 
 In order to take care of the schedulability of \ref{m0:leave}, we need to strengthen the coarse schedule by adding \ref{c1}. The side conditions for schedule replacement requires us to prove \ref{m1:prog0} and \ref{m1:saf3} in order to prove refinement.
-\replace{m0:leave}{lv:c0}{lv:c0,lv:c1}{}{m1:prog0}{m1:saf3}
+\replace{m0:leave}{lv:c0,lv:c1}{m1:prog0}{m1:saf3}
 
 \begin{align*}
 \cschedule{m0:leave}{lv:c1}
@@ -277,7 +277,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 %
 \subsection{Design}
 %
-\replace{m1:movein}{}{mi:c0}{}{m2:prog0}{m2:saf0}
+\replace{m1:movein}{mi:c0}{m2:prog0}{m2:saf0}
 \begin{align*}
 \progress{m2:prog0}{\true}{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }
 % \\ \safety{m2:saf0}{m1:movein}{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }{\false} % \2{\textbf{except}} \text{\ref{m1:movein}}

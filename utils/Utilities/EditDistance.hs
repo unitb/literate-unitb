@@ -123,7 +123,7 @@ effect (Swap i) xs      = take i xs ++ ys ++ drop (i+2) xs
         ys = reverse $ take 2 $ drop i xs
 
 effects :: Eq a => [Change a] -> [a] -> [a]
-effects ks xs = L.foldl (flip effect) xs ks 
+effects ks xs = L.foldl' (flip effect) xs ks 
 
 -- prop_d :: Eq a => ([Change a],[a]) -> Bool
 -- prop_d (ks,xs) = dist xs (effects ks xs) <= length ks

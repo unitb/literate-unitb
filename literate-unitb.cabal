@@ -110,10 +110,12 @@ library
           -- TEST CASES
         -- Document.Tests.CompCalc
         Document.Tests.Cubes
+        Document.Tests.Definitions
         Document.Tests.GarbageCollector
         -- Document.Tests.IndirectEq
         Document.Tests.Lambdas
         Document.Tests.LockFreeDeque
+        Document.Tests.LockFreeDeque.Stable
         Document.Tests.Parser
         Document.Tests.Phase
         Document.Tests.Puzzle
@@ -201,7 +203,7 @@ executable test_tmp
   main-is: test_tmp.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, literate-unitb-latex, literate-unitb-logic, literate-unitb-utils, process, QuickCheck, reactive-banana-transformers, unitb-testing, lens, axiomatic-classes, mtl, monad-loops, semigroups, typelist-functor
+  build-depends:       base >=4.8 && < 5, literate-unitb, literate-unitb-latex, literate-unitb-logic, literate-unitb-utils, process, QuickCheck, reactive-banana-transformers, unitb-testing, lens, axiomatic-classes, mtl, monad-loops, semigroups, typelist-functor, containers, deepseq
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

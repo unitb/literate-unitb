@@ -1,0 +1,580 @@
+\documentclass[12pt]{amsart}
+\usepackage[margin=0.5in]{geometry} 
+  % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{calculational}
+\usepackage{ulem}
+\usepackage{hyperref}
+\usepackage{unitb}
+
+\newcommand{\REQ}{\text{REQ}}
+
+\begin{document}
+
+\section{Strategy}
+
+\begin{itemize}
+  \item 
+\end{itemize}
+\section{Model m0 --- Requests and non-deterministic handling}
+  \input{lock-free-deque/machine_m0.tex}
+\begin{machine}{m0}
+  \with{sets}
+  \newset{\REQ} 
+  \newevent{add}{add}
+  \newevent{handle}{handle}
+  \[ \variable{ req : \set [\REQ] } \]
+  \begin{description}
+    \comment{req}{set of pending requests}
+  \end{description}
+  \[ \param{add}{ r : \REQ } \]
+  \[ \param{handle}{ r : \REQ } \]
+  \begin{align*}
+      \initialization{m0:init0}{ req = \emptyset } \\
+      \evguard{add}{m0:guard}{ \neg r \in req } \\
+      \evbcmeq{add}{m0:act0}{req}{ req \bunion \{ r \} } \\
+      \cschedule{handle}{m0:sch0}{ \neg req = \emptyset } \\
+      \evguard{handle}{m0:grd0}{ r \in req } \\
+      \evbcmeq{handle}{m0:act0}{req}{ req \setminus \{ r \} } 
+  \end{align*}
+
+\noindent
+\end{machine}
+\section{Model m1 --- Version numbers and individual fairness}
+  \input{lock-free-deque/machine_m1.tex}
+\begin{machine}{m1}
+    \refines{m0}
+  \[ \variable{ ver : \Int } \]
+  \begin{description}
+    \comment{ver}{ serial number of the current data structure state }
+  \end{description}
+  \[ \indices{handle}{ v : \Int } \]
+  \promote{handle}{r}
+  \removecoarse{handle}{m0:sch0}
+  \removeguard{handle}{m0:grd0}
+  % \removeact{handle}{m0:act0}
+  \[\witness{handle}{r}{r \in req}\]
+  \[\witness{handle}{v}{v = ver}\]
+  \begin{align}
+      \initialization{m1:init0}{ ver = 0 } \\
+      \cschedule{handle}{m1:sch0}{ r \in req } \\
+      \cschedule{handle}{m1:sch1}{ v = ver } \\
+      % \evguard{handle}{m1:grd0}{ r = r0 } \\
+      \evbcmeq{handle}{m1:act0}{ver}{ ver + 1 } 
+  \end{align}
+\end{machine}
+\section{Model m2 --- Specialized events}
+  \input{lock-free-deque/machine_m2}
+\begin{machine}{m2}
+  \refines{m1}
+  \[ \variable{pshL,pshR,popR,popL : \set [\REQ]} \]
+  \begin{description}
+    \comment{pshL}{replaces $req$. Set of push\_left requests }
+    \comment{pshR}{replaces $req$. Set of push\_right requests }
+    \comment{popL}{replaces $req$. Set of pop\_left requests }
+    \comment{popR}{replaces $req$. Set of pop\_right requests }
+  \end{description}
+  \begin{align}
+    \initialization{m2:init0}{pshL = \emptyset} \\
+    \initialization{m2:init1}{popL = \emptyset} \\
+    \initialization{m2:init2}{pshR = \emptyset} \\
+    \initialization{m2:init3}{popR = \emptyset} 
+  \end{align}
+  \subsection{Specialize \emph{handle}}
+  % \begin{align*}
+    \refiningevent{handle}{handle:popL}{handle\_popL}
+    \refiningevent{handle}{handle:popR}{handle\_popR} 
+    \refiningevent{handle}{handle:pushL}{handle\_pushL}
+    \refiningevent{handle}{handle:pushR}{handle\_pushR}
+  % \end{align*}
+  \splitevent{handle}{handle:popL,handle:popR,handle:pushR,handle:pushL}
+  \begin{align*}
+    \definition{Req}{ pshL \bunion 
+        pshR \bunion 
+        popL \bunion 
+        popR } 
+  \end{align*}
+  \begin{align}
+    \invariant{m2:inv0}{ Req = req } \\
+    \invariant{m2:inv1}{ pshL \binter pshR = \emptyset } \\
+    \invariant{m2:inv2}{ pshL \binter popL = \emptyset } \\
+    \invariant{m2:inv3}{ pshL \binter popR = \emptyset } \\
+    \invariant{m2:inv4}{ pshR \binter popL = \emptyset } \\
+    \invariant{m2:inv5}{ pshR \binter popR = \emptyset } \\
+    \invariant{m2:inv6}{ popL \binter popR = \emptyset } \\
+    \cschedule{handle:pushL}{m2:sch0}{ r \in pshL } \\
+    \evbcmeq{handle:pushL}{m2:act0}{pshL}{pshL \setminus \{ r \}} \\
+    \cschedule{handle:pushR}{m2:sch0}{ r \in pshR } \\
+    \evbcmeq{handle:pushR}{m2:act0}{pshR}{pshR \setminus \{ r \}} \\
+    \cschedule{handle:popL}{m2:sch0}{ r \in popL } \\
+    \evbcmeq{handle:popL}{m2:act0}{popL}{popL \setminus \{ r \}} \\
+    \cschedule{handle:popR}{m2:sch0}{ r \in popR } \\
+    \evbcmeq{handle:popR}{m2:act0}{popR}{popR \setminus \{ r \}} 
+    % \invariant{m2:inv1}{ popL \subseteq req } \\
+    % \invariant{m2:inv2}{ pshR \subseteq req } \\
+    % \invariant{m2:inv3}{ popR \subseteq req } 
+  \end{align}
+  \[ \variable{ ppd : \set [\REQ] } \]
+  \begin{align}
+    \initialization{m2:init4}{ ppd = \emptyset } \\
+    \evbcmeq{handle:popR}{m2:act1}{ppd}{ ppd \bunion \{r\} } \\
+    \evbcmeq{handle:popL}{m2:act1}{ppd}{ ppd \bunion \{r\} }
+  \end{align}
+  \newevent{return}{return}
+  \[ \indices{return}{ r : \REQ } \]
+  \begin{align}
+    \cschedule{return}{m2:sch0}{ r \in ppd } \\
+    \evbcmeq{return}{m2:act0}{ppd}{ ppd \setminus \{ r \} }
+  \end{align}
+\subsection{Specialize \emph{add}}
+    \refiningevent{add}{add:popL}{add\_popL} 
+    \refiningevent{add}{add:popR}{add\_popR}
+    \refiningevent{add}{add:pushL}{add\_pushL}
+    \refiningevent{add}{add:pushR}{add\_pushR}
+  \hide{\splitevent{add}{add:popL,add:popR,add:pushR,add:pushL}}
+  \begin{align}
+    \evbcmeq{add:popL}{m2:act0}{popL}{popL \bunion \{r\}} \\
+    \evbcmeq{add:pushL}{m2:act1}{pshL}{pshL \bunion \{r\}} \\
+    \evbcmeq{add:popR}{m2:act2}{popR}{popR \bunion \{r\}} \\
+    \evbcmeq{add:pushR}{m2:act3}{pshR}{pshR \bunion \{r\}} 
+  \end{align}
+\subsection{Data refinement}
+  \removevar{req}
+  \removeinit{m0:init0}
+  \[\initwitness{req}{req = \emptyset}\]
+  \removeact{handle:popR}{m0:act0}
+  \removeact{handle:pushR}{m0:act0}
+  \removeact{handle:popL}{m0:act0}
+  \removeact{handle:pushL}{m0:act0}
+  \removecoarse{handle:popR}{m1:sch0}
+  \removecoarse{handle:pushR}{m1:sch0}
+  \removecoarse{handle:popL}{m1:sch0}
+  \removecoarse{handle:pushL}{m1:sch0}
+  \removeguard{add:popR}{m0:guard}
+  \removeguard{add:pushR}{m0:guard}
+  \removeguard{add:popL}{m0:guard}
+  \removeguard{add:pushL}{m0:guard}
+  \begin{align*}
+  \evguard{add:popR}{m2:grd0}
+    { \neg r \in Req } \\
+  \evguard{add:pushR}{m2:grd0}
+    { \neg r \in Req } \\
+  \evguard{add:popL}{m2:grd0}
+    { \neg r \in Req } \\
+  \evguard{add:pushL}{m2:grd0}
+    { \neg r \in Req } 
+  \end{align*}
+  \removeact{add:popR}{m0:act0}
+  \removeact{add:pushR}{m0:act0}
+  \removeact{add:popL}{m0:act0}
+  \removeact{add:pushL}{m0:act0}
+\end{machine}
+  \newcommand{\OBJ}{\mathcal{O}bj}
+\section{Model m3 --- The Contents}
+  \input{lock-free-deque/machine_m3}
+\begin{machine}{m3}
+  \refines{m2}
+  \with{functions}
+  \with{intervals}
+
+  \[ \newset{\OBJ}  \]
+  \[ \variable{ p,q : \Int } \]
+  \[ \variable{ qe : \Int \pfun \OBJ } \]
+  \begin{align}
+    \invariant{m3:inv0}{ qe \in \intervalR{p}{q} \tfun \OBJ } \\
+    \invariant{m3:inv1}{ p \le q } \\
+    \initialization{m3:init0}{ p = 0 \land q = 0} \\
+    \initialization{m3:init1}{ qe = \emptyfun }
+  \end{align}
+  \subsection{Push}
+    \[\variable{insL : \REQ \pfun \OBJ} \]
+    \[\variable{insR : \REQ \pfun \OBJ} \]
+  \begin{description}
+    \comment{insL}{parameter for the \emph{push left} operation} 
+    \comment{insR}{parameter for the \emph{push right} operation} 
+  \end{description}
+  \begin{align}
+    \invariant{m3:inv2}{ insL \in pshL \tfun \OBJ } \\
+    \invariant{m3:inv3}{ insR \in pshR \tfun \OBJ } \\
+    \initialization{m3:init2}{ insL = \emptyfun } \\
+    \initialization{m3:init4}{ insR = \emptyfun }
+  \end{align}
+  \begin{align}
+    \evbcmeq{handle:pushL}{m3:act0}{p}{p - 1} \\
+    \evbcmeq{handle:pushL}{m3:act1}{qe}{ qe \2| (p \0- 1 \fun insL.r)} \\
+    \evbcmeq{handle:pushR}{m3:act0}{q}{q + 1} \\
+    \evbcmeq{handle:pushR}{m3:act1}{qe}{ qe \2| (q \fun insR.r)} 
+  \end{align}
+  
+  \[ \param{add:pushL}{ obj : \OBJ } \]
+
+  \begin{align}
+    \evbcmeq{add:pushL}{m3:act0}
+      {insL}{ insL \1| r \fun obj } \\
+    \evbcmeq{handle:pushL}{m3:act2}
+      {insL}{ \{ r \} \domsub insL }
+  \end{align}
+
+  \[ \param{add:pushR}{ obj : \OBJ } \]
+  
+  \begin{align}
+    \evbcmeq{add:pushR}{m3:act0}
+      {insR}{ insR \1| r \fun obj } \\
+    \evbcmeq{handle:pushR}{m3:act2}
+      {insR}{ \{ r \} \domsub insR }
+  \end{align}
+  \[ \variable{ res : \REQ \pfun \OBJ } \]
+  \[ \variable{ result : \OBJ } \]
+  \[ \variable{ emp : \Bool } \]
+  \subsection{Pop}
+  \begin{align}
+    \initialization{m3:init3}{ res = \emptyfun } \\
+    \invariant{m3:inv4}{ res \in ppd \pfun \OBJ } \\
+    \evbcmeq{return}{m3:act0}{res}{ \{r\} \domsub res} \\
+    \evbcmsuch{return}{m3:act1}{result}{ r \in \dom.res \implies result' = res.r } \\
+    \evbcmeq{return}{m3:act2}{emp}{ (r \in \dom.res) } 
+  \end{align}
+  \splitevent{handle:popL}{handle:popL:empty,handle:popL:non:empty}
+  \splitevent{handle:popR}{handle:popR:empty,handle:popR:non:empty}
+  \refiningevent{handle:popL}{handle:popL:empty}{handle\_popL\_empty}
+  \refiningevent{handle:popL}{handle:popL:non:empty}{handle\_popL\_non\_empty}
+  \refiningevent{handle:popR}{handle:popR:empty}{handle\_popR\_empty}
+  \refiningevent{handle:popR}{handle:popR:non:empty}{handle\_popR\_non\_empty}
+  \[ \dummy{v : \Int} \]
+  \replace{handle:popL}{m3:sch0}{m3:prog0}
+  \begin{align*}
+    & \progress{m3:prog0}{v = ver}{p = q \lor p < q}
+    \refine{m3:prog0}{implication}{}{}
+  \end{align*}
+  \begin{align}
+    \cschedule{handle:popL:non:empty}{m3:sch0}{ p < q } \\
+    \cschedule{handle:popL:empty}{m3:sch0}{ p = q } \\
+    \evbcmeq{handle:popL:non:empty}{m3:act0}{res}{ res \1| (r \fun qe.p) } \\
+    \evbcmeq{handle:popL:non:empty}{m3:act1}{p}{p+1} \\
+    \evbcmeq{handle:popL:non:empty}{m3:act2}{qe}{ \{p\} \domsub qe }
+  \end{align}
+  \replace{handle:popR}{m3:sch0}{m3:prog0}
+  \begin{align}
+    \cschedule{handle:popR:non:empty}{m3:sch0}{ p < q } \\
+    \cschedule{handle:popR:empty}{m3:sch0}{ p = q } \\
+    \evbcmeq{handle:popR:non:empty}{m3:act0}{res}{ res \1| (r \fun qe.(q\0-1)) } \\
+    \evbcmeq{handle:popR:non:empty}{m3:act1}{q}{q-1} \\
+    \evbcmeq{handle:popR:non:empty}{m3:act2}{qe}{ \{q-1\} \domsub qe }
+  \end{align}
+\end{machine}
+\section{Model m4 --- Memory nodes}
+\newcommand{\Addr}{\text{Addr}}
+  \input{lock-free-deque/machine_m4}
+\begin{machine}{m4}
+  \refines{m3}
+  \newset{\Addr}
+  \[ \variable{ rep : \Int \pfun \Addr } \]
+  \[ \constant{ dummy : \Addr } \]
+  \begin{align*}
+    \assumption{m4:asm0}{ \neg \finite{\Addr} } \\
+    \invariant{m4:inv8}{ \finite.(\ran.rep) } \\
+    \invariant{m4:inv0}{ \injective{rep} } \\
+    \invariant{m4:inv1}
+      { rep \in \intervalR{p}{q} \tfun \Addr } \\
+    \invariant{m4:inv2}{ \neg dummy \in \ran.rep } \\
+    \initialization{m4:init0}{ rep  = \emptyfun } \\
+    \evbcmeq{handle:popL:non:empty}{m4:act0}
+      {rep}{ \{ p \} \domsub rep } \\
+    \evbcmeq{handle:popR:non:empty}{m4:act0}
+      {rep}{ \{ q-1 \} \domsub rep } \\
+    \evbcmeq{handle:pushL}{m4:act0}
+      {rep}{ rep \2| (p\0-1 \fun n) } \\
+    \evguard{handle:pushL}{m4:grd0}
+      { \neg n \in \ran.rep \bunion \{dummy\} } \\
+    \evbcmeq{handle:pushR}{m4:act0}
+      {rep}{ rep \2| (q \fun n) }  \\
+    \evguard{handle:pushR}{m4:grd0}
+      { \neg n \in \ran.rep \bunion \{dummy\} } 
+  \end{align*}
+  \[ \param{handle:pushL}{ n : \Addr } \]
+  \[ \param{handle:pushR}{ n : \Addr } \]
+\end{machine}
+  \input{lock-free-deque/machine_m5}
+\begin{machine}{m5}
+  \refines{m4}
+\subsection{Data structure}
+    % \refiningevent{handle}{handle:popL}{handle\_popL}
+    % \refiningevent{handle}{handle:popR}{handle\_popR} 
+    \refiningevent{handle:pushL}{handle:pushL:empty}{handle\_pushL\_empty}
+    \refiningevent{handle:pushL}{handle:pushL:non:empty}{handle\_pushL\_non\_empty}
+    \refiningevent{handle:pushR}{handle:pushR:empty}{handle\_pushR\_empty}
+    \refiningevent{handle:pushR}{handle:pushR:non:empty}{handle\_pushR\_non\_empty}
+  \splitevent{handle:pushR}{handle:pushR:empty,handle:pushR:non:empty}
+  \splitevent{handle:pushL}{handle:pushL:empty,handle:pushL:non:empty}
+    \refiningevent{handle:popL:non:empty}{handle:popL:one}{handle\_popL\_one}
+    \refiningevent{handle:popL:non:empty}{handle:popL:more}{handle\_popL\_more}
+    \refiningevent{handle:popR:non:empty}{handle:popR:one}{handle\_popR\_one}
+    \refiningevent{handle:popR:non:empty}{handle:popR:more}{handle\_popR\_more}
+  \splitevent{handle:popR:non:empty}{handle:popR:one,handle:popR:more}
+  \splitevent{handle:popL:non:empty}{handle:popL:one,handle:popL:more}
+  \[ \definition{Node}{ 
+      \left[
+      \begin{array}{l}
+        'item : \OBJ \\ 
+      , 'left : \Addr \\
+      , 'right : \Addr  
+      \end{array} \right]
+      } \]
+  \[ \variable{ link : \Addr \pfun 
+      \{ 'item : \OBJ 
+      , 'left : \Addr
+      , 'right : \Addr  \} } \]
+  \begin{align}
+    \invariant{m5:inv1}
+      { link \in \ran.rep \tfun Node } \\
+    \invariant{m5:inv2}
+      { \qforall{i}{\betweenR{p}{i}{q}}{ qe.i = link.(rep.i).'item } } \\
+    \initialization{m5:init1}
+      { link = \emptyfun } 
+  \end{align}
+\subsection{Pop}
+  \begin{align}
+    \initialization{m5:in0}{ RH = dummy } \\
+    \initialization{m5:in1}{ LH = dummy } \\
+    \evbcmeq{handle:popL:one}{m5:act1}{link}
+      { \{ LH \} \domsub link } \\
+    \evbcmeq{handle:popL:one}{m5:act2}{LH}
+      { dummy } \\
+    \evbcmeq{handle:popL:one}{m5:act5}{RH}
+      { dummy } \\
+    \evbcmeq{handle:popR:one}{m5:act1}{link}
+      { \{ RH \} \domsub link } \\
+    \evbcmeq{handle:popR:one}{m5:act2}{RH}
+      { dummy } \\
+    \evbcmeq{handle:popR:one}{m5:act4}{LH}
+      { dummy } \\
+    \evbcmeq{handle:popL:more}{m5:act1}{link}
+      { \{ LH \} \domsub link } \\
+    \evbcmeq{handle:popL:more}{m5:act2}
+      {LH}{ link.LH.'right } \\
+    \evbcmeq{handle:popR:more}{m5:act1}{link}
+      { \{ RH \} \domsub link } \\
+    \evbcmeq{handle:popR:more}{m5:act2}{RH}
+      { link.RH.'left } 
+  \end{align}
+\subsection{Push}
+\paragraph{\eqref{m5:inv0}}
+  \[ \variable{ RH,LH : \Addr } \]
+  \removeguard{handle:pushL:empty}{m4:grd0}
+  \removeguard{handle:pushL:non:empty}{m4:grd0}
+  \removeguard{handle:pushR:empty}{m4:grd0}
+  \removeguard{handle:pushR:non:empty}{m4:grd0}
+  \begin{align}
+    \evguard{handle:pushL:empty}{m5:grd0}
+      { \neg n \in \dom.link \bunion \{dummy\} } \\
+    \evguard{handle:pushL:non:empty}{m5:grd0}
+      { \neg n \in \dom.link \bunion \{dummy\} } \\
+    \evbcmeq{handle:pushL:empty}{m5:act1}
+      {link}{ \begin{array}{ll}        
+            & link \\
+        \2| & n \fun \left[ \begin{array}{l}
+           'item  := insL.r, \\
+           'left  := dummy, \\
+           'right := dummy 
+        \end{array} \right] 
+      \end{array}
+          } \\
+    \cschedule{handle:pushL:empty}{m5:sch1}
+      { LH = dummy } \\
+    \cschedule{handle:pushL:non:empty}{m5:sch1}
+      { \neg LH = dummy } \\
+    \evbcmeq{handle:pushL:non:empty}{m5:act1}
+      {link}{ \begin{array}{ll}        
+            & link \\
+        \2| & n \fun \left[ \begin{array}{l}
+           'item  := insL.r, \\
+           'left  := dummy, \\
+           'right := LH 
+        \end{array} \right] \\
+          \2 | & LH \fun (link.LH) [ 'left := n ] 
+      \end{array}
+          } \\
+    \evbcmeq{handle:pushL:empty}{m5:act2}
+      {LH}{ n } \\
+    \evbcmeq{handle:pushL:empty}{m5:act3}
+      {RH}{ n } \\
+    \evbcmeq{handle:pushL:non:empty}{m5:act2}
+      {LH}{ n } \\
+    \evguard{handle:pushR:empty}{m5:grd0}
+      { \neg n \in \dom.link \bunion \{dummy\} } \\
+    \evbcmeq{handle:pushR:empty}{m5:act1}
+      {link}{ \begin{array}{ll}        
+            & link \\
+        \2| & n \fun \left[ 
+        \begin{array}{l}
+           'item  := insR.r, \\
+           'left  := dummy, \\
+           'right := dummy 
+        \end{array} \right] 
+      \end{array}
+          } \\
+    \evbcmeq{handle:pushR:empty}{m5:act2}
+      {RH}{ n } \\
+    \evbcmeq{handle:pushR:empty}{m5:act3}
+      {LH}{ n } \\
+    % \cschedule{handle:pushR:empty}{m5:sch0}
+    %   { r \in pshR } \\
+    \evguard{handle:pushR:non:empty}{m5:grd0}
+      { \neg n \in \dom.link \bunion \{dummy\} } \\
+    \cschedule{handle:pushR:empty}{m5:sch1}
+      { RH = dummy } \\
+    \cschedule{handle:pushR:non:empty}{m5:sch1}
+      { \neg RH = dummy } \\
+    \evbcmeq{handle:pushR:non:empty}{m5:act1}
+      {link}{ \begin{array}{ll}        
+            & link \\
+        \2| & n \fun \left[ 
+        \begin{array}{l}
+           'item  := insR.r, \\
+           'left  := RH, \\
+           'right := dummy 
+        \end{array} \right] \\
+          \2 | & RH \fun (link.RH) [ 'right := n ]
+      \end{array}
+          } \\
+    \evbcmeq{handle:pushR:non:empty}{m5:act2}
+      {RH}{ n }
+  \end{align}
+  % \replace{handle:pushL}{m5:sch0}{m5:prog0}
+  % \replace{handle:pushR}{m5:sch0}{m5:prog1}
+  \[ \dummy{ r : \REQ } \]
+  % \begin{align}
+    % \progress{m5:prog0}{ r \in pshL }{ r \in \dom.nL } \\
+    % \progress{m5:prog1}{ r \in pshR }{ r \in \dom.nR }
+  % \end{align}
+\paragraph{\eqref{m5:inv3}}
+  % \begin{align}
+    % \invariant{m5:inv6}
+    %   { \qforall{r}{ r \in \dom.nL }{item.(nL.r).'item = insL.r} }\\
+    % \evbcmeq{handle:pushL}{m5:act1}{nL}{ \{ r \} \domsub nL }
+  % \end{align}  
+  % \begin{align}
+    % \invariant{m5:inv7}
+      % { \qforall{r}{ r \in \dom.nR }{item.(nR.r).'item = insR.r} }\\
+    % \evbcmeq{handle:pushR}{m5:act1}{nR}{ \{ r \} \domsub nR }
+  % \end{align} 
+\subsection{ Linking } 
+% \subsection{ \eqref{m5:inv10} } 
+  \begin{align}
+    \invariant{m5:inv11}
+      { \qforall{i}{\betweenR{p}{i}{q-1}}{ link.(rep.i).'right = rep.(i+1) } } \\
+    \invariant{m5:inv12}
+      { \qforall{i}{\betweenR{p}{i}{q-1}}{ link.(rep.(i+1)).'left = rep.i } } \\
+    \invariant{m5:inv13}
+      { p < q \2\implies LH = rep.p  } \\
+    \invariant{m5:inv14}
+      { p < q \2\implies RH = rep.(q-1) } \\
+    \invariant{m5:inv15}
+      { p = q \2\implies LH = dummy  } \\
+    \invariant{m5:inv16}
+      { p = q \2\implies RH = dummy }
+  \end{align}
+\subsection{New Progress Properties}
+  \begin{align}
+    \invariant{m5:inv7}{ \finite.(\dom.link) } 
+  \end{align}
+  \removevar{qe,rep,p,q}
+  \removeact{handle:popL:one}{m3:act0}
+  \removeact{handle:popL:more}{m3:act0}
+  \begin{align}
+  \evbcmeq{handle:popL:one}{m5:act3}
+      {res}{ res \1| (r \fun link.LH.'item) } \\
+  \evbcmeq{handle:popL:more}{m5:act3}
+      {res}{ res \1| (r \fun link.LH.'item) } 
+  \end{align}
+  \removeact{handle:popL:one}{m3:act2} \\
+  \removeact{handle:popL:more}{m3:act2} \\
+  \removeact{handle:popR:one}{m3:act0} \\
+  \removeact{handle:popR:more}{m3:act0} \\
+  % \evbcmeq{handle:popR:non:empty}{m3:act0}{res}{ res \1| (r \fun qe.(q\0-1)) } \\
+  \begin{align}
+    \evbcmeq{handle:popR:one}{m5:act3}
+      {res}{ res \1| (r \fun link.RH.'item) } \\
+    \evbcmeq{handle:popR:more}{m5:act3}
+      {res}{ res \1| (r \fun link.RH.'item) }
+  \end{align}
+  \removeact{handle:popR:one}{m3:act2} \\
+  \removeact{handle:popR:more}{m3:act2} \\
+  \removeact{handle:pushL:empty}{m3:act1} \\
+  \removeact{handle:pushL:non:empty}{m3:act1} \\
+  \removeact{handle:pushR:empty}{m3:act1} \\ 
+  \removeact{handle:pushR:non:empty}{m3:act1} \\ 
+  \removeinit{m3:init1}
+  \removeinit{m4:init0}
+  \removeinit{m3:init0}
+  \begin{align}
+    \initwitness{qe}{qe = \emptyfun} \\
+    \invariant{m5:inv4}{ p = q \equiv LH = dummy } \\
+    \invariant{m5:inv5}{ p = q \equiv RH = dummy } \\
+    \initwitness{rep}{ rep = \emptyfun } \\
+    \initwitness{p}{ p = 0 } \\
+    \initwitness{q}{ q = 0 }
+  \end{align}
+  \removecoarse{handle:popR:one}{m3:sch0}
+  \removecoarse{handle:popR:more}{m3:sch0}
+  \begin{align*}
+    \cschedule{handle:popR:one}{m5:sch0}{ \neg RH = dummy } \\
+    \cschedule{handle:popR:one}{m5:sch1}{ RH = LH } \\
+    \cschedule{handle:popR:more}{m5:sch0}{ \neg RH = dummy } \\
+    \cschedule{handle:popR:more}{m5:sch1}{ \neg RH = LH } 
+  \end{align*}
+\removecoarse{handle:popL:one}{m3:sch0} 
+\removecoarse{handle:popL:more}{m3:sch0} 
+\removecoarse{handle:popL:empty}{m3:sch0} 
+\removecoarse{handle:popR:empty}{m3:sch0}
+\begin{align*}
+  \cschedule{handle:popL:one}{m5:sch0}{ \neg LH = dummy } \\
+  \cschedule{handle:popL:one}{m5:sch1}{ LH = RH } \\
+  \cschedule{handle:popL:more}{m5:sch0}{ \neg LH = dummy } \\
+  \cschedule{handle:popL:more}{m5:sch1}{ \neg LH = RH } \\
+  \cschedule{handle:popR:empty}{m5:sch0}{ RH = dummy } \\
+  \cschedule{handle:popL:empty}{m5:sch0}{ LH = dummy } 
+\end{align*}
+\removeact{handle:popL:one}{m3:act1} 
+\removeact{handle:popL:more}{m3:act1}
+\removeact{handle:popR:one}{m3:act1}
+\removeact{handle:popR:more}{m3:act1}
+\removeact{handle:pushL:empty}{m3:act0}
+\removeact{handle:pushL:non:empty}{m3:act0}
+\removeact{handle:pushR:empty}{m3:act0}
+\removeact{handle:pushR:non:empty}{m3:act0}
+
+  \removeact{handle:popL:one}{m4:act0}
+  \removeact{handle:popL:more}{m4:act0}
+  \removeact{handle:popR:one}{m4:act0}
+  \removeact{handle:popR:more}{m4:act0}
+  \removeact{handle:pushL:empty}{m4:act0}
+  \removeact{handle:pushR:empty}{m4:act0}
+  \removeact{handle:pushL:non:empty}{m4:act0}
+  \removeact{handle:pushR:non:empty}{m4:act0}
+
+\end{machine}
+
+\begin{machine}{m6}
+  \refines{m5}
+\[ \variable{ tailL,tailR : \Addr \pfun \{ 'item : \OBJ 
+      , 'left : \Addr
+      , 'right : \Addr  \} } \]
+\[ \definition{Shared}{ link | tailL | tailR } \]
+\end{machine}
+
+\section{Complete Development}
+
+\input{lock-free-deque/machine_m0}
+\input{lock-free-deque/machine_m1}
+\input{lock-free-deque/machine_m2}
+\pagebreak
+\input{lock-free-deque/machine_m3}
+\pagebreak
+\input{lock-free-deque/machine_m4}
+\pagebreak
+\input{lock-free-deque/machine_m5}
+\pagebreak
+\input{lock-free-deque/machine_m6}
+
+\end{document}

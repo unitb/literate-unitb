@@ -23,8 +23,9 @@ import qualified Data.Foldable as F
 import Data.Graph
 import Data.List ( intercalate )
 import qualified Data.List as L
-import Data.Map as M hiding ( foldl, map, null, size, (!) )
-import Data.Semigroup
+import Data.Map as M  hiding ( foldl, map, null, size, (!) )
+import Data.Semigroup hiding ( (<>) )
+import qualified Data.Semigroup as S 
 import Data.String.Lines as LN
 import Data.Typeable
 
@@ -41,6 +42,7 @@ import qualified Text.Parsec as P
 import Text.Parsec.Error
 import qualified Text.Parsec.Pos as P
 
+import Text.Pretty
 import Text.Printf.TH
 
 import Utilities.Graph hiding ( map, empty, size, (!) )
@@ -73,6 +75,7 @@ data LatexToken =
     deriving (Eq, Show, Typeable, Generic)
 
 makePrisms ''LatexToken
+makePrisms ''LatexNode
 
 envType :: Environment -> String
 envType (Env _ n _ _ _) = n
@@ -116,6 +119,9 @@ instance IsBracket BracketType Char where
     bracketPair Curly = ('{','}')
     bracketPair Square = ('[',']')
 
+instance PrettyPrintable LatexDoc where
+    pretty = flatten
+
 instance NFData Environment where
 instance NFData Bracket where
 instance NFData LatexDoc where
@@ -153,7 +159,7 @@ flatten_li (BracketNode (Bracket b li0 ct li1))
 
 fold_doc :: (a -> LatexNode -> a)
          -> a -> LatexNode -> a
-fold_doc f x doc  = foldl f x $ contents' $ contents doc
+fold_doc f x doc  = L.foldl' f x $ contents' $ contents doc
 
 fold_docM :: Monad m
           => (a -> LatexNode -> m a)
@@ -174,9 +180,17 @@ map_docM_ :: Monad m
          -> LatexNode -> m ()
 map_docM_ f doc = mapM_ f $ contents' $ contents doc
 
-asSingleton :: LatexDoc -> Maybe LatexNode
-asSingleton (Doc _ [x] _) = Just x
-asSingleton (Doc _ _ _) = Nothing
+isWord :: LatexDoc -> Maybe String
+isWord = fmap fst . isWord'
+
+isWord' :: LatexDoc -> Maybe (String,LineInfo)
+isWord' (Doc _ xs _) = concat' =<< mapM (f <=< preview _Text) xs 
+    where
+        concat' ((x,li):xs) = Just (x ++ concatMap fst xs,li)
+        concat' [] = Nothing
+        f (TextBlock x li) = Just (x,li)
+        f (Command x li)   = Just (x,li)
+        f _                = Nothing
 
 class IsLatexNode node where
     contents :: node -> LatexDoc
@@ -415,18 +429,21 @@ latex_content' = do
 texToken :: (Traversal' LatexToken a) -> Parser a
 texToken = token 
 
-token :: (Syntactic token,P.Stream xs Identity token,Show token,Token token)
+token :: ( Syntactic token,P.Stream xs Identity token
+         , Token token)
       => (Traversal' token a) -> P.Parsec xs () a
 token p = tokenAux (^? p)
 
 texTokenAux :: (LatexToken -> Maybe a) -> Parser a
 texTokenAux = tokenAux
 
-tokenAux :: (Syntactic token,P.Stream xs Identity token,Show token,Token token)
+tokenAux :: ( Syntactic token,P.Stream xs Identity token
+            , Token token)
          => (token -> Maybe a) -> P.Parsec xs () a
-tokenAux p = P.tokenPrim show (const (\t -> const $ liToPos $ end (t,line_info t)) . posToLi) p
+tokenAux p = P.tokenPrim lexeme (const (\t -> const $ liToPos $ end (t,line_info t)) . posToLi) p
 
-token' :: (Syntactic token,P.Stream xs Identity token,Show token,Token token)
+token' :: ( Syntactic token,P.Stream xs Identity token
+          , PrettyPrintable token,Token token)
        => (Traversal' token a) -> P.Parsec xs () token
 token' p = tokenAux (\x -> x <$ (x^?p))
 

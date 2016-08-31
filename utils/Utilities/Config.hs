@@ -4,6 +4,8 @@ import Control.Monad
 
 import Data.String
 
+import System.Directory
+import System.FilePath
 import System.Info
 import System.Process
 
@@ -12,6 +14,11 @@ data EditorOption = EditorOpt
     , file :: String
     , wait :: Bool
     }
+
+homeSettingPath :: IO FilePath
+homeSettingPath = do
+    home <- getHomeDirectory
+    return $ home </> "Literate Unit-B"
 
 editFile :: String -> EditorOption
 editFile fn = EditorOpt Nothing fn False

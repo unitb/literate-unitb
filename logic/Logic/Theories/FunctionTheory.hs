@@ -49,7 +49,7 @@ zrep_select = typ_fun2 (mk_fun' [] "select" [fun_type gA gB, gA] $ maybe_type gB
 
 zovl    = typ_fun2 ovl_fun
 zmk_fun = typ_fun2 mk_fun_fun
-zempty_fun = Right $ FunApp emptyfun []
+zempty_fun = Right $ funApp emptyfun []
 
 ovl_fun, mk_fun_fun, emptyfun :: Fun
 ovl_fun = mk_fun' [gA,gB] "ovl" [ft,ft] ft
@@ -103,16 +103,16 @@ function_theory :: Theory
 function_theory = Theory { .. }
     where        
         _extends =  symbol_table [set_theory]
-        _theoryName = fromString'' "functions"
+        _theory'Name = fromString'' "functions"
         _consts   = empty
-        _theoryDummies  = empty
+        _theory'Dummies  = empty
         _theorems = empty
-        _theorySyntacticThm = empty_monotonicity
+        _theory'SyntacticThm = empty_monotonicity
             { _associative = fromList [(fromString'' "zovl",zempty_fun)] }
 --        set_ths  = 
         fun_set t0 t1 = set_type (fun_type t0 t1)
         _types    = symbol_table [fun_sort]
-        _defs = 
+        _theory'Defs = 
             symbol_table
                 [ 
                   -- Def [t0,t1] "ovl" [f1_decl,f2_decl] (fun_type t0 t1) 
@@ -273,6 +273,7 @@ function_theory = Theory { .. }
                                 $   (zapply f1 x .=. zapply f1 x2) 
                                 .=> (x .=. x2) )
             $axiom $     zinjective $ as_fun zempty_fun
+                -- injective, ovl and ran (with mk_set)
             --     -- injective, domsubt and ran (with mk_set)
             -- $axiom $         zinjective f1 /\ (x `zelem` zdom f1)
             --             .=>       zran (zmk_set x `zdomsubt` f1)
@@ -356,8 +357,9 @@ function_notation = create $ do
                  , [domrest,domsubt] 
                  , [ equal ] ]
              , L.map (L.map Right)
-               [ [ total_fun,partial_fun ]
-               , [ membership ]] ]
+               [ [ apply ]
+               , [ total_fun,partial_fun ]
+               , [ membership, equal ]] ]
    left_assoc  .= [[overload]]
    right_assoc .= [[domrest,domsubt]]
    commands    .= 

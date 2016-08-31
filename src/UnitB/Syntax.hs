@@ -13,7 +13,7 @@ where
 import Logic.Expr.Scope
 import Logic.Theory
 
-import UnitB.Event
+import UnitB.Event hiding (Changes(..))
 import UnitB.Machine
 import UnitB.Proof hiding (Builder)
 import UnitB.Property

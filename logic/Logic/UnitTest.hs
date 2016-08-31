@@ -17,6 +17,7 @@ import Control.Precondition
 
 import           Data.List
 import qualified Data.Map.Class as M
+import           Data.Typeable
 import           Data.Tuple
 
 import GHC.Stack
@@ -40,6 +41,20 @@ poCase :: Pre
        -> TestCase
 poCase n test res = WithLineInfo (?loc) $ Other $ POCase n test res
 
+onlyPoCases :: TestCase -> Maybe TestCase
+onlyPoCases (Suite cs n ts) = Suite cs n <$> nonEmpty (mapMaybe onlyPoCases ts)
+    where
+        nonEmpty [] = Nothing
+        nonEmpty xs@(_:_) = Just xs
+onlyPoCases (WithLineInfo cs t) = WithLineInfo cs <$> onlyPoCases t
+onlyPoCases (Other p) = Other <$> (cast p :: Maybe POCase)
+onlyPoCases _ = Nothing
+
+run_poTestSuite :: Pre => TestCase -> IO Bool
+run_poTestSuite t = maybe noProps run_test_cases (onlyPoCases t)
+    where
+        noProps = putStrLn "No QuickCheckProps" >> return True
+
 instance IsTestCase POCase where
     makeCase cs (POCase n test res)     = do
             let cmd = catch (test & mapped._2 %~ print_po) handler
@@ -48,9 +63,6 @@ instance IsTestCase POCase where
                     putStrLn n
                     print exc
                     return (show (exc :: SomeException), logNothing)
-                -- get_po = catch (snd `liftM` y) g
-                -- g :: SomeException -> IO (Table Label Sequent)
-                -- g = const $ putStrLn "EXCEPTION!!!" >> return M.empty
             return UT
                 { name = n
                 , routine = cmd

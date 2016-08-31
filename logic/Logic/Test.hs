@@ -2,11 +2,12 @@
 module Logic.Test where
 
     -- Modules
-import Logic.Expr
+import Logic.Expr hiding (field)
 import Logic.Expr.Const
 import Logic.Expr.Parser
 import Logic.Proof.Monad
 import Logic.QuasiQuote hiding (var)
+import Logic.Theories
 import Logic.Theory
 import Logic.Theories.SetTheory
 
@@ -33,6 +34,7 @@ import Test.QuickCheck.Report
 import Test.UnitTest hiding (name)
 
 import Utilities.MapSyntax
+import Utilities.Syntactic
 
 left :: Type -> Type
 left  = suffix_generics "1"
@@ -218,6 +220,8 @@ test = test_cases "genericity"
         , aCase "QuasiQuotes with proof monads and assumptions" case20 result20
         , aCase "Records lookup syntax" case21 result21
         , aCase "Proofs with record lookup" case22 result22
+        , aCase "Testing the parser (\\qforall{x,y}{}{x = y})" case23 result23
+        , aCase "Testing the parser (\\neg (-2) = 2)" case24 result24
         ]
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
@@ -226,7 +230,7 @@ test = test_cases "genericity"
         vB1 = reserved "b" 1
         vC1 = reserved "c" 1
         vC2 = reserved "c" 2
-        fun_sort = z3Sort "\\tfun" "fun" 2
+        fun_sort = z3Sort "\\pfun" "fun" 2
         gtype    = Gen fun_sort [z3GENERIC "c", set_type $ z3GENERIC "b"]
         
         stype0   = Gen fun_sort [int, set_type real]
@@ -243,8 +247,8 @@ case5   :: IO Expr
 result5 :: Expr
 case6   :: IO Expr
 result6 :: Expr
-case3 = return $ specialize (fromList [(a,gB)]) $ FunApp union [x3,x4]
-result3 = FunApp (mk_fun' [gB] "union" [set_type gB,set_type gB] $ set_type gB) [x3,x4] 
+case3 = return $ specialize (fromList [(a,gB)]) $ funApp union [x3,x4]
+result3 = funApp (mk_fun' [gB] "union" [set_type gB,set_type gB] $ set_type gB) [x3,x4] 
 case5 = return $ p
 result5 = q
 case6 = return $ pp
@@ -274,42 +278,37 @@ c :: InternalName
 c = fromString'' "c"
 
 pp :: Expr
-pp = FunApp member [FunApp union [x1,x2], specialize (fromList [(a,set_type gA)]) $ FunApp union [x3,x4]]
+pp = funApp member [funApp union [x1,x2], specialize (fromList [(a,set_type gA)]) $ funApp union [x3,x4]]
 
 qq :: Expr
-qq = FunApp member [FunApp union [x1,x2], FunApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA,set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
+qq = funApp member [funApp union [x1,x2], funApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA,set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
 p :: Expr
-p = FunApp member [FunApp union [x1,x2], specialize (fromList [(a,set_type $ gA)]) $ FunApp union [x3,x4]]
+p = funApp member [funApp union [x1,x2], specialize (fromList [(a,set_type $ gA)]) $ funApp union [x3,x4]]
 q :: Expr
-q = FunApp member [FunApp union [x1,x2], FunApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA, set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
+q = funApp member [funApp union [x1,x2], funApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA, set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
 
 case7   :: IO ExprP
 result7 :: ExprP
 (case7, result7) = 
         ( return (x `zelem` zempty_set)
-        , Right $ FunApp (mk_fun' [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
+        , Right $ funApp (mk_fun' [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
         )
     where
         train = Gen (z3Sort "\\train" "train" 0) []
         (x,_) = var "x" train
-        empty_set_of_train = FunApp (mk_fun' [train] "empty-set" [] $ set_type train) []
+        empty_set_of_train = funApp (mk_fun' [train] "empty-set" [] $ set_type train) []
 
 result8 :: String
 result8 = unlines
     [ "(and p q)"
-    , "(and p (= 87 87))"
-    , "(and (or (and p q)"
-    , "         (and p (= 87 87))"
-    , "         (and (= 7 7) q)"
-    , "         (and (= 7 7) (= 7 87)))"
-    , "     q)"
-    , "(and (or (and p q)"
-    , "         (and p (= 87 87))"
-    , "         (and (= 7 7) q)"
-    , "         (and (= 7 7) (= 7 87)))"
-    , "     (= 87 87))"
-    , "(and (= 7 7) q)"
-    , "(and (= 7 7) (= 7 87))"
+    , "p"
+    , "(and (or (and p q) p q (= 7 87)) q)"
+    , "(and p q)"
+    , "p"
+    , "q"
+    , "(= 7 87)"
+    , "q"
+    , "(= 7 87)"
     ]
 
 case8 :: IO String
@@ -357,8 +356,8 @@ case10 = return $ z3_code $ runSequent $ do
         let t = record_type $ runMap' $ do
                 x ## int
                 b ## bool
-            x = [smt|x|]
-            b = [smt|b|]
+            x = [field|x|]
+            b = [field|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
         assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
@@ -371,13 +370,14 @@ result10 = unlines
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
-    , "(declare-datatypes (a1 a2) ( (Record-b-x (Record-b-x (b a1) (x a2))) ))"
+    , "(declare-datatypes (a1 a2)"
+    , "                   ( (Record-b-x (Record-b-x (@@field@@_b a1) (@@field@@_x a2))) ))"
     , "; comment: we don't need to declare the sort Bool"
     , "; comment: we don't need to declare the sort Int"
     , "(declare-const v1 (Record-b-x Bool Int))"
     , "(declare-const v2 (Record-b-x Bool Int))"
     , "(assert (= v1 (Record-b-x true 7)))"
-    , "(assert (= v2 (Record-b-x (b v1) 7)))"
+    , "(assert (= v2 (Record-b-x (@@field@@_b v1) 7)))"
     , "(assert (not (= v1 v2)))"
     , "(check-sat-using (or-else (then qe smt)"
     , "                          (then simplify smt)"
@@ -392,12 +392,12 @@ case11 = return $ z3_code $ runSequent $ do
         let t = record_type $ runMap' $ do
                 x ## int
                 b ## bool
-            x = [smt|x|]
-            b = [smt|b|]
+            x = Field [smt|x|]
+            b = Field [smt|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
         assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
-        assume $ v2 `zelem` zrecord_set' (x ## zmk_set 7 >> b ## zcast (set_type bool) zset_all)
+        assume $ v2 `zelem` mk_zrecord_set (x ## zmk_set 7 >> b ## zcast (set_type bool) zset_all)
         check $ v1 .=. v2
 
 result11 :: String
@@ -407,7 +407,8 @@ result11 = unlines
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
-    , "(declare-datatypes (a1 a2) ( (Record-b-x (Record-b-x (b a1) (x a2))) ))"
+    , "(declare-datatypes (a1 a2)"
+    , "                   ( (Record-b-x (Record-b-x (@@field@@_b a1) (@@field@@_x a2))) ))"
     , "; comment: we don't need to declare the sort Bool"
     , "; comment: we don't need to declare the sort Int"
     , "(define-sort set (a) (Array a Bool))"
@@ -598,6 +599,25 @@ result11 = unlines
     , "                       (finite@Open@@Record-b-x@@Bool@@Int@Close (union s1 s2)))"
     , "                   :pattern"
     , "                   ( (finite@Open@@Record-b-x@@Bool@@Int@Close (union s1 s2)) ))))"
+    , "(assert (forall ( (s1 (set Bool))"
+    , "                  (s2 (set Bool)) )"
+    , "                (! (=> (and (finite@@Bool s2) (not (finite@@Bool s1)))"
+    , "                       (not (finite@@Bool (set-diff@@Bool s1 s2))))"
+    , "                   :pattern"
+    , "                   ( (finite@@Bool (set-diff@@Bool s1 s2)) ))))"
+    , "(assert (forall ( (s1 (set Int))"
+    , "                  (s2 (set Int)) )"
+    , "                (! (=> (and (finite@@Int s2) (not (finite@@Int s1)))"
+    , "                       (not (finite@@Int (set-diff@@Int s1 s2))))"
+    , "                   :pattern"
+    , "                   ( (finite@@Int (set-diff@@Int s1 s2)) ))))"
+    , "(assert (forall ( (s1 (set (Record-b-x Bool Int)))"
+    , "                  (s2 (set (Record-b-x Bool Int))) )"
+    , "                (! (=> (and (finite@Open@@Record-b-x@@Bool@@Int@Close s2)"
+    , "                            (not (finite@Open@@Record-b-x@@Bool@@Int@Close s1)))"
+    , "                       (not (finite@Open@@Record-b-x@@Bool@@Int@Close (set-diff@Open@@Record-b-x@@Bool@@Int@Close s1 s2))))"
+    , "                   :pattern"
+    , "                   ( (finite@Open@@Record-b-x@@Bool@@Int@Close (set-diff@Open@@Record-b-x@@Bool@@Int@Close s1 s2)) ))))"
     , "(assert (forall ( (x Bool) )"
     , "                (! (finite@@Bool (mk-set@@Bool x))"
     , "                   :pattern"
@@ -613,28 +633,6 @@ result11 = unlines
     , "(assert (finite@@Bool empty-set@@Bool))"
     , "(assert (finite@@Int empty-set@@Int))"
     , "(assert (finite@Open@@Record-b-x@@Bool@@Int@Close empty-set@Open@@Record-b-x@@Bool@@Int@Close))"
-    , "(assert (forall ( (s1 (set Bool))"
-    , "                  (s2 (set Bool)) )"
-    , "                (! (=> (subset s1 s2)"
-    , "                       (=> (finite@@Bool s2) (finite@@Bool s1)))"
-    , "                   :pattern"
-    , "                   ( (finite@@Bool s2)"
-    , "                     (finite@@Bool s1) ))))"
-    , "(assert (forall ( (s1 (set Int))"
-    , "                  (s2 (set Int)) )"
-    , "                (! (=> (subset s1 s2)"
-    , "                       (=> (finite@@Int s2) (finite@@Int s1)))"
-    , "                   :pattern"
-    , "                   ( (finite@@Int s2)"
-    , "                     (finite@@Int s1) ))))"
-    , "(assert (forall ( (s1 (set (Record-b-x Bool Int)))"
-    , "                  (s2 (set (Record-b-x Bool Int))) )"
-    , "                (! (=> (subset s1 s2)"
-    , "                       (=> (finite@Open@@Record-b-x@@Bool@@Int@Close s2)"
-    , "                           (finite@Open@@Record-b-x@@Bool@@Int@Close s1)))"
-    , "                   :pattern"
-    , "                   ( (finite@Open@@Record-b-x@@Bool@@Int@Close s2)"
-    , "                     (finite@Open@@Record-b-x@@Bool@@Int@Close s1) ))))"
     , "(assert (forall ( (r1 (set (Record-b-x Bool Int))) )"
     , "                (! (= (set@Open@@Record-b-x@@Bool@@Int@Close@Open@@Record-b-x@@Bool@@Int@Close r1 ident@Open@@Record-b-x@@Bool@@Int@Close)"
     , "                      r1)"
@@ -661,8 +659,8 @@ result11 = unlines
     , "                  (@@fv@@_1 (set Int))"
     , "                  (@@bv@@_0 (Record-b-x Bool Int)) )"
     , "                (! (= (elem@Open@@Record-b-x@@Bool@@Int@Close @@bv@@_0 (@@lambda@@_0 @@fv@@_0 @@fv@@_1))"
-    , "                      (and (elem@@Bool (b @@bv@@_0) @@fv@@_0)"
-    , "                           (elem@@Int (x @@bv@@_0) @@fv@@_1)))"
+    , "                      (and (elem@@Bool (@@field@@_b @@bv@@_0) @@fv@@_0)"
+    , "                           (elem@@Int (@@field@@_x @@bv@@_0) @@fv@@_1)))"
     , "                   :pattern"
     , "                   ( (elem@Open@@Record-b-x@@Bool@@Int@Close @@bv@@_0 (@@lambda@@_0 @@fv@@_0 @@fv@@_1)) ))))"
     , "(assert (not (= v1 v2)))"
@@ -679,12 +677,12 @@ case12 = discharge ("case12") $ runSequent $ do
         let t = record_type $ runMap' $ do
                 x ## int
                 b ## bool
-            x = [smt|x|]
-            b = [smt|b|]
+            x = Field [smt|x|]
+            b = Field [smt|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
         assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
-        assume $ v2 `zelem` zrecord_set' (x ## zmk_set 7 >> b ## zmk_set mztrue)
+        assume $ v2 `zelem` mk_zrecord_set (x ## zmk_set 7 >> b ## zmk_set mztrue)
         check $ v1 .=. v2
 
 result12 :: Validity
@@ -699,8 +697,8 @@ case13 = do
 result13 :: Expr
 result13 = fromRight' $ zrecord' (foo ## 7 >> bar ## zset_enum [1,2])
     where
-        foo = [smt|foo|]
-        bar = [smt|bar|]
+        foo = Field [smt|foo|]
+        bar = Field [smt|bar|]
 
 case14 :: IO Expr
 case14 = return $ getExpr $ c [expr| r [ 'foo := 7, 'bar := \{ 1,2 \} ] |]
@@ -712,8 +710,8 @@ case14 = return $ getExpr $ c [expr| r [ 'foo := 7, 'bar := \{ 1,2 \} ] |]
                 x ## int
                 bar ## bool
         r = [smt|r|]
-        x = [smt|x|]
-        bar = [smt|bar|]
+        x = [field|x|]
+        bar = [field|bar|]
 
 result14 :: Expr
 result14 = fromRight' $ zrec_update r (foo ## 7 >> bar ## zset_enum [1,2])
@@ -722,9 +720,9 @@ result14 = fromRight' $ zrec_update r (foo ## 7 >> bar ## zset_enum [1,2])
                     [ (bar,bool)
                     , (x,int) ]
         r'  = [smt|r|]
-        x   = [smt|x|]
-        foo = [smt|foo|]
-        bar = [smt|bar|]
+        x   = [field|x|]
+        foo = [field|foo|]
+        bar = [field|bar|]
 
     -- empty record literal
 case15 :: IO Expr
@@ -747,8 +745,8 @@ case16 = return $ getExpr $ c [expr| r [ 'foo := 7 ] [ 'bar := \{ 1,2 \} ] |]
                 x ## int
                 bar ## bool
         r = [smt|r|]
-        x = [smt|x|]
-        bar = [smt|bar|]
+        x = [field|x|]
+        bar = [field|bar|]
 
 result16 :: Expr
 result16 = fromRight' $ zrec_update (zrec_update r (foo ## 7)) (bar ## zset_enum [1,2])
@@ -757,9 +755,9 @@ result16 = fromRight' $ zrec_update (zrec_update r (foo ## 7)) (bar ## zset_enum
                     [ (bar,bool)
                     , (x,int) ]
         r'  = [smt|r|]
-        x   = [smt|x|]
-        foo = [smt|foo|]
-        bar = [smt|bar|]
+        x   = [field|x|]
+        foo = [field|foo|]
+        bar = [field|bar|]
 
 -- field lookup
 -- record set
@@ -773,13 +771,20 @@ case17 = do
                 decls %= M.union (symbol_table 
                     [Var r t
                     ,Var intV $ set_type int])
+                free_dummies .= True
+                dum_ctx %= insert_symbol (Var r t')
         t = record_type $ runMap' $ do
                 x ## int
                 bar ## bool
+        t' = record_type $ runMap' $ do
+                x ## int
+                foo ## int
+                bar ## set_type int
         r = [smt|r|]
-        x = [smt|x|]
+        x = [field|x|]
         intV = [tex|\Int|]
-        bar = [smt|bar|]
+        bar = [field|bar|]
+        foo = [field|foo|]
 
 
 result17 :: Expr
@@ -788,14 +793,14 @@ result17 = fromRight' $ rec `zelem` set
         zint_set = Right $ Word $ Var intV $ set_type int
         intV = [tex|\Int|]
         rec = zrec_update r (foo ## 7 >> bar ## zset_enum [1,2])
-        set = zrecord_set' (do foo ## zint_set; x ## zint_set; bar ## zpow_set zint_set)
+        set = mk_zrecord_set (do foo ## zint_set; x ## zint_set; bar ## zpow_set zint_set)
         r' = [smt|r|]
         r  = Right $ Word $ Var r' $ record_type $ M.fromList 
                     [ (bar,bool)
                     , (x,int) ]
-        x = [smt|x|]
-        bar = [smt|bar|]
-        foo = [smt|foo|]
+        x = [field|x|]
+        bar = [field|bar|]
+        foo = [field|foo|]
 
 case18 :: IO Validity
 case18 = discharge("case13") $ runSequent $ do
@@ -833,29 +838,58 @@ case21 = return $ getExpr $ c [expr| r.'x = 7 |]
                 x ## int
                 bar ## bool
         r = [smt|r|]
-        x = [smt|x|]
-        bar = [smt|bar|]
+        x = [field|x|]
+        bar = [field|bar|]
 
 result21 :: Expr
-result21 = Record (FieldLookup r x) `zeq` zint 7
+result21 = Record (FieldLookup r x) int  `zeq` zint 7
     where
         r  = Word $ Var r' $ record_type $ M.fromList 
                     [ (bar,bool)
                     , (x,int) ]
         r'  = [smt|r|]
-        x   = [smt|x|]
-        bar = [smt|bar|]
+        x   = [field|x|]
+        bar = [field|bar|]
 
 case22 :: IO Validity
 case22 = discharge "case22" $ runSequent $ do
     let t = record_type $ runMap' $ do
                 x ## bool
                 bar ## int
-        x   = [smt|x|]
-        bar = [smt|bar|]
+        x   = [field|x|]
+        bar = [field|bar|]
     declare "r" t
     assumeQ [expr| r = [ 'x := \true, 'bar := 7 ] |]
     checkQ  [expr| r.'bar = 8 |]
 
 result22 :: Validity
 result22 = Invalid
+
+case23 :: IO UntypedExpr
+case23 = return $ either show_error id $ untypedExpression
+    where
+        expr = "\\qforall{x,y}{}{x = y}"
+        stringLi = asStringLi (mkLI expr) expr
+        setting = theory_setting basic_theory
+        untypedExpression = parse_expression setting stringLi
+        show_error = \x -> error ("couldn't parse expression:\n" ++ show_err x)
+
+result23 :: UntypedExpr
+result23 = zforall [x',y'] ztrue (fun2 (zeq_fun gA) x y)
+    where
+        x' = z3Var "x" ()
+        y' = z3Var "y" ()
+        x = Word x'
+        y = Word y'
+
+case24 :: IO UntypedExpr
+case24 = return $ either show_error id $ untypedExpression
+    where
+        expr = "\\neg (-2) = 2"
+        stringLi = asStringLi (mkLI expr) expr
+        setting = theory_setting' preludeTheories
+        untypedExpression = parse_expression setting stringLi
+        show_error = \x -> error ("couldn't parse expression:\n" ++ show_err x)
+
+result24 :: UntypedExpr
+result24 = znot (fun2 (zeq_fun gA) (zopp $ zint 2) (zint 2))

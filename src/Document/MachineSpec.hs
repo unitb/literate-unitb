@@ -12,11 +12,12 @@ import Logic.Theories.Arithmetic
 import Logic.Theories.FunctionTheory
 import Logic.Theories.SetTheory
 
-import UnitB.Expr
+import UnitB.Expr hiding (zelem')
 import UnitB.UnitB
 
 
     -- Libraries
+import Control.Invariant hiding ((===))
 import Control.Lens hiding (Context,elements)
 import Control.Monad
 import Control.Monad.Reader
@@ -42,20 +43,25 @@ import           Utilities.Table
 prop_parseOk :: Property
 prop_parseOk = forAll correct_machine $ f_prop_parseOk
 
-f_prop_parseOk :: (Pretty RawMachine, Tex) -> Property
+f_prop_parseOk :: (Pretty RawMachine, Tex) -> Invariant
 f_prop_parseOk (Pretty mch,Tex tex) =
         (M.elems . M.map (fmap asExpr) . view' machines) `liftM` (all_machines tex) .== Right [mch]
  
 prop_type_error :: Property
 prop_type_error = forAll (liftM snd mch_with_type_error) f_prop_type_error
 
-f_prop_type_error :: Tex -> Bool
-f_prop_type_error (Tex tex) = either (all is_type_error) (const False) (all_machines tex) 
+f_prop_type_error :: Tex -> Property
+f_prop_type_error (Tex tex) = 
+        either (\m -> counterexample (show_err m) $ all is_type_error m) (const $ property False) (all_machines tex) 
 
 prop_expr_parser :: ExprNotation -> Property
-prop_expr_parser (ExprNotation ctx n e) = e' === parse_expression parser (withLI $ showExpr n $ asExpr e)
+prop_expr_parser (ExprNotation ctx n e) = 
+        counterexample text $
+        counterexample (pretty ctx) $
+        e' === parse (withLI text)
     where
-        parser = setting_from_context n ctx
+        text = showExpr n $ getExpr e
+        parse  = fmap getExpr . parse_expr (setting_from_context n ctx & expected_type .~ Nothing)
         e' = Right e
         li = LI "" 0 0
         withLI xs = StringLi (map (\x -> (x,li)) xs) li
@@ -83,7 +89,11 @@ instance Arbitrary ExprNotation where
                     M.empty M.empty 
         return $ ExprNotation 
                     ctx basic_notation e
-    shrink = genericShrink
+    shrink (ExprNotation ctx n e) = mapMaybe (validScope n) . genericShrink $ (ctx,e)
+        where
+            validScope n (ctx,e)
+                | used_var' e `M.isSubmapOf` (ctx^.constants) = Just (ExprNotation ctx n e)
+                | otherwise = Nothing
 
 data MachineInput = MachineInput RawMachine [LatexNode]
 
@@ -91,6 +101,7 @@ is_type_error :: Error -> Bool
 is_type_error e = 
             "type error:" `L.isInfixOf` msg
         ||  "expected type:" `L.isInfixOf` msg
+        ||  "signature:" `L.isInfixOf` msg
     where
         msg = message e
 
@@ -141,7 +152,7 @@ showExpr notation e = show_e e
             | length xs == 0 = error $ [printf|show_e: not a binary or unary operator '%s' %s|]
                                     (render $ f^.name)
                                     (L.intercalate ", " $ map pretty xs)
-            | otherwise      = show_e (FunApp f $ [head xs, FunApp f $ tail xs])
+            | otherwise      = show_e (funApp f $ [head xs, funApp f $ tail xs])
             where
                 x = xs ! 0
                 y = xs ! 1
@@ -343,8 +354,8 @@ fun_map = M.fromList
         ]
 
 zelem' :: RawExpr -> RawExpr -> RawExpr
-zelem' e0 e1 = FunApp (mk_fun' [int] "elem" [int,set_type int] bool) [e0,e1 :: RawExpr]
-        -- zeq' e0 e1 = FunApp (mk_fun [] "=" [int,int] bool) [e0,e1 :: Expr]
+zelem' e0 e1 = funApp (mk_fun' [int] "elem" [int,set_type int] bool) [e0,e1 :: RawExpr]
+        -- zeq' e0 e1 = funApp (mk_fun [] "=" [int,int] bool) [e0,e1 :: Expr]
 
 choose_expr :: Bool -> Type -> EGen RawExpr
 choose_expr b t = do

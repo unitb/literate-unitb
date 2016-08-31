@@ -17,9 +17,9 @@ import Document.Visitor
 
 import Latex.Parser hiding (contents,source)
 
-import Logic.Expr
 import Logic.Expr.Parser
 
+import UnitB.Expr
 import UnitB.Syntax as AST
 
     --
@@ -31,16 +31,19 @@ import qualified Control.Category as C
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Control.Monad
+import           Control.Monad.Fix
 import           Control.Monad.Reader.Class 
+import           Control.Monad.Trans
+import           Control.Monad.Trans.Maybe
 
 import Control.Precondition
 
 import           Data.List.NonEmpty as NE (toList)
+import           Data.Either
 import           Data.Either.Validation
 import           Data.Existential
 import Data.Map.Class as M hiding ( map, (\\) )
 import qualified Data.Map.Class as M
-import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Traversable as T
 
@@ -58,17 +61,17 @@ run_phase2_vars = C.id &&& symbols >>> liftP wrapup
         wrap = L.map (second $ makeCell . uncurry3 TheoryDef)
         symbols = arr (view mchTable) >>> run_phase
             [ variable_decl
+            , definition
             , constant_decl
             , dummy_decl
             , index_decl
             , param_decl
-            , promote_param
             , arr $ Just . M.map (wrap . L.view pSetDecl)
+            , promote_param
+            , remove_ind
             , remove_var ]
         wrapup (SystemP r_ord p1,vs) = do
-            let vs' = inherit2 p1 r_ord 
-                        <$> unionsWith (++)
-                        <$> vs
+            let vs' = inherit2 p1 r_ord . unionsWith (++) <$> vs
             vars <- triggerM
                 =<< make_all_tables' err_msg 
                 =<< triggerM vs'
@@ -79,10 +82,31 @@ newMch :: [(Name,VarScope)]
        -> MachineP1' EventP1 EventP1 TheoryP2
        -> MachineP2' EventP1 EventP1 TheoryP2 
        -> MM' c (MachineP2' EventP1 EventP1 TheoryP2)
-newMch vars' m m' = makeMachineP2' m _pMchSynt <$> liftField toMchDecl vars'
+newMch vars' m _ = parseDefs =<< mfix (newMch' vars' m)
+
+newMch' :: [(Name,VarScope)] 
+        -> MachineP1' EventP1 EventP1 TheoryP2
+        -> MachineP2RawDef' EventP1 EventP1 TheoryP2 
+        -> MM' c (MachineP2RawDef' EventP1 EventP1 TheoryP2)
+newMch' vars' m m' = makeMachineP2'' m _pMchSynt <$> liftField toMchDecl vars'
     where
-        _pMchSynt = (m^.pCtxSynt & primed_vars .~ refVars & decls %~ M.union refVars)
-        refVars   = (m'^.pAbstractVars) `M.union` (m'^.pStateVars)
+        _pMchSynt  = (m^.pCtxSynt & primed_vars .~ refVars & decls %~ M.union refVars)
+        refVars   = M.unions [m'^.pAbstractVars, m'^.pStateVars]
+
+parseDef :: MachineP2RawDef' ae ce thy
+         -> StringLi -> MM' c Expr
+parseDef m = liftEither . parse_expr (m^.pMchSynt & expected_type .~ Nothing)
+
+parseDefs :: MachineP2RawDef' ae ce thy
+          -> MM' c (MachineP2' ae ce thy )
+parseDefs m = do
+        m' <- m & pDefs (\defs -> triggerM =<< sequence 
+                             <$> (defs & traverse (unfail . parseDef m)))
+        let defs = M.mapWithKey (\n -> Var n.type_of.getExpr) $ m'^.pMchDef
+        return $ m' & pMchSynt.decls %~ M.union defs
+
+unfail :: MM' c a -> MM' c (Maybe a)
+unfail (MM (MaybeT cmd)) = MM $ lift cmd
 
 make_phase2 :: MachineP1
             -> Table Name VarScope
@@ -127,14 +151,9 @@ instance IsVarScope TheoryDef where
     toThyDecl s th = [Right $ PDefinitions s $ thDef th]
     toMchDecl _ _  = []
 
-instance PrettyRecord TheoryDef where
-    recordFields = genericRecordFields []
-instance PrettyPrintable TheoryDef where
-    pretty = prettyRecord
-
 variable_decl :: MPipeline MachineP1
                     [(Name,VarScope)]
-variable_decl = machine_var_decl Machine "\\variable"
+variable_decl = machine_var_decl MchVar "\\variable"
 
 instance IsVarScope TheoryConst where
     toOldEventDecl _ _ = []
@@ -142,10 +161,12 @@ instance IsVarScope TheoryConst where
     toThyDecl s th = [Right $ PConstants s $ thCons th]
     toMchDecl _ _  = []
 
-instance PrettyRecord TheoryConst where
-    recordFields = genericRecordFields []
-instance PrettyPrintable TheoryConst where
-    pretty = prettyRecord
+definition :: MPipeline MachineP1 
+                  [(Name,VarScope)]
+definition = machineCmd "\\definition" 
+                $ \(VarName n,Expr xp) _m _p1 -> do
+            li <- ask
+            return [(n,makeCell $ MchDef n xp Local li)]
 
 constant_decl :: MPipeline MachineP1
                     [(Name,VarScope)]
@@ -155,29 +176,40 @@ instance IsVarScope MachineVar where
     toOldEventDecl _ _ = []
     toNewEventDecl _ _ = []
     toThyDecl _ _ = []
-    toMchDecl s (Machine v Local _)     = [Right $ PStateVars s v]
-    toMchDecl s (Machine v Inherited _) = map Right [PAbstractVars s v,PStateVars s v]
-    toMchDecl s (DelMch (Just v) Local li)     = map Right [PDelVars s (v,li),PAbstractVars s v]
-    toMchDecl s (DelMch (Just v) Inherited li) = [Right $ PDelVars s (v,li)]
-    toMchDecl s (DelMch Nothing _ li)    = [Left $ Error ([printf|deleted variable '%s' does not exist|] $ render s) li]
+    toMchDecl s (MchVar v Local _)     = [Right $ PStateVars s v]
+    toMchDecl s (MchVar v Inherited _) = map Right [PAbstractVars s v,PStateVars s v]
+    toMchDecl s (DelMchVar (Just v) Local li)     = map Right [PDelVars s (v,li),PAbstractVars s v]
+    toMchDecl s (DelMchVar (Just v) Inherited li) = [Right $ PDelVars s (v,li)]
+    toMchDecl s (DelMchVar Nothing _ li)    = [Left $ Error ([printf|deleted variable '%s' does not exist|] $ render s) li]
 
-instance PrettyRecord MachineVar where
-    recordFields = genericRecordFields []
-instance PrettyPrintable MachineVar where
-    pretty = prettyRecord
+instance IsVarScope MachineDef where
+    toOldEventDecl _ _ = []
+    toNewEventDecl _ _ = []
+    toThyDecl _ _ = []
+    toMchDecl _s (MchDef v term Local _) 
+            = [Right $ PMchDef v term]
+    toMchDecl _s (MchDef v term Inherited _) 
+            = [Right $ PMchDef v term,Right $ PMchOldDef v term]
+
+remove_ind :: MPipeline MachineP1 [(Name,VarScope)]
+remove_ind = machineCmd "\\removeind" $ \(Conc evt,xs) _m _p1 -> do
+        li <- ask
+        get_concrete_event _p1 evt
+        return [ (x,makeCell $ Evt $ M.singleton (Right evt) 
+                $ EventDecl (Index $ InhDelete Nothing) (pure (Right evt)) Local li) 
+            | IndName x <- xs ]
 
 remove_var :: MPipeline MachineP1 [(Name,VarScope)]
 remove_var = machineCmd "\\removevar" $ \(Identity xs) _m _p1 -> do
         li <- ask
-        return $ map ((\x -> (x,makeCell $ DelMch Nothing Local li)) . getVarName) xs
+        return $ map ((\x -> (x,makeCell $ DelMchVar Nothing Local li)) . getVarName) xs
 
-dummy_decl :: MPipeline MachineP1
-                    [(Name,VarScope)]
-dummy_decl = machine_var_decl 
-        (\v source li -> Evt $ singleton Nothing (EventDecl (Param v) dummy source li)) 
+dummy_decl :: MPipeline MachineP1 [(Name,VarScope)]
+dummy_decl = machine_var_decl
+        (\v source li -> Evt $ singleton (Left DummyDecl) (EventDecl (Param v) dummy source li)) 
         "\\dummy"
     where
-        dummy = EventId (label "dummy") :| []
+        dummy = Left DummyDecl :| []
 
 machine_var_decl :: IsVarScope var
                  => (Var -> DeclSource -> LineInfo -> var)
@@ -197,53 +229,61 @@ promote_param = machineCmd "\\promote" $ \(Conc lbl,VarName n) _m p1 -> do
                 ([printf|event '%s' is undeclared|] $ pretty lbl)
                 $ as_label lbl `M.lookup` evts
             li <- ask
-            return $ [(n,makeCell $ Evt $ M.singleton (Just evt) 
-                        (EventDecl (Promoted Nothing) (evt :| []) Local li))]
+            return $ [(n,makeCell $ Evt $ M.singleton (Right evt) 
+                        (EventDecl (Promoted Nothing) (Right evt :| []) Local li))]
 
 index_decl :: MPipeline MachineP1 [(Name,VarScope)]
-index_decl = event_var_decl Index "\\indices"
+index_decl = event_var_decl (Index . InhAdd) "\\indices"
 
 param_decl :: MPipeline MachineP1 [(Name,VarScope)]
 param_decl = event_var_decl Param "\\param"
 
 type EventSym = (EventId,[(Name,Var)])
 
-toEventDecl :: RefScope -> Name -> EvtDecls -> [Either Error (EventId,[EventP2Field])]
+toEventDecl :: RefScope 
+            -> Name 
+            -> EvtDecls 
+            -> [Either Error (EventId,[EventP2Field])]
 toEventDecl ref s (Evt m) = concatMap (concatMap fromValidation . uncurry f)
-                                     $ MM.mapMaybe distrLeft' $ M.toList m
+                                     $ rights $ view distrLeft <$> M.toList m
          where 
             fromValidation (Success x) = [Right x]
             fromValidation (Failure xs) = Left <$> xs
             f :: EventId -> EventDecl -> [Validation [Error] (EventId, [EventP2Field])]
-            f eid x = case (ref,x^.declSource) of
-                        (Old,Inherited) -> [ (_2.traverse) id (e,[g x]) | e <- NE.toList $ x^.source ]
-                        (Old,Local) -> []
-                        (New,_) -> [ (_2.traverse) id (eid,[g x])]
-            g :: EventDecl -> Validation [Error] EventP2Field
+            f eid x = case ref of
+                        Old -> [ _2 id (e,g x) | e <- rights $ NE.toList $ x^.source ]
+                        New -> [ _2 id (eid,g x)]
+            g :: EventDecl -> Validation [Error] [EventP2Field]
             g x = case x^.scope of 
-                        Index v  -> Success $ EIndices s v
-                        Param v  -> Success $ EParams s v
-                        Promoted Nothing -> Failure [Error "Promoting a non-existing parameter" $ x^.lineInfo]
+                        Index (InhAdd v) -> case (ref,x^.declSource) of
+                            (Old,Local) -> Success []
+                            _           -> Success [EIndices s v]
+                        Param v -> case (ref,x^.declSource) of
+                            (Old,Local) -> Success []
+                            _           -> Success [EParams s v]
+                        Promoted Nothing  -> case (ref,x^.declSource) of
+                            (Old,Local) -> Success []
+                            _           -> Failure [Error "Promoting a non-existing parameter" $ x^.lineInfo]
+                        Index (InhDelete Nothing)  -> case (ref,x^.declSource) of
+                            (Old,Local) -> Success []
+                            _           -> Failure [Error "Deleting a non-existing index" $ x^.lineInfo]
+                        Index (InhDelete (Just v)) -> 
+                                            case (ref,x^.declSource) of
+                                                (Old,Local)     -> Success [EIndices s v]
+                                                (New,Local)     -> Success [EDelIndices s (v,x^.lineInfo)]
+                                                (_,Inherited)   -> Success []
                         Promoted (Just v) -> case ref of
-                                                Old -> Success $ EParams s v
-                                                New -> Success $ EIndices s v
+                                                Old -> case x^.declSource of 
+                                                        Inherited -> Success [EIndices s v]
+                                                        Local     -> Success [EParams s v]
+                                                New -> Success [EIndices s v]
 
 instance IsVarScope EvtDecls where
     toOldEventDecl = toEventDecl Old
     toNewEventDecl = toEventDecl New
     toMchDecl _ _  = []
     toThyDecl n (Evt m) = L.map (Right . PDummyVars n . fromJust' . view varDecl) $ M.ascElems 
-                                $ M.filterWithKey (const.MM.isNothing) m
-
-instance PrettyRecord EvtDecls where
-    recordFields = genericRecordFields []
-instance PrettyPrintable EvtDecls where
-    pretty = prettyRecord
-
-instance PrettyRecord EventDecl where
-    recordFields = genericRecordFields []
-instance PrettyPrintable EventDecl where
-    pretty = prettyRecord
+                                $ M.filterWithKey (const.isLeft) m
 
 event_var_decl :: (Var -> EvtScope Var)
                -> String
@@ -258,8 +298,8 @@ event_var_decl escope kw = machineCmd kw $ \(Conc lbl,PlainText xs) _m p1 -> do
                 $ as_label lbl `M.lookup` evts
             li <- ask
             vs <- hoistEither $ get_variables' ts xs li
-            return $ map (\(n,v) -> ((n,makeCell $ Evt $ M.singleton (Just evt) 
-                    (EventDecl (escope v) (evt :| []) Local li)))) vs
+            return $ map (\(n,v) -> ((n,makeCell $ Evt $ M.singleton (Right evt) 
+                    (EventDecl (escope v) (Right evt :| []) Local li)))) vs
 
 return []
 

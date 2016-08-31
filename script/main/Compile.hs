@@ -13,6 +13,7 @@ import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
 import Data.Char
+import Data.List
 import Data.String
 
 import Shelly hiding ( get, put, (</>), liftIO )
@@ -145,7 +146,7 @@ main = do
                 clearScreen
                 hFlush stdout
                 let (cs,xs,yss) = unzip3 rs
-                    c = foldl success ExitSuccess cs
+                    c = foldl' success ExitSuccess cs
                     ys = concat yss
                 putStr (take 60 $ cycle "\b") 
                 putStr $ concat xs

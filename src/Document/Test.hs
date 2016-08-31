@@ -7,6 +7,7 @@ import Document.Document
 
 -- import qualified Document.Tests.CompCalc as CC
 import qualified Document.Tests.Cubes as Cubes 
+import qualified Document.Tests.Definitions as Defs
 -- import qualified Document.Tests.IndirectEq as Ind
 import qualified Document.Tests.Lambdas as Lambdas
 import qualified Document.Tests.LockFreeDeque as LFD
@@ -20,11 +21,13 @@ import qualified Document.Tests.UnlessExcept as UE
 -- import qualified Document.Tests.Suite as Suite
 import qualified Document.Scope (Scope)
 import qualified Document.ExprScope as ESc 
+import qualified Document.VarScope as VSc 
 import qualified Document.MachineSpec as MSpec 
 import qualified Document.Tests.GarbageCollector as Gar
 import qualified Document.Tests.Parser as Parser
 import qualified Document.Tests.TerminationDetection as Term
 import qualified Document.Phase.Test as PhTest
+import Document.Tests.Suite (find_errors)
 
 import Document.Phase.Expressions as PExp 
 
@@ -37,8 +40,6 @@ import Test.UnitTest
 import UnitB.UnitB
 
     -- Libraries
-import Control.Lens
-
 import Test.QuickCheck.AxiomaticClass
 
 import Utilities.Syntactic
@@ -59,6 +60,7 @@ test = test_cases
         , UE.test_case
         , PhTest.test_case
         , Cubes.test_case
+        , Defs.test_case
         , Train.test_case
         , Lambdas.test_case
         , Phase.test_case
@@ -75,27 +77,21 @@ test = test_cases
             PExp.check_props
         , QuickCheckProps "expression scope, properties" 
             ESc.run_tests
+        , QuickCheckProps "variable scope, properties" 
+            VSc.run_tests
         ]
 
 result1 :: String
 result1 = unlines 
-    [ "  o  m/INIT/WD"
-    , "  o  m/INIT/WWD"
-    , "  o  m/INV/WD"
-    , "  o  m/enter/FIS/in@prime"
-    , "  o  m/enter/WD/ACT/a1"
-    , "  o  m/enter/WD/C_SCH"
-    , "  o  m/enter/WD/F_SCH"
-    , "  o  m/enter/WD/GRD/goal"
-    , "  o  m/enter/WD/GRD/hypotheses"
-    , "  o  m/enter/WD/GRD/relation"
-    , "  o  m/enter/WD/GRD/step 1"
-    , "  o  m/enter/WWD"
-    , "passed 12 / 12"
+    [ "  o  m/enter/FIS/in@prime/goal"
+    , "  o  m/enter/FIS/in@prime/hypotheses"
+    , "  o  m/enter/FIS/in@prime/relation"
+    , "  o  m/enter/FIS/in@prime/step 1"
+    , "passed 4 / 4"
     ]
 
-path1 :: String
-path1 = "Tests/new_syntax.tex"
+path1 :: FilePath
+path1 = [path|Tests/new_syntax.tex|]
 
 case1 :: IO String
 case1 = do
@@ -104,23 +100,20 @@ case1 = do
         Right [m] -> do
             (s,_,_)   <- str_verify_machine m
             return s
+        Left x -> return $ show_err x
         x -> return $ show x
 
 result2 :: String
-result2 = concat [
-        "[Error \"predicate is undefined: 'a1'\" (LI \"\" 23 12)]"
+result2 = unlines
+    [ "error 23:12:"
+    , "    predicate is undefined: 'a1'"
     ]
 
-path2 :: String
-path2 = "Tests/new_syntax-err0.tex"
+path2 :: FilePath
+path2 = [path|Tests/new_syntax-err0.tex|]
 
 case2 :: IO String
-case2 = do
-    r <- parse_machine path2
-    case r of
-        Right _ -> do
-            return "ok"
-        Left x -> return $ show $ x & traverse.traverseLineInfo.filename .~ ""
+case2 = find_errors path2
 
 check_axioms :: TestCase
 check_axioms = QuickCheckProps "conformance of instances to type class axioms"

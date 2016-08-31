@@ -31,30 +31,42 @@ test_case = test_cases
         , aCase "safety properties of m2" case2 result2
         , aCase "progress properties of m2" case3 result3
         , aCase "File structure" case4 result4
-        , aCase "Root machine" case5 result5
+        , stringCase "Root machine" case5 result5
+        , aCase "definitions of m2" case6 result6
+        , aCase "assumptions of m2" case7 result7
         ]
 
 result0 :: String
 result0 = unlines
     [ "\\noindent \\ref{m1:moveout} $[t]$ \\textbf{event}"
     , "\\begin{block}"
+    , "  \\item   \\textbf{refines}"
+    , "  \\begin{block}"
+    , "    \\item   \\ref{m1:moveout}"
+    , "  \\end{block}"
     , "  \\item   \\textbf{during}"
     , "  \\begin{block}"
-    , "    \\item[ \\eqref{m1:moveoutc1} ]{$t \\in in \\land loc.t \\in plf$} %"
+    , "    \\item[ ]{$t \\in in \\land loc.t \\in plf$} %"
+    , "    %\\eqref{m1:moveoutc1}"
     , "  \\end{block}"
     , "  \\item   \\textbf{upon}"
     , "  \\begin{block}"
-    , "    \\item[ \\eqref{m1:moveoutmo:f0} ]{$\\neg ext \\in \\ran.loc$} %"
+    , "    \\item[ ]{$\\neg ext \\in \\ran.loc$} %"
+    , "    %\\eqref{m1:moveoutmo:f0}"
     , "  \\end{block}"
     , "  \\item   \\textbf{when}"
     , "  \\begin{block}"
-    , "    \\item[ \\eqref{m1:moveoutmo:g1} ]{$t \\in in$} %"
-    , "    \\item[ \\eqref{m1:moveoutmo:g2} ]{$loc.t \\in plf$} %"
-    , "    \\item[ \\eqref{m1:moveoutmo:g3} ]{$\\neg ext \\in \\ran.loc$} %"
+    , "    \\item[ ]{$t \\in in$} %"
+    , "    %\\eqref{m1:moveoutmo:g1}"
+    , "    \\item[ ]{$loc.t \\in plf$} %"
+    , "    %\\eqref{m1:moveoutmo:g2}"
+    , "    \\item[ ]{$\\neg ext \\in \\ran.loc$} %"
+    , "    %\\eqref{m1:moveoutmo:g3}"
     , "  \\end{block}"
     , "  \\item   \\textbf{begin}"
     , "  \\begin{block}"
-    , "    \\item[ \\eqref{m1:moveouta2} ]{$loc \\bcmsuch loc' = loc \\1 | t \\fun ext$} %"
+    , "    \\item[ ]{$loc \\bcmsuch loc' = loc \\1 | t \\fun ext$} %"
+    , "    %\\eqref{m1:moveouta2}"
     , "  \\end{block}"
     , "  \\item   \\textbf{end} \\\\"
     , "\\end{block}"
@@ -68,37 +80,51 @@ case0 = makeReport $ do
     return $ getListing $
             event_summary' m lbl evt
 
-path0 :: String
-path0 = "Tests/train-station-set.tex"
+path0 :: FilePath
+path0 = [path|Tests/train-station-set.tex|]
 
 result1 :: String
 result1 = unlines
     [ "\\noindent \\ref{m1:moveout} $[t]$ \\textbf{event}"
     , "\\begin{block}"
+    , "  \\item   \\textbf{refines}"
+    , "  \\begin{block}"
+    , "    \\item   \\ref{m1:moveout}"
+    , "  \\end{block}"
     , "  \\item   \\textbf{during}"
     , "  \\begin{block}"
-    , "    \\item[ \\eqref{m1:moveoutc1} ]{$t \\in in \\land loc.t \\in plf$} %"
-    , "    \\item[ \\eqref{m1:moveoutm3:mo:sch0} ]{$loc.t \\in osgn$} %"
+    , "    \\item[ ]{$t \\in in \\land loc.t \\in plf$} %"
+    , "    %\\eqref{m1:moveoutc1}"
+    , "    \\item[ ]{$loc.t \\in osgn$} %"
+    , "    %\\eqref{m1:moveoutm3:mo:sch0}"
     , "  \\end{block}"
     , "  \\item   \\textbf{upon}"
     , "  \\begin{block}"
-    , "    \\item[ \\eqref{m1:moveoutmo:f0} ]\\sout{$\\neg ext \\in \\ran.loc$} %"
+    , "    \\item[ ]\\sout{$\\neg ext \\in \\ran.loc$} %"
+    , "    %\\eqref{m1:moveoutmo:f0}"
     , "  \\end{block}"
     , "  \\item   \\textbf{when}"
     , "  \\begin{block}"
-    , "    \\item[ \\eqref{m1:moveoutmo:g3} ]\\sout{$\\neg ext \\in \\ran.loc$} %"
+    , "    \\item[ ]\\sout{$\\neg ext \\in \\ran.loc$} %"
+    , "    %\\eqref{m1:moveoutmo:g3}"
     , "  \\end{block}"
     , "  \\begin{block}"
-    , "    \\item[ \\eqref{m1:moveoutm3:mo:grd0} ]{$loc.t \\in osgn$} %"
-    , "    \\item[ \\eqref{m1:moveoutmo:g1} ]{$t \\in in$} %"
-    , "    \\item[ \\eqref{m1:moveoutmo:g2} ]{$loc.t \\in plf$} %"
+    , "    \\item[ ]{$loc.t \\in osgn$} %"
+    , "    %\\eqref{m1:moveoutm3:mo:grd0}"
+    , "    \\item[ ]{$t \\in in$} %"
+    , "    %\\eqref{m1:moveoutmo:g1}"
+    , "    \\item[ ]{$loc.t \\in plf$} %"
+    , "    %\\eqref{m1:moveoutmo:g2}"
     , "  \\end{block}"
     , "  \\item   \\textbf{begin}"
     , "  \\begin{block}"
-    , "    \\item[ \\eqref{m1:moveouta2} ]{$loc \\bcmsuch loc' = loc \\1 | t \\fun ext$} %"
-    , "    \\item[ \\eqref{m1:moveoutm3:mo:act0} ]{$isgn,osgn \\bcmsuch isgn' = isgn$} %"
-    , "    \\item[ \\eqref{m1:moveoutm3:mo:act1} ]{$isgn,osgn \\bcmsuch osgn'  \\2 = osgn  %"
+    , "    \\item[ ]{$loc \\bcmsuch loc' = loc \\1 | t \\fun ext$} %"
+    , "    %\\eqref{m1:moveouta2}"
+    , "    \\item[ ]{$isgn,osgn \\bcmsuch isgn' = isgn$} %"
+    , "    %\\eqref{m1:moveoutm3:mo:act0}"
+    , "    \\item[ ]{$isgn,osgn \\bcmsuch osgn'  \\2 = osgn  %"
     , "  \t\\setminus \\{ loc.t \\}$} %"
+    , "    %\\eqref{m1:moveoutm3:mo:act1}"
     , "  \\end{block}"
     , "  \\item   \\textbf{end} \\\\"
     , "\\end{block}"
@@ -171,6 +197,8 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/m3_m3-ctr-plf.tex" ## True
         "dir/file/machine_m0.tex" ## True
         "dir/file/machine_m0_co.tex"    ## True
+        "dir/file/machine_m0_asm.tex"   ## True
+        "dir/file/machine_m0_def.tex"   ## True
         "dir/file/machine_m0_inv.tex"   ## True
         "dir/file/machine_m0_prog.tex"  ## True
         "dir/file/machine_m0_props.tex" ## True
@@ -179,6 +207,8 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/machine_m0_trans.tex" ## True
         "dir/file/machine_m1.tex" ## True
         "dir/file/machine_m1_co.tex"    ## True
+        "dir/file/machine_m1_asm.tex"   ## True
+        "dir/file/machine_m1_def.tex"   ## True
         "dir/file/machine_m1_inv.tex"   ## True
         "dir/file/machine_m1_prog.tex"  ## True
         "dir/file/machine_m1_props.tex" ## True
@@ -187,6 +217,8 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/machine_m1_trans.tex" ## True
         "dir/file/machine_m2.tex" ## True
         "dir/file/machine_m2_co.tex"    ## True
+        "dir/file/machine_m2_asm.tex"   ## True
+        "dir/file/machine_m2_def.tex"   ## True
         "dir/file/machine_m2_inv.tex"   ## True
         "dir/file/machine_m2_prog.tex"  ## True
         "dir/file/machine_m2_props.tex" ## True
@@ -195,6 +227,8 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/machine_m2_trans.tex" ## True
         "dir/file/machine_m3.tex" ## True
         "dir/file/machine_m3_co.tex"    ## True
+        "dir/file/machine_m3_asm.tex"   ## True
+        "dir/file/machine_m3_def.tex"   ## True
         "dir/file/machine_m3_inv.tex"   ## True
         "dir/file/machine_m3_prog.tex"  ## True
         "dir/file/machine_m3_props.tex" ## True
@@ -208,24 +242,36 @@ case4 = runEitherT $ do
     return $ M.map isJust $ view' files $ execMockFileSystem 
         $ produce_summaries "dir/file.ext" s
 
-case5 :: IO (Either String (Maybe String))
-case5 = runEitherT $ do
-    s <- get_system path0
+case5 :: IO String
+case5 = makeReport $ do
+    s <- get_system' path0
     let fs = execMockFileSystem $ produce_summaries "dir/file.ext" s
-    return $ (fs^.content')^?files.ix "dir/file/machine_m3.tex".traverse
+    return $ fromMaybe "documentation file not found" $ (fs^.content')^?files.ix "dir/file/machine_m3.tex".traverse
 
-result5 :: Either String (Maybe String)
-result5 = Right . Just . unlines $ 
+result5 :: String
+result5 = unlines 
     [ "%!TEX root=../file.ext"
     , "\\begin{block}"
     , "  \\item   \\textbf{machine} m3"
     , "  \\item   \\textbf{refines} m2"
+    , "  \\item   \\textbf{sets}"
+    , "  \\begin{block}"
+    , "    \\item   $\\Blk$"
+    , "    \\item   $\\Train$"
+    , "  \\end{block}"
+    , "  \\item   \\textbf{constants}"
+    , "  \\begin{block}"
+    , "    \\item   $ent \\in \\Blk$"
+    , "    \\item   $ext \\in \\Blk$"
+    , "    \\item   $plf \\subseteq \\Blk$"
+    , "  \\end{block}"
+    , "  \\item   \\input{file/machine_m3_asm}"
     , "  \\item   \\textbf{variables}"
     , "  \\begin{block}"
-    , "    \\item   $in$"
-    , "    \\item   $isgn$"
-    , "    \\item   $loc$"
-    , "    \\item   $osgn$"
+    , "    \\item   $in \\subseteq \\Train$"
+    , "    \\item   $loc \\in \\Train \\pfun \\Blk$"
+    , "    \\item   $isgn \\in \\textbf{Bool}$\\quad(new)"
+    , "    \\item   $osgn \\subseteq \\Blk$\\quad(new)"
     , "  \\end{block}"
     , "  \\item   \\input{file/machine_m3_inv}"
     , "  \\item   \\input{file/machine_m3_prog}"
@@ -233,10 +279,14 @@ result5 = Right . Just . unlines $
     , "  \\item   \\input{file/machine_m3_trans}"
     , "  \\item   \\textbf{initialization}"
     , "  \\begin{block}"
-    , "    \\item[ \\eqref{in0} ]{$loc \\, = \\emptyfun$} %"
-    , "    \\item[ \\eqref{in1} ]{$in = \\emptyset$} %"
-    , "    \\item[ \\eqref{m3:init0} ]{$osgn = \\emptyset$} %"
-    , "    \\item[ \\eqref{m3:init1} ]{$isgn = \\false$} %"
+    , "    \\item[ ]{$loc \\, = \\emptyfun$} %"
+    , "    %\\eqref{in0}"
+    , "    \\item[ ]{$in = \\emptyset$} %"
+    , "    %\\eqref{in1}"
+    , "    \\item[ ]{$osgn = \\emptyset$} %"
+    , "    %\\eqref{m3:init0}"
+    , "    \\item[ ]{$isgn = \\false$} %"
+    , "    %\\eqref{m3:init1}"
     , "  \\end{block}"
     , "  \\textbf{events}"
     , "  \\begin{block}"
@@ -247,4 +297,40 @@ result5 = Right . Just . unlines $
     , "    \\item   \\input{file/m3_m3-ctr-plf}"
     , "  \\end{block}"
     , "  \\item   \\textbf{end} \\\\"
-    , "\\end{block}" ]
+    , "\\end{block}"
+    ]
+
+path6 :: FilePath
+path6 = [path|Tests/lock-free deque/main12.tex|]
+
+result6 :: String
+result6 = unlines
+    [ "\\textbf{definitions}"
+    , "\\begin{block}"
+    , "  \\item[] {$Req \\3\\triangleq [ 'req : \\REQ ]$} %"
+    , "\\end{block}"
+    ]
+
+case6 :: IO String
+case6 = makeReport $ do
+    m <- parse_machine' path6 2
+    return $ getListing $
+        defs_sum m
+
+result7 :: String
+result7 = unlines
+    [ "\\textbf{assumptions}"
+    , "\\begin{block}"
+    , "  \\item[ \\eqref{asm0} ]{$\\neg ext \\in plf \\1\\land \\neg ext = ent$} %"
+    , "  \\item[ \\eqref{asm1} ]{$\\qforall{b}{}{ b \\in \\Blk \\2\\equiv b \\in plf \\1\\lor b = ent \\1\\lor b = ext }$} %"
+    , "  \\item[ \\eqref{asm2} ]{$\\qexists{b}{}{b \\in plf}$} %"
+    , "  \\item[ \\eqref{asm3} ]{$\\neg ent \\in plf$} %"
+    , "  \\item[ \\eqref{asm7} ]{$(\\{ ext \\} \\bunion plf = \\compl \\{ent\\}) \\land (\\{ ent \\} \\bunion plf = \\compl \\{ext\\}) \\land \\{ ext, ent \\} = \\compl plf$} %"
+    , "\\end{block}"
+    ]
+
+case7 :: IO String
+case7 = makeReport $ do
+    m <- parse_machine' path0 2
+    return $ getListing $
+        asm_sum m

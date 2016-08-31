@@ -14,8 +14,9 @@ module Utilities.Graph
 where
 -- 
 
-import Control.DeepSeq
-import Control.Monad
+import           Control.DeepSeq
+import           Control.Monad
+import qualified Control.Precondition as P
 
 import           Data.Array as A ( bounds, Array, (//), array, ixmap )
 import qualified Data.Array as A -- hiding ( (!) )
@@ -119,9 +120,9 @@ times :: (Ord a, Composition b)
 times (Matrix m0 xs x) (Matrix m1 ys y) = Matrix m2 zs z
     where
         -- f :: a -> a -> b
-        f x y = (m0 M.! x) M.! y
+        f x y = (m0 P.! x) P.! y
         -- g :: a -> a -> b
-        g x y = m1 M.! x M.! y
+        g x y = m1 P.! x P.! y
         -- m2 :: Map a (Map a b)
         m2 = fromList $ do
                 x <- xs
@@ -139,7 +140,7 @@ times (Matrix m0 xs x) (Matrix m1 ys y) = Matrix m2 zs z
         z  = x `seqC` y
 
 uppest :: Composition a => [a] -> a
-uppest = foldl up zero 
+uppest = foldl' up zero 
 
 vertices :: Matrix a b -> [a]
 vertices (Matrix _ vs _) = vs
@@ -235,17 +236,17 @@ closure xs = ys
         es = L.map f xs
         n  = length vs
         ys = concatMap g $ A.assocs $ closure_ ar
-        f (u,v) = ((m0 A.! u, m0 A.! v),True)
+        f (u,v) = ((m0 P.! u, m0 P.! v),True)
         g ((i,j),b)
-            | b         = [(m1 A.! i, m1 A.! j)]
+            | b         = [(m1 P.! i, m1 P.! j)]
             | otherwise = []
 
 m_closure :: (Ix b, Ord b) => [(b,b)] -> Array (b,b) Bool
 m_closure xs = ixmap (g m, g n) f $ closure_ ar
     where
         (m0,m1,ar) = matrix_of xs
-        f (x,y)    = (m0 M.! x, m0 M.! y)
-        g (i,j)    = (m1 A.! i, m1 A.! j) 
+        f (x,y)    = (m0 P.! x, m0 P.! y)
+        g (i,j)    = (m1 P.! i, m1 P.! j) 
         (m,n)      = bounds ar
 
 m_closure_with :: (Ord b) => [b] -> [(b,b)] -> Matrix b Bool
@@ -255,18 +256,18 @@ m_closure_with vs es = Matrix (M.map (M.mapKeys convert . fromList . (`zip` repe
         tr          = fromList $ zip [0..] $ nub new_vs
         tr'         = fromList $ zip new_vs ([0..] :: [Int])
         new_vs      = OL.nubSort $ vs ++ L.map fst es ++ L.map snd es
-        vs'         = OL.nubSort $ L.map (tr' M.!) new_vs
-        es'         = L.map (\(x,y) -> (tr' M.! x, tr' M.! y)) es
+        vs'         = OL.nubSort $ L.map (tr' P.!) new_vs
+        es'         = L.map (\(x,y) -> (tr' P.! x, tr' P.! y)) es
         al          = M.map sort $ fromListWith (++) $ L.map m_v vs' ++ L.map m_e es'
         m_v v       = (v,[])
         m_e (v0,v1) = (v0,[v1])
         order       = cycles_with vs' es'
         f m (AcyclicSCC v) = M.adjust (`OL.union` g m v) v m
         f m (CyclicSCC vs) = fromList (zip vs $ repeat $ h m vs) `M.union` m
-        g m v  = unions $ (al M.! v) : L.map (m M.!) (al M.! v)
+        g m v  = unions $ (al P.! v) : L.map (m P.!) (al P.! v)
         h m vs = unions $ vs : L.map (g m) vs
-        result      = M.mapKeys convert $ foldl f al order
-        convert x   = tr M.! x
+        result      = M.mapKeys convert $ foldl' f al order
+        convert x   = tr P.! x
 
 as_matrix :: Ord a => [(a, a)] -> Matrix a Bool
 as_matrix xs = as_matrix_with [] xs
@@ -299,7 +300,7 @@ matrix_of_with rs xs = (m0,m1,ar)
         m1  = array (1,n) $ zip [1..n] vs
         es = L.map f xs
         n  = length vs
-        f (u,v) = ((m0 M.! u, m0 M.! v),True)
+        f (u,v) = ((m0 P.! u, m0 P.! v),True)
 
 --edges_of 
 

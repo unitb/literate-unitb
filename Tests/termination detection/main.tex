@@ -105,7 +105,7 @@
 	\assumption{m2:asm0}{ \neg active = idle } \\
 	\assumption{m2:asm1}{ \finite.Pcs }
 \end{align}
-	\replace{detect}{m1:sch0}{m2:sch0}{}{m2:prog0}{m2:saf0}
+	\replace{detect}{m2:sch0}{m2:prog0}{m2:saf0}
 \begin{align}
 \refine{m2:prog0}{induction}{m2:prog1}{ \var{d}{up}{Pcs} }
 	& \progress{m2:prog1}

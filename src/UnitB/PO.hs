@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns
     ,OverloadedStrings
+    ,ScopedTypeVariables
     ,ViewPatterns
     ,GADTs,TypeFamilies #-}
     -- Behavior hiding
@@ -17,9 +18,10 @@ module UnitB.PO
 where
 
     -- Modules
+import Logic.Expr.Prism
 import Logic.Expr.Scope
 import Logic.Proof
-import           Logic.Proof.POGenerator hiding ( variables )
+import           Logic.Proof.POGenerator hiding ( variables, definitions )
 import qualified Logic.Proof.POGenerator as POG
 import Logic.Theory
 import Logic.WellDefinedness
@@ -102,22 +104,42 @@ sch_lbl           = label "SCH"
 thm_lbl           = label "THM"
 
 assert_ctx :: RawMachineAST -> Context
-assert_ctx m =
-          (Context M.empty (view' variables m `M.union` view' del_vars m) M.empty M.empty M.empty)
+assert_ctx m = empty_ctx
+        & constants .~ (vars `M.union` del)
+        & definitions .~ ds
+    where
+        del  = m!.del_vars
+        vars = m!.variables
+        mkDef n e = makeDef [] n [] (type_of e) e
+        ds   = M.mapWithKey mkDef $ m!.defs
 
 step_ctx :: RawMachineAST -> Context
 step_ctx m = merge_all_ctx 
-        [  Context M.empty (primeAll $ vars `M.union` abs) M.empty M.empty M.empty
+        [  empty_ctx 
+                & constants .~ primeAll (vars `M.union` abs)
+                & definitions .~ ds
         ,  assert_ctx m ]
     where
         abs  = m!.abs_vars
         vars = m!.variables
+        mkDef n e = makeDef [] n [] (type_of e) e
+        ds   = M.mapWithKey mkDef 
+                $ M.mapKeys addPrime 
+                $ primed (vars `M.union` abs) <$> m!.defs
 
 abstract_step_ctx :: RawMachineAST -> Context
 abstract_step_ctx m = merge_all_ctx 
-        [  Context M.empty (primeAll $ view' variables m) M.empty M.empty M.empty
+        [  empty_ctx 
+                & constants .~ primeAll vars
+                & definitions .~ ds
         ,  assert_ctx m ]
     where
+        mkDef n e = makeDef [] n [] (type_of e) e
+        ds   = M.mapWithKey mkDef 
+                $ M.mapKeys addPrime 
+                $ primed vars <$> m!.defs
+        vars = m!.variables
+
 
 evt_saf_ctx :: HasConcrEvent' event RawExpr => event -> Context
 evt_saf_ctx evt  = Context M.empty (evt^.new.params) M.empty M.empty M.empty
@@ -157,6 +179,7 @@ raw_machine_pos' m' = eval_generator $
                         set_syntactic_props syn
                         nameless_hyps $ M.ascElems unnamed 
                         named_hyps $ named_f
+                        setTimeout $ m!.timeout
                         ) $ do
                     let moreTr = additional_transient m
                     forM_ (M.toList (p^.transient) ++ moreTr) $ \tr -> do
@@ -309,11 +332,51 @@ init_witness_fis_po m =
 
 init_fis_po :: RawMachineAST -> M ()
 init_fis_po m = 
-    with 
-        (do _context (assert_ctx m) )
-        (emit_exist_goal [init_fis_lbl] 
-            (M.ascElems $ (view' variables m)  `M.union` (view' abs_vars m)) 
-            (M.ascElems $ m!.inits))
+        with 
+            (do _context (assert_ctx m) 
+                POG.variables det_vars
+                named_hyps $ uncurry (zeq . Word) <$> det_act)
+            (emit_exist_goal [init_fis_lbl] 
+                (M.ascElems $ nonDet_vars) 
+                (M.ascElems $ new_act))
+    where
+        -- pvar = L.map prime $ M.ascElems $ (m!.variables) `M.union` (m!.abs_vars)
+        (det_act,new_act) = splitDetInit vars $ m!.inits
+        vars = (m!.variables)  `M.union` (m!.abs_vars)
+        nonDet_vars = vars `M.difference` det_vars
+        det_vars = symbol_table $ fst <$> det_act
+
+_AssignExpr :: Prism' RawExpr (Var,RawExpr)
+_AssignExpr = prism' (uncurry zeq) (preview [fun| (= $v $e) |]) . swapped . aside _Word . swapped
+
+splitDetInit :: Map Name Var
+             -> Map Label RawExpr
+             -> ( Map Label (Var,RawExpr)
+                , Map Label RawExpr )
+splitDetInit vs acts = (det' & _Wrapped.traverse %~ distr, M.map zall $ M.unionWith (++) clash' nonDet')
+    where
+        acts' = conjuncts <$> acts
+        nonDet :: Map Label (NonEmpty RawExpr) 
+        nonDet' = M.map NE.toList nonDet
+        det :: Map Label (NonEmpty (Var,RawExpr))
+        (nonDet,det) = M.mapMaybe (nonEmpty.fst) &&& M.mapMaybe (nonEmpty.snd) $ M.map isDet acts'
+        distr :: (a,(b,c)) -> (b,(a,c))
+        distr (x,(y,z)) = (y,(x,z))
+        isDet :: [RawExpr] -> ([RawExpr],[(Var,RawExpr)])
+        isDet = partitionEithers . L.map (matching _AssignExpr)
+        clash' :: Map Label [RawExpr]
+        clash' = M.fromListWith (++) $ 
+                M.toList clash & \xs -> [ (l,[Word v `zeq` e]) | (v,es) <- xs, (l,e) <- es ]
+        det'  :: Map Var (Label,RawExpr)
+        clash :: Map Var [(Label,RawExpr)]
+        (clash,det') = mapEither onlyOne $ M.fromListWith (++) $ distrList $ M.toList det
+        distrList :: [(t1, NonEmpty (t, t2))] -> [(t, [(t1, t2)])]
+        distrList xs = [ (v,[(l,e)]) | (l,ne) <- xs, (v,e) <- NE.toList ne ]
+            -- det & _Wrapped %~ _ . L.map sequence
+            -- (_2 %~ pure) . sequence
+        onlyOne [(v,x)] 
+            | M.null (free_vars' vs x) = Right (v,x)
+        onlyOne x   = Left x
 
 type M = POGen
 
@@ -377,7 +440,12 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = provided (null inds) $ do
                                     named_hyps $ M.map (new_dummy ind) grd)
                       $ do
                         emit_goal [as_label evt_lbl,"NEG"] 
-                            $ xp `zimplies` (znot $ primed (m!.variables) xp) 
+                            $ xp `zimplies` (znot $ primed vars xp) 
+        vars = M.unions 
+                    [ m!.variables
+                    , m!.abs_vars
+                    , m!.definedSymbols
+                    ]
         all_ind = M.ascElems $ M.unions $ fv : L.zipWith local_ind (NE.toList evt_lbl) es
         inds    = L.map (fmap1 $ setSuffix "param") $ M.ascElems 
                         $ M.unions (L.map (view indices) es) `M.difference` hint
@@ -465,8 +533,8 @@ prop_saf' m excp (pname, Unless fv p q) =
             inds :: Table SkipOrEvent (Table Name Var)
             inds  = M.map (view indices) $ M.fromList excps
         forM_ evts $ \(evt_lbl,evt) -> do
-            let grd  = evt^.new.guards
-                act  = ba_predicate m evt
+            let grd = evt^.new.guards
+                act = ba_predicate m evt
                 ind = findWithDefault M.empty (Right evt_lbl) inds
                 fvs = symbol_table fv 
                 neq x = znot $ Word x `zeq` Word (suff x)
@@ -486,10 +554,11 @@ prop_saf' m excp (pname, Unless fv p q) =
                         rng
                         $ new_dummy inter $
                             zimplies (p `zand` znot q) 
-                                     (primed vars $ p `zor` q))
+                                     (primed (vars `M.union` (m!.definedSymbols)) 
+                                            $ p `zor` q))
     where
         evts = rights $ L.map (\(x,y) -> (,y) <$> x) $ M.toList $ all_upwards m
-        vars = m!.variables
+        vars = (m!.variables) `M.union` (m!.abs_vars)
         suff = add_suffix "param"
 
 inv_po :: RawMachineAST -> (Label, RawExpr) -> M ()
@@ -499,15 +568,17 @@ inv_po m (pname, xp) =
             $ forM_ (M.toList $ nonSkipUpwards m) $ \(evt_lbl,evt) -> do
                 let grd  = evt^.new.guards
                     act  = ba_predicate m evt
+                    vars = view' variables m `M.union` view' abs_vars m `M.union` view' definedSymbols m
                 with 
                     (do named_hyps $ grd
                         assume_old_guard evt
                         named_hyps $ act
                         named_hyps $ M.map ba_pred $ evt^.abs_actions
+                        POG.variables $ old_indices evt
                         POG.variables $ evt^.new.indices
                         POG.variables $ evt^.new.params)
                     (emit_goal [as_label evt_lbl,inv_lbl,pname] 
-                        (primed (view' variables m `M.union` view' abs_vars m) xp))
+                        (primed vars xp))
         with (do _context $ assert_ctx m
                  named_hyps $ m!.inits 
                  named_hyps $ M.mapKeys as_label $ witnessDef <$> m!.init_witness)
@@ -522,10 +593,16 @@ wit_wd_po m (lbl, evt) =
                  prefix_label $ as_label lbl
                  named_hyps $ evt^.new.guards
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
-            (emit_goal ["WWD"] $ well_definedness $ zall 
-                $ M.ascElems $ witnessDef <$> evt^.witness)
+        (do
+            emit_goal ["WWD"] $ well_definedness $ zall 
+                $ M.ascElems $ witnessDef <$> evt^.witness
+            emit_goal ["WWD"] $ well_definedness $ zall 
+                $ M.ascElems $ witnessDef <$> evt^.param_witness)
 
-wit_fis_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
+old_indices :: RawEventMerging -> Map Name Var
+old_indices evt = M.unions $ evt^.partsOf (abstract_evts.traverse._2.old.indices)
+
+wit_fis_po :: Pre => RawMachineAST -> (EventId, RawEventMerging) -> M ()
 wit_fis_po m (lbl, evt) = 
         with (do _context $ step_ctx m
                  POG.variables $ m!.del_vars
@@ -535,8 +612,13 @@ wit_fis_po m (lbl, evt) =
                  prefix_label $ as_label lbl
                  named_hyps $ evt^.new.guards
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
-            (emit_exist_goal ["WFIS"] pvar 
-                $ M.ascElems $ witnessDef <$> evt^.witness)
+        (do 
+            let old_ind = old_indices evt
+                new_ind = evt^.new.params
+            emit_exist_goal ["WFIS"] pvar 
+                $ M.ascElems $ witnessDef <$> evt^.witness
+            emit_exist_goal ["WFIS"] (M.elems $ old_ind `M.difference` new_ind)
+                $ M.ascElems $ witnessDef <$> evt^.param_witness)
     where
         pvar = L.map prime $ M.ascElems $ view' abs_vars m `M.difference` view' variables m
 
@@ -569,8 +651,8 @@ ind_wit_fis_po m (lbl, evts) =
 removeSkip :: NonEmpty (SkipOrEvent, t) -> [(EventId, t)]
 removeSkip = rights.fmap (view distrLeft).NE.toList
 
-csched_ref_safety :: RawScheduleChange -> RawEventSplitting -> [(Label,RawSafetyProp)]
-csched_ref_safety sch ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_label *** safe)
+csched_ref_safety :: OldNewPair k -> RawEventSplitting -> [(Label,RawSafetyProp)]
+csched_ref_safety (old,new) ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_label *** safe)
         -- | When using witnesses with event indices:
         -- | as /\ cs.i
         -- | either 
@@ -583,8 +665,6 @@ csched_ref_safety sch ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_lab
         -- |     as ↦ i = f.x ∧ cs.i
         -- |     i = f.x ∧ cs.i  unless  ¬as
     where
-        new = (sch^.keep) `M.union` (sch^.add)
-        old = (sch^.keep) `M.union` (sch^.remove)
         ind cevt = M.ascElems $ M.union (cevt^.indices) (ev^.indices)
         safe :: ConcrEvent' RawExpr -> RawSafetyProp
         safe cevt = Unless (ind cevt)
@@ -605,7 +685,7 @@ replace_csched_po m (lbl,evt') = do
                 prefix_label nb ) $ do
             with (do
                     prefix_label "saf") $
-                forM_ (csched_ref_safety ref evt') 
+                forM_ (csched_ref_safety (oldNewPair (evt'^.abstrEvent') ref) evt') 
                     $ prop_saf' m (Just lbl)
             with (do
                     _context $ assert_ctx m
@@ -643,14 +723,17 @@ replace_csched_po m (lbl,evt') = do
                                         cs -> singleton "split" $ zsome $ NE.map zall cs
                     forM_ (M.toList new_part') $ \(lbl,sch) -> do
                         emit_goal ["prog",plbl,"rhs",lbl] $ $typeCheck$
-                            Right q0 .=> Right sch
+                            Right q0 .=> Right sch \/ mznot (Right $ zall old_c)
 
 weaken_csched_po :: RawMachineAST -> (EventId,RawEventSplitting) -> M ()
 weaken_csched_po m (lbl,evt) = do
-            let weaken_sch = do
+            let weaken_sch :: NonEmpty (Map Label RawExpr, Map Label RawExpr)
+                weaken_sch = do
                         e <- evt^.evt_pairs
-                        return $ (e^.added.coarse_sched) `M.difference` M.unions (L.map (view add) $ e^.c_sched_ref)
-
+                        let addRule = M.unions (L.map (view add) $ e^.c_sched_ref)
+                            new     = e^.added.coarse_sched
+                        return ( new `M.difference` addRule
+                               , new `M.intersection` addRule )
                 old_c = evt^.old.coarse_sched
             with (do
                     prefix_label $ as_label lbl
@@ -665,13 +748,20 @@ weaken_csched_po m (lbl,evt) = do
                         -- | old version admits old_f as assumption
                         -- | why is it correct or needed?
                         -- | named_hyps old_f
-                    named_hyps old_c) $ do
+                    named_hyps old_c  ) $ do
+                unless (isOneToOne evt) $
+                    with (do
+                            prefix_label "saf") $ do
+                        let ref = unrefinedSched evt
+                        forM_ (F.concat $ csched_ref_safety <$> ref <*> pure evt) 
+                            $ prop_saf' m (Just lbl)
                 case weaken_sch of
-                    m :| [] -> 
-                        forM_ (M.toList m) $ \(lbl,sch) -> do
+                    (m0,m1) :| [] -> 
+                        with (named_hyps m1)
+                        $ forM_ (M.toList $ m0) $ \(lbl,sch) -> do
                             emit_goal [lbl] sch
                     ms -> 
-                        emit_goal [] $ zsome $ NE.map zall ms
+                        emit_goal [] $ zsome $ NE.map zall (fst <$> ms)
 
 replace_fsched_po :: RawMachineAST -> (EventId,RawEventSplitting) -> M ()
 replace_fsched_po m (lbl,aevt) = do
@@ -736,22 +826,25 @@ intersections []  = assertFalse' "intersection of empty list is undefined"
 intersections [x] = x
 intersections (x:xs) = x `intersection` intersections xs                                
 
-strengthen_guard_po :: RawMachineAST -> (EventId,RawEventMerging) -> M ()
+strengthen_guard_po :: Pre => RawMachineAST -> (EventId,RawEventMerging) -> M ()
 strengthen_guard_po m (lbl,evt) = 
         with (do
             prefix_label $ as_label lbl
             prefix_label "GRD/str"
             _context $ assert_ctx m
             _context $ step_ctx m
+            POG.variables $ M.unions $ evt^.partsOf (abstract_evts.traverse._2.old.indices)
             POG.variables $ evt^.new.indices
             POG.variables $ evt^.new.params 
+            named_hyps $ M.mapKeys as_label $ witnessDef <$> evt^.param_witness
             named_hyps $ invariants m 
             named_hyps $ evt^.new.guards ) $ do
         case evt^.evt_pairs of
-          evt :| [] ->
+          evt :| [] -> 
             forM_ (M.toList $ evt^.deleted.guards) $ \(lbl,grd) -> do
                 emit_goal [lbl] grd
-          es -> emit_goal [] $ zsome $ NE.map (zall . M.ascElems . view (deleted.guards)) es
+          es -> 
+            emit_goal [] $ zsome $ NE.map (zall . M.ascElems . view (deleted.guards)) es
 
 sim_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
 sim_po m (lbl, evt) = 
@@ -761,6 +854,7 @@ sim_po m (lbl, evt) =
                 POG.variables $ evt^.new.params 
                 prefix_label $ as_label lbl
                 prefix_label "SIM"
+                named_hyps (invariants m)
                 named_hyps (evt^.new.guards)
                 -- nameless_hyps $ _ $ evt^.abstract_evts
                 named_hyps (ba_predicate m evt) ) $
@@ -776,15 +870,37 @@ fis_po m (lbl, evt) =
                  POG.variables $ evt^.indices
                  POG.variables $ evt^.params 
                  POG.variables $ m!.del_vars
+                 POG.variables $ (m!.variables) `M.difference` nonDet_vars
                  primed_vars $ m!.del_vars
                  named_hyps $ invariants m
                  -- nameless_hyps $ _ $ evt^.abstract_evts
                  named_hyps $ ba_predicate' (m!.abs_vars) $ evt^.abs_actions
-                 named_hyps $ evt^.new.guards)
+                 named_hyps $ evt^.new.guards
+                 named_hyps $ review _AssignExpr <$> det_act)
             (emit_exist_goal [as_label lbl, fis_lbl] pvar 
-                $ M.ascElems $ ba_predicate' (m!.variables) $ evt^.new_actions)
+                $ M.ascElems $ ba_predicate' nonDet_vars $ new_act)
     where
-        pvar = L.map prime $ M.ascElems $ view' variables m `M.union` view' abs_vars m
+        pvar = L.map prime $ M.ascElems $ (m!.variables) `M.union` (m!.abs_vars)
+        (det_act,new_act) = splitNonDet $ evt^.new_actions 
+        nonDet_vars = frame new_act
+
+splitNonDet :: forall expr. Map Label (Action' expr) 
+            -> ( Map Label (Var,expr)
+               , Map Label (Action' expr) )
+splitNonDet acts = (det' & _Wrapped.traverse %~ distr, clash' `M.union` nonDet)
+    where
+        (nonDet,det) = mapEither isDet acts
+        distr :: (a,(b,c)) -> (b,(a,c))
+        distr (x,(y,z)) = (y,(x,z))
+        isDet = matching _Assign
+        clash' :: Map Label (Action' expr)
+        clash' = clash & _Wrapped %~ \xs -> [ (l,Assign v e) | (v,es) <- xs, (l,e) <- es ]
+        det'  :: Map Var (Label,expr)
+        clash :: Map Var [(Label,expr)]
+        (clash,det') = mapEither onlyOne $ M.fromListWith (++) $ distrList $ M.toList det
+        distrList xs = [ (v,[(l,e)]) | (l,(v,e)) <- xs ]
+        onlyOne [x] = Right x
+        onlyOne x   = Left x
 
 tr_wd_po :: RawMachineAST -> (Label, RawTransient) -> M ()
 tr_wd_po  m (lbl, Tr vs p _ (TrHint wit _)) = 
@@ -832,10 +948,16 @@ co_wd_po m (lbl, Co vs p) =
                  prefix_label "CO"
                  _context $ step_ctx m
                  nameless_hyps $ M.elems $
-                    M.map (primed $ view' variables m) $ invariants m
+                    M.map (primed vars) 
+                        $ invariants m
                  named_hyps $ invariants m)
              $ emit_goal ["WD"]
                 $ well_definedness $ zforall vs ztrue p
+    where
+        vars = M.unions [ view' variables m
+                        , view' abs_vars m
+                        , view' definedSymbols m
+                        ]
 
 inv_wd_po :: RawMachineAST -> M ()
 inv_wd_po m = 

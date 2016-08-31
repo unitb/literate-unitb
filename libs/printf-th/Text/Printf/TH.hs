@@ -1,9 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Text.Printf.TH where
 
-import Text.Printf as P
+import Data.List 
+
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
+
+import Text.Printf as P
 
 printf :: QuasiQuoter
 printf = QuasiQuoter
@@ -40,4 +43,4 @@ subst xs n z
         m = length fn
 
 substAll :: String -> [String] -> String
-substAll xs ys = foldl (uncurry <$> subst) xs $ zip [0..] ys
+substAll xs ys = foldl' (uncurry <$> subst) xs $ zip [0..] ys

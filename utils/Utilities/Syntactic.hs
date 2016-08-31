@@ -1,11 +1,12 @@
 module Utilities.Syntactic where
 
 import Control.DeepSeq
+import qualified Control.Invariant as I
+import Control.Precondition
 import Control.Lens
 
 import Control.Monad
 import Control.Monad.Trans.Either
-import Control.Monad.IO.Class
 
 import Data.List
 import Data.List.NonEmpty as NE (NonEmpty(..))
@@ -20,18 +21,17 @@ import GHC.Read
 import GHC.SrcLoc
 import GHC.Stack.Utils
 
-import Language.Haskell.TH (Loc(..))
-
 import Safe
 
 import Test.QuickCheck as QC
 import Test.QuickCheck.ZoomEq
 
 import Text.ParserCombinators.ReadPrec
+import Text.Pretty
 import Text.Printf.TH
 
 
-data Error = Error String LineInfo | MLError String [(String,LineInfo)]
+data Error = Error String LineInfo | MLError String (NonEmpty (String,LineInfo))
     deriving (Eq,Typeable,Show,Ord,Read,Generic)
 
 data LineInfo = LI 
@@ -117,16 +117,16 @@ instance Syntactic LineInfo where
     traverseLineInfo = id
 
 instance ZoomEq Error where
-    (.==) = (===)
+    (.==) = (I.===)
 instance Syntactic Error where
     line_info (Error _ li) = li
-    line_info (MLError _ ls) = minimum $ map snd ls
+    line_info (MLError _ ls) = minimum $ snd <$> ls
     after = line_info
     traverseLineInfo f (Error x li) = Error x <$> f li
     traverseLineInfo f (MLError x lis) = MLError x <$> (traverse._2) f lis
 
 instance ZoomEq LineInfo where
-    (.==) = (===)
+    (.==) = (I.===)
 instance Arbitrary LineInfo where
     arbitrary = LI "file" <$> QC.elements [0,5,10] <*> QC.elements [0,5,10]
 
@@ -136,14 +136,14 @@ showLiLong (LI fn ln col) = [printf|%s:%d:%d|] fn ln col
 report :: Error -> String
 report (Error msg li) = [printf|%s:\n    %s|] (showLiLong li) msg
 report (MLError msg ys) = [printf|%s\n%s|] msg
-                (unlines 
+                (intercalate "\n" 
                     $ map (\(msg,li) -> [printf|%s:\n\t%s\n|] (showLiLong li) msg) 
-                    $ sortOn snd ys)
+                    $ sortOn snd $ NE.toList ys)
 
-makeReport :: MonadIO m => EitherT [Error] m String -> m String
+makeReport :: Monad m => EitherT [Error] m String -> m String
 makeReport = liftM fst . makeReport' () . liftM (,())
 
-makeReport' :: MonadIO m => a -> EitherT [Error] m (String,a) -> m (String,a)
+makeReport' :: Monad m => a -> EitherT [Error] m (String,a) -> m (String,a)
 makeReport' def m = eitherT f return m
     where    
         f x = return ("Left " ++ show_err x,def)
@@ -164,19 +164,30 @@ shrink_error_list es' = do
         less_specific e0@(Error _ _) e1@(Error _ _) = e0 == e1
         less_specific (MLError m0 ls0) (MLError m1 ls1) = m0 == m1 && ls0' `subset` ls1'
             where
-                ls0' = sortOn snd ls0
-                ls1' = sortOn snd ls1
+                ls0' = sortOn snd $ NE.toList ls0
+                ls1' = sortOn snd $ NE.toList ls1
         less_specific _ _ = False
         es = nubSort es'
 
 data TokenStream a = StringLi [(a,LineInfo)] LineInfo
+    deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
 
 type StringLi = TokenStream Char
+
+instance ZoomEq a => ZoomEq (TokenStream a) where
+instance PrettyPrintable LineInfo where
+    pretty (LI _ i j) = [printf|(li:%d:%d)|] i j
+instance PrettyPrintable a => PrettyPrintable (TokenStream a) where
+    pretty str@(StringLi xs _) = pretty (line_info str) ++ ": " ++ pretty (map fst xs)
 
 instance Syntactic (TokenStream a) where
     line_info (StringLi xs li) = headDef li (map snd xs)
     after (StringLi _ li) = li
     traverseLineInfo f (StringLi xs li) = StringLi <$> (traverse._2) f xs <*> f li
+
+instance Arbitrary def => Arbitrary (TokenStream def) where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
 
 unconsStream :: TokenStream a -> Maybe (a,LineInfo,TokenStream a)
 unconsStream (StringLi ((x,li):xs) li') = Just (x,li,StringLi xs li')
@@ -216,17 +227,21 @@ asStringLi li xs = unlinesLi ys'
 asLI :: Loc -> LineInfo
 asLI loc = uncurry (LI (loc_filename loc)) (loc_start loc)
 
+mkLI :: String -> LineInfo
+mkLI str = LI str 1 1
+
 locToLI :: SrcLoc -> LineInfo
 locToLI loc = LI
             (srcLocFile loc) 
             (srcLocStartLine loc)
             (srcLocStartCol loc)
 
-errorTrace :: [FilePath] -> CallStack -> String -> [Error]
-errorTrace fs stack msg = [MLError msg $ map (_2 %~ locToLI) loc]
+errorTrace :: I.Pre => [FilePath] -> CallStack -> String -> [Error]
+errorTrace fs stack msg = [MLError msg $ nonEmpty' $ loc & mapped._2 %~ locToLI]
     where
         loc = getSrcLocs fs stack
 
-instance NFData Error
+instance NFData Error 
 instance NFData LineInfo
+instance NFData a => NFData (TokenStream a)
 instance Serialize LineInfo where

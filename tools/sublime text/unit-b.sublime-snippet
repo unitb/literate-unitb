@@ -1,0 +1,16 @@
+<snippet>
+  <content><![CDATA[
+\event{${1:<name>}}{${2:<indices>}} % name [indices]
+  {${1:}}  % abstract event
+  {${3:}}    % coarse schedule
+  {${4:}}    % fine schedule
+  {${5:}}    % parameters
+  {${6:}}    % guard
+  {${7:}}    % witness
+  {${8:}}    % action
+]]></content>
+  <!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+  <tabTrigger>event</tabTrigger>
+  <!-- Optional: Set a scope to limit where the snippet will trigger -->
+  <!-- <scope>text.latex</scope> -->
+</snippet>

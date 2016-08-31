@@ -132,6 +132,7 @@ instance IsMap MapWithHash where
     filter f = mapWithHash %~ filter f
     {-# INLINE filterWithKey #-}
     filterWithKey f = mapWithHash %~ filterWithKey (f . key)
+    partition = partitionWithKey . const
     {-# INLINE partitionWithKey #-}
     partitionWithKey f = onPair mapWithHash $
             partitionWithKey (f . key)

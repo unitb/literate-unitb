@@ -21,6 +21,7 @@ module Logic.Operator
     , implies, follows, equiv
     , combine, precede
     , mk_expr, mk_unary
+    , mk_expr', mk_unary'
         -- Lenses
     , new_ops 
     , prec 
@@ -39,6 +40,7 @@ import Logic.Expr
 
     -- Libraries
 import Control.DeepSeq
+import qualified Control.Invariant as I
 import Control.Lens
 import Control.Monad
 import Control.Precondition
@@ -77,8 +79,15 @@ mk_expr :: BinOperator -> Expr -> Expr -> Either [String] Expr
 mk_expr (BinOperator _ _ Flipped f) x y = flip (typ_fun2 f) (Right x) (Right y)
 mk_expr (BinOperator _ _ Direct f) x y  = typ_fun2 f (Right x) (Right y)
 
+mk_expr' :: BinOperator -> UntypedExpr -> UntypedExpr -> UntypedExpr
+mk_expr' (BinOperator _ _ Flipped f) x y = flip (fun2' f) x y
+mk_expr' (BinOperator _ _ Direct f) x y  = fun2' f x y
+
 mk_unary :: UnaryOperator -> Expr -> Either [String] Expr
 mk_unary (UnaryOperator _ _ f) x = typ_fun1 f $ Right x
+
+mk_unary' :: UnaryOperator -> UntypedExpr -> UntypedExpr
+mk_unary' (UnaryOperator _ _ f) x = fun1 f x
 
 data Assoc = LeftAssoc | RightAssoc | NoAssoc
     deriving (Show,Eq,Typeable,Generic)
@@ -87,7 +96,18 @@ data Flipping = Flipped | Direct
     deriving (Eq,Ord,Show,Generic,Typeable,Bounded,Enum)
 
 data Notation = Notation
-    { _new_ops :: [Operator]
+    { -- _new_ops a list of all the operators defined by this Notation object
+      _new_ops :: [Operator]
+      -- _prec specifies a partial order using three levels of nested lists
+      -- (can be seen as a set of independent constraints)
+      -- Example:
+      -- if _prec == [ xs , ys ], xs specifies one way in which operators have
+      -- precedence and ys specifies a different way.
+      -- And when looking at xs, it may be the case that xs == [ [*,/] , [+,-] ]
+      -- which means that * binds tighter than both + and -, and so does /
+      -- However, no precedence is implied between * and / and between + and -
+      -- In a way, they are on the same level of precedence and using them together
+      -- is ambiguous; unless they are mutually left / right associative.
     , _prec :: [[[Operator]]] 
     , _left_assoc :: [[BinOperator]]
     , _right_assoc :: [[BinOperator]]
@@ -99,7 +119,7 @@ data Notation = Notation
     } deriving (Eq,Generic,Show)
 
 instance ZoomEq Notation where
-    (.==) = (===)
+    (.==) = (I.===)
 instance PrettyPrintable Notation where
     pretty _ = "<notation>" 
 
@@ -221,7 +241,7 @@ data BinOperator = BinOperator InternalName Name Flipping Fun
     deriving (Typeable,Generic,Eq,Ord,Show)
 
 instance ZoomEq BinOperator where
-    (.==) = (===)
+    (.==) = (I.===)
 
 instance PrettyPrintable BinOperator where
     pretty (BinOperator x y _ _) = pretty (x,y) -- format str x y
@@ -272,7 +292,7 @@ assoc_table :: Notation -> Matrix Operator Assoc
 assoc_table ops 
 --      | not $ L.null complete = error $ "assoc': all new operators are not declared: " ++ show complete
         | not $ L.null cycles   = error $ "assoc': cycles exist in the precedence graph" ++ show cycles
-        | otherwise   = foldl (G.unionWith join) (G.empty NoAssoc)
+        | otherwise   = foldl' (G.unionWith join) (G.empty NoAssoc)
                   [ G.map (f LeftAssoc) pm :: Matrix Operator Assoc
                   , G.map (f RightAssoc) $ G.transpose pm
                   , G.map (f LeftAssoc) $ G.mapKeys g lm
@@ -306,6 +326,7 @@ functional_notation = with_assoc empty_notation
                      [ [apply]
                      , [pair_op]
                      , [equal] ]]
+    , _commands    = [ Command [tex|\ifelse|] [smt|ite|] 3 ite_fun ]
     , _left_assoc  = [[apply],[pair_op]]
     , _right_assoc = []
     , _relations   = []

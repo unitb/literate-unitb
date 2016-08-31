@@ -70,12 +70,7 @@ part3 = test_cases
 
 result0 :: String
 result0 = unlines 
-    [ "  o  m0/INIT/FIS/a"
-    , "  o  m0/INIT/FIS/b"
-    , "  o  m0/INIT/FIS/c"
-    , "  o  m0/INIT/FIS/f"
-    , "  o  m0/INIT/FIS/n"
-    , "  o  m0/INIT/INV/inv0"
+    [ "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/INV/inv2"
     , "  o  m0/INIT/INV/inv3/goal"
@@ -84,9 +79,6 @@ result0 = unlines
     , "  o  m0/INIT/INV/inv3/step 1"
     , "  o  m0/INIT/INV/inv3/step 2"
     , "  o  m0/INIT/INV/inv3/step 3"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
-    , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
     , "  o  m0/evt/FIS/c@prime"
@@ -111,28 +103,15 @@ result0 = unlines
     , "  o  m0/evt/INV/inv1/step 7"
     , "  o  m0/evt/INV/inv2/easy"
     , " xxx m0/evt/INV/inv3"
-    , "  o  m0/evt/WD/ACT/a0"
-    , "  o  m0/evt/WD/ACT/a1"
-    , "  o  m0/evt/WD/ACT/a2"
-    , "  o  m0/evt/WD/ACT/a3"
-    , "  o  m0/evt/WD/C_SCH"
-    , "  o  m0/evt/WD/F_SCH"
-    , "  o  m0/evt/WD/GRD"
-    , "  o  m0/evt/WWD"
-    , "passed 48 / 49"
+    , "passed 32 / 33"
     ]
 
-path0 :: String
-path0 = "Tests/cubes-t0.tex"
+path0 :: FilePath
+path0 = [path|Tests/cubes-t0.tex|]
 
 result1 :: String
 result1 = unlines
-    [ "  o  m0/INIT/FIS/a"
-    , "  o  m0/INIT/FIS/b"
-    , "  o  m0/INIT/FIS/c"
-    , "  o  m0/INIT/FIS/f"
-    , "  o  m0/INIT/FIS/n"
-    , "  o  m0/INIT/INV/inv0"
+    [ "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/INV/inv2"
     , "  o  m0/INIT/INV/inv3/goal"
@@ -142,9 +121,6 @@ result1 = unlines
     , "  o  m0/INIT/INV/inv3/step 2"
     , "  o  m0/INIT/INV/inv3/step 3"
     , "  o  m0/INIT/INV/inv4"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
-    , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
     , "  o  m0/evt/FIS/c@prime"
@@ -179,29 +155,15 @@ result1 = unlines
     , "  o  m0/evt/INV/inv3/step 5"
     , "  o  m0/evt/INV/inv3/step 6"
     , "  o  m0/evt/INV/inv4"
-    , "  o  m0/evt/WD/ACT/a0"
-    , "  o  m0/evt/WD/ACT/a1"
-    , "  o  m0/evt/WD/ACT/a2"
-    , "  o  m0/evt/WD/ACT/a3"
-    , "  o  m0/evt/WD/ACT/a4"
-    , "  o  m0/evt/WD/C_SCH"
-    , "  o  m0/evt/WD/F_SCH"
-    , "  o  m0/evt/WD/GRD"
-    , "  o  m0/evt/WWD"
-    , "passed 61 / 61"
+    , "passed 44 / 44"
     ]
 
-path1 :: String
-path1 = "Tests/cubes-t1.tex"
+path1 :: FilePath
+path1 = [path|Tests/cubes-t1.tex|]
 
 result2 :: String
 result2 = unlines
-    [ "  o  m0/INIT/FIS/a"
-    , "  o  m0/INIT/FIS/b"
-    , "  o  m0/INIT/FIS/c"
-    , "  o  m0/INIT/FIS/f"
-    , "  o  m0/INIT/FIS/n"
-    , "  o  m0/INIT/INV/inv0"
+    [ "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/INV/inv2"
     , "  o  m0/INIT/INV/inv3/goal"
@@ -212,8 +174,6 @@ result2 = unlines
     , "  o  m0/INIT/INV/inv3/step 3"
     , "  o  m0/INIT/INV/inv4"
     , "  o  m0/INIT/INV/inv5"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
@@ -257,29 +217,15 @@ result2 = unlines
     , "  o  m0/evt/INV/inv5/main goal/step 3"
     , "  o  m0/evt/INV/inv5/main goal/step 4"
     , "  o  m0/evt/INV/inv5/main goal/step 5"
-    , "  o  m0/evt/WD/ACT/a0"
-    , "  o  m0/evt/WD/ACT/a1"
-    , "  o  m0/evt/WD/ACT/a2"
-    , "  o  m0/evt/WD/ACT/a3"
-    , "  o  m0/evt/WD/ACT/a4"
-    , "  o  m0/evt/WD/C_SCH"
-    , "  o  m0/evt/WD/F_SCH"
-    , "  o  m0/evt/WD/GRD"
-    , "  o  m0/evt/WWD"
-    , "passed 70 / 70"
+    , "passed 54 / 54"
     ]
 
-path2 :: String
-path2 = "Tests/cubes-t2.tex"
+path2 :: FilePath
+path2 = [path|Tests/cubes-t2.tex|]
 
 result3 :: String
 result3 = unlines
-    [ "  o  m0/INIT/FIS/a"
-    , "  o  m0/INIT/FIS/b"
-    , "  o  m0/INIT/FIS/c"
-    , "  o  m0/INIT/FIS/f"
-    , "  o  m0/INIT/FIS/n"
-    , "  o  m0/INIT/INV/inv0"
+    [ "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/INV/inv2"
     , "  o  m0/INIT/INV/inv3/goal"
@@ -291,8 +237,6 @@ result3 = unlines
     , "  o  m0/INIT/INV/inv4"
     , "  o  m0/INIT/INV/inv5"
     , "  o  m0/INIT/INV/inv6"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
@@ -337,20 +281,11 @@ result3 = unlines
     , "  o  m0/evt/INV/inv5/main goal/step 4"
     , "  o  m0/evt/INV/inv5/main goal/step 5"
     , "  o  m0/evt/INV/inv6"
-    , "  o  m0/evt/WD/ACT/a0"
-    , "  o  m0/evt/WD/ACT/a1"
-    , "  o  m0/evt/WD/ACT/a2"
-    , "  o  m0/evt/WD/ACT/a3"
-    , "  o  m0/evt/WD/ACT/a4"
-    , "  o  m0/evt/WD/C_SCH"
-    , "  o  m0/evt/WD/F_SCH"
-    , "  o  m0/evt/WD/GRD"
-    , "  o  m0/evt/WWD"
-    , "passed 72 / 72"
+    , "passed 56 / 56"
     ]
 
-path3 :: String
-path3 = "Tests/cubes-t3.tex"
+path3 :: FilePath
+path3 = [path|Tests/cubes-t3.tex|]
 
 result4 :: Either [Error] (Table ProgId ProgressProp)
 result4 = M.map (fmap (DispExpr "")) <$> either g Right (do
@@ -382,8 +317,8 @@ result4 = M.map (fmap (DispExpr "")) <$> either g Right (do
         li         = LI path4 0 0
         g xs = Left $ map (`Error` li) xs
 
-path4 :: String
-path4 = "Tests/cubes-t6.tex"
+path4 :: FilePath
+path4 = [path|Tests/cubes-t6.tex|]
 
 case4 :: IO (Either [Error] (Table ProgId ProgressProp))
 case4 = runEitherT (do
@@ -424,12 +359,7 @@ case6 = verify path6 0
 
 result6 :: String
 result6 = unlines
-    [ "  o  m0/INIT/FIS/a"
-    , "  o  m0/INIT/FIS/b"
-    , "  o  m0/INIT/FIS/c"
-    , "  o  m0/INIT/FIS/f"
-    , "  o  m0/INIT/FIS/n"
-    , "  o  m0/INIT/INV/inv0"
+    [ "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/INV/inv2"
     , "  o  m0/INIT/INV/inv3/goal"
@@ -442,8 +372,6 @@ result6 = unlines
     , "  o  m0/INIT/INV/inv5"
     , "  o  m0/INIT/INV/inv6"
     , " xxx m0/INIT/INV/inv8"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
@@ -498,56 +426,28 @@ result6 = unlines
     , "  o  m0/evt/INV/inv8"
     , "  o  m0/evt/SAF/saf0"
     , "  o  m0/evt/SCH/grd0"
-    , "  o  m0/evt/WD/ACT/a0"
-    , "  o  m0/evt/WD/ACT/a1"
-    , "  o  m0/evt/WD/ACT/a2"
-    , "  o  m0/evt/WD/ACT/a3"
-    , "  o  m0/evt/WD/ACT/a4"
-    , "  o  m0/evt/WD/C_SCH"
-    , "  o  m0/evt/WD/F_SCH"
-    , "  o  m0/evt/WD/GRD"
-    , "  o  m0/evt/WWD"
-    , "  o  m0/prog0/LIVE/monotonicity/lhs"
     , "  o  m0/prog0/LIVE/monotonicity/rhs"
-    , "  o  m0/prog0/PROG/WD/lhs"
-    , "  o  m0/prog0/PROG/WD/rhs"
     , " xxx m0/prog1/LIVE/add"
-    , "  o  m0/prog1/PROG/WD/lhs"
-    , "  o  m0/prog1/PROG/WD/rhs"
     , "  o  m0/prog2/LIVE/trading/lhs"
     , "  o  m0/prog2/LIVE/trading/rhs"
-    , "  o  m0/prog2/PROG/WD/lhs"
-    , "  o  m0/prog2/PROG/WD/rhs"
     , "  o  m0/prog3/LIVE/PSP/lhs"
     , "  o  m0/prog3/LIVE/PSP/rhs"
-    , "  o  m0/prog3/PROG/WD/lhs"
-    , "  o  m0/prog3/PROG/WD/rhs"
     , "  o  m0/prog4/LIVE/discharge/tr/lhs"
     , " xxx m0/prog4/LIVE/discharge/tr/rhs"
-    , "  o  m0/prog4/PROG/WD/lhs"
-    , "  o  m0/prog4/PROG/WD/rhs"
-    , "  o  m0/saf0/SAF/WD/lhs"
-    , "  o  m0/saf0/SAF/WD/rhs"
-    , "  o  m0/tr0/TR/WD"
     , "  o  m0/tr0/TR/evt/EN"
     , "  o  m0/tr0/TR/evt/NEG"
-    , "passed 103 / 107"
+    , "passed 73 / 77"
     ]
 
-path6 :: String
-path6 = "Tests/cubes-t5.tex"
+path6 :: FilePath
+path6 = [path|Tests/cubes-t5.tex|]
 
 case7 :: IO (String, Table Label Sequent)
 case7 = verify path7 0
 
 result7 :: String
 result7 = unlines
-    [ "  o  m0/INIT/FIS/a"
-    , "  o  m0/INIT/FIS/b"
-    , "  o  m0/INIT/FIS/c"
-    , "  o  m0/INIT/FIS/f"
-    , "  o  m0/INIT/FIS/n"
-    , "  o  m0/INIT/INV/inv0"
+    [ "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/INV/inv2"
     , "  o  m0/INIT/INV/inv3/goal"
@@ -559,8 +459,6 @@ result7 = unlines
     , "  o  m0/INIT/INV/inv4"
     , "  o  m0/INIT/INV/inv5"
     , "  o  m0/INIT/INV/inv6"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
@@ -613,74 +511,34 @@ result7 = unlines
     , "  o  m0/evt/INV/inv6/step 4"
     , " xxx m0/evt/INV/inv6/step 5"
     , "  o  m0/evt/SAF/saf0"
-    , "  o  m0/evt/WD/ACT/a0"
-    , "  o  m0/evt/WD/ACT/a1"
-    , "  o  m0/evt/WD/ACT/a2"
-    , "  o  m0/evt/WD/ACT/a3"
-    , "  o  m0/evt/WD/ACT/a4"
-    , "  o  m0/evt/WD/C_SCH"
-    , "  o  m0/evt/WD/F_SCH"
-    , "  o  m0/evt/WD/GRD"
-    , "  o  m0/evt/WWD"
-    , "  o  m0/prog0/LIVE/monotonicity/lhs"
     , "  o  m0/prog0/LIVE/monotonicity/rhs"
-    , "  o  m0/prog0/PROG/WD/lhs"
-    , "  o  m0/prog0/PROG/WD/rhs"
     , " xxx m0/prog1/LIVE/add"
-    , "  o  m0/prog1/PROG/WD/lhs"
-    , "  o  m0/prog1/PROG/WD/rhs"
     , " xxx m0/prog10/LIVE/add"
-    , "  o  m0/prog10/PROG/WD/lhs"
-    , "  o  m0/prog10/PROG/WD/rhs"
     , " xxx m0/prog2/LIVE/trading/lhs"
     , "  o  m0/prog2/LIVE/trading/rhs"
-    , "  o  m0/prog2/PROG/WD/lhs"
-    , "  o  m0/prog2/PROG/WD/rhs"
     , " xxx m0/prog3/LIVE/PSP/lhs"
     , " xxx m0/prog3/LIVE/PSP/rhs"
-    , "  o  m0/prog3/PROG/WD/lhs"
-    , "  o  m0/prog3/PROG/WD/rhs"
     , " xxx m0/prog4/LIVE/add"
-    , "  o  m0/prog4/PROG/WD/lhs"
-    , "  o  m0/prog4/PROG/WD/rhs"
     , " xxx m0/prog5/LIVE/transitivity/lhs"
     , "  o  m0/prog5/LIVE/transitivity/mhs/0/1"
     , "  o  m0/prog5/LIVE/transitivity/rhs"
-    , "  o  m0/prog5/PROG/WD/lhs"
-    , "  o  m0/prog5/PROG/WD/rhs"
     , " xxx m0/prog6/LIVE/add"
-    , "  o  m0/prog6/PROG/WD/lhs"
-    , "  o  m0/prog6/PROG/WD/rhs"
     , " xxx m0/prog7/LIVE/add"
-    , "  o  m0/prog7/PROG/WD/lhs"
-    , "  o  m0/prog7/PROG/WD/rhs"
-    , "  o  m0/prog8/LIVE/transitivity/lhs"
     , "  o  m0/prog8/LIVE/transitivity/mhs/0/1"
     , "  o  m0/prog8/LIVE/transitivity/rhs"
-    , "  o  m0/prog8/PROG/WD/lhs"
-    , "  o  m0/prog8/PROG/WD/rhs"
     , " xxx m0/prog9/LIVE/add"
-    , "  o  m0/prog9/PROG/WD/lhs"
-    , "  o  m0/prog9/PROG/WD/rhs"
-    , "  o  m0/saf0/SAF/WD/lhs"
-    , "  o  m0/saf0/SAF/WD/rhs"
-    , "passed 111 / 122"
+    , "passed 69 / 80"
     ]
 
-path7 :: String
-path7 = "Tests/cubes-t4.tex"
+path7 :: FilePath
+path7 = [path|Tests/cubes-t4.tex|]
 
 case8 :: IO (String, Table Label Sequent)
 case8 = verify path8 0
 
 result8 :: String
 result8 = unlines
-    [ "  o  m0/INIT/FIS/a"
-    , "  o  m0/INIT/FIS/b"
-    , "  o  m0/INIT/FIS/c"
-    , "  o  m0/INIT/FIS/f"
-    , "  o  m0/INIT/FIS/n"
-    , "  o  m0/INIT/INV/inv0"
+    [ "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/INV/inv2"
     , "  o  m0/INIT/INV/inv3/goal"
@@ -693,8 +551,6 @@ result8 = unlines
     , "  o  m0/INIT/INV/inv5"
     , "  o  m0/INIT/INV/inv6"
     , "  o  m0/INIT/INV/inv7"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
@@ -749,57 +605,27 @@ result8 = unlines
     , "  o  m0/evt/SAF/saf0"
     , "  o  m0/evt/SAF/saf1"
     , "  o  m0/evt/SCH/grd0"
-    , "  o  m0/evt/WD/ACT/a0"
-    , "  o  m0/evt/WD/ACT/a1"
-    , "  o  m0/evt/WD/ACT/a2"
-    , "  o  m0/evt/WD/ACT/a3"
-    , "  o  m0/evt/WD/ACT/a4"
-    , "  o  m0/evt/WD/C_SCH"
-    , "  o  m0/evt/WD/F_SCH"
-    , "  o  m0/evt/WD/GRD"
-    , "  o  m0/evt/WWD"
-    , "  o  m0/prog0/LIVE/monotonicity/lhs"
     , "  o  m0/prog0/LIVE/monotonicity/rhs"
-    , "  o  m0/prog0/PROG/WD/lhs"
-    , "  o  m0/prog0/PROG/WD/rhs"
     , "  o  m0/prog1/LIVE/induction/lhs"
     , "  o  m0/prog1/LIVE/induction/rhs"
-    , "  o  m0/prog1/PROG/WD/lhs"
-    , "  o  m0/prog1/PROG/WD/rhs"
     , "  o  m0/prog2/LIVE/trading/lhs"
     , "  o  m0/prog2/LIVE/trading/rhs"
-    , "  o  m0/prog2/PROG/WD/lhs"
-    , "  o  m0/prog2/PROG/WD/rhs"
     , "  o  m0/prog3/LIVE/PSP/lhs"
     , "  o  m0/prog3/LIVE/PSP/rhs"
-    , "  o  m0/prog3/PROG/WD/lhs"
-    , "  o  m0/prog3/PROG/WD/rhs"
     , "  o  m0/prog4/LIVE/discharge/saf/lhs"
     , "  o  m0/prog4/LIVE/discharge/saf/rhs"
     , "  o  m0/prog4/LIVE/discharge/tr"
-    , "  o  m0/prog4/PROG/WD/lhs"
-    , "  o  m0/prog4/PROG/WD/rhs"
-    , "  o  m0/saf0/SAF/WD/lhs"
-    , "  o  m0/saf0/SAF/WD/rhs"
-    , "  o  m0/saf1/SAF/WD/lhs"
-    , "  o  m0/saf1/SAF/WD/rhs"
-    , "  o  m0/tr0/TR/WD"
     , "  o  m0/tr0/TR/evt/EN"
     , "  o  m0/tr0/TR/evt/NEG"
-    , "passed 110 / 111"
+    , "passed 78 / 79"
     ]
   
-path8 :: String
-path8 = "Tests/cubes-t7.tex"
+path8 :: FilePath
+path8 = [path|Tests/cubes-t7.tex|]
 
 result9 :: String
 result9 = unlines
-    [ "  o  m0/INIT/FIS/a"
-    , "  o  m0/INIT/FIS/b"
-    , "  o  m0/INIT/FIS/c"
-    , "  o  m0/INIT/FIS/f"
-    , "  o  m0/INIT/FIS/n"
-    , "  o  m0/INIT/INV/inv0"
+    [ "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/INV/inv2"
     , "  o  m0/INIT/INV/inv3/goal"
@@ -812,14 +638,7 @@ result9 = unlines
     , "  o  m0/INIT/INV/inv5"
     , "  o  m0/INIT/INV/inv6"
     , "  o  m0/INIT/INV/inv7"
-    , "  o  m0/INIT/WD"
-    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
-    , "  o  m0/evt/FIS/a@prime"
-    , "  o  m0/evt/FIS/b@prime"
-    , "  o  m0/evt/FIS/c@prime"
-    , "  o  m0/evt/FIS/f@prime"
-    , "  o  m0/evt/FIS/n@prime"
     , "  o  m0/evt/INV/inv0/goal"
     , "  o  m0/evt/INV/inv0/hypotheses"
     , "  o  m0/evt/INV/inv0/relation"
@@ -868,65 +687,31 @@ result9 = unlines
     , "  o  m0/evt/SAF/saf0"
     , "  o  m0/evt/SAF/saf1"
     , "  o  m0/evt/SCH/grd0"
-    , "  o  m0/evt/WD/ACT/a0"
-    , "  o  m0/evt/WD/ACT/a1"
-    , "  o  m0/evt/WD/ACT/a2"
-    , "  o  m0/evt/WD/ACT/a3"
-    , "  o  m0/evt/WD/ACT/a4"
-    , "  o  m0/evt/WD/C_SCH"
-    , "  o  m0/evt/WD/F_SCH"
-    , "  o  m0/evt/WD/GRD"
-    , "  o  m0/evt/WWD"
-    , "  o  m0/prog0/LIVE/monotonicity/lhs"
     , "  o  m0/prog0/LIVE/monotonicity/rhs"
-    , "  o  m0/prog0/PROG/WD/lhs"
-    , "  o  m0/prog0/PROG/WD/rhs"
     , "  o  m0/prog1/LIVE/induction/lhs"
     , "  o  m0/prog1/LIVE/induction/rhs"
-    , "  o  m0/prog1/PROG/WD/lhs"
-    , "  o  m0/prog1/PROG/WD/rhs"
     , "  o  m0/prog2/LIVE/trading/lhs"
     , "  o  m0/prog2/LIVE/trading/rhs"
-    , "  o  m0/prog2/PROG/WD/lhs"
-    , "  o  m0/prog2/PROG/WD/rhs"
     , "  o  m0/prog3/LIVE/PSP/lhs"
     , "  o  m0/prog3/LIVE/PSP/rhs"
-    , "  o  m0/prog3/PROG/WD/lhs"
-    , "  o  m0/prog3/PROG/WD/rhs"
     , "  o  m0/prog4/LIVE/discharge/saf/lhs"
     , "  o  m0/prog4/LIVE/discharge/saf/rhs"
     , "  o  m0/prog4/LIVE/discharge/tr"
-    , "  o  m0/prog4/PROG/WD/lhs"
-    , "  o  m0/prog4/PROG/WD/rhs"
     , "  o  m0/prog5/LIVE/disjunction/lhs"
     , "  o  m0/prog5/LIVE/disjunction/rhs"
-    , "  o  m0/prog5/PROG/WD/lhs"
-    , "  o  m0/prog5/PROG/WD/rhs"
     , " xxx m0/prog6/LIVE/add"
-    , "  o  m0/prog6/PROG/WD/lhs"
-    , "  o  m0/prog6/PROG/WD/rhs"
     , " xxx m0/prog7/LIVE/add"
-    , "  o  m0/prog7/PROG/WD/lhs"
-    , "  o  m0/prog7/PROG/WD/rhs"
     , " xxx m0/prog8/LIVE/add"
-    , "  o  m0/prog8/PROG/WD/lhs"
-    , "  o  m0/prog8/PROG/WD/rhs"
-    , "  o  m0/saf0/SAF/WD/lhs"
-    , "  o  m0/saf0/SAF/WD/rhs"
-    , "  o  m0/saf1/SAF/WD/lhs"
-    , "  o  m0/saf1/SAF/WD/rhs"
-    , "  o  m0/tr0/TR/WD"
     , "  o  m0/tr0/TR/evt/EN"
     , "  o  m0/tr0/TR/evt/NEG"
-    , "passed 120 / 124"
+    , "passed 75 / 79"
     ]
 
-
-path9 :: String
-path9 = "Tests/cubes-t8.tex"
+path9 :: FilePath
+path9 = [path|Tests/cubes-t8.tex|]
      
-path10 :: String
-path10 = "Tests/cubes-t9.tex"
+path10 :: FilePath
+path10 = [path|Tests/cubes-t9.tex|]
 
 result10 :: String
 result10 = unlines
@@ -942,7 +727,6 @@ result10 = unlines
     , ""
     , "error 347:1:"
     , "\tProgress property prog3 (refined in m0)"
-    , ""
     , ""
     ]
 
@@ -1245,18 +1029,17 @@ result11 = unlines
     , "                       (finite@@Int (union s1 s2)))"
     , "                   :pattern"
     , "                   ( (finite@@Int (union s1 s2)) ))))"
+    , "(assert (forall ( (s1 (set Int))"
+    , "                  (s2 (set Int)) )"
+    , "                (! (=> (and (finite@@Int s2) (not (finite@@Int s1)))"
+    , "                       (not (finite@@Int (set-diff@@Int s1 s2))))"
+    , "                   :pattern"
+    , "                   ( (finite@@Int (set-diff@@Int s1 s2)) ))))"
     , "(assert (forall ( (x Int) )"
     , "                (! (finite@@Int (mk-set@@Int x))"
     , "                   :pattern"
     , "                   ( (finite@@Int (mk-set@@Int x)) ))))"
     , "(assert (finite@@Int empty-set@@Int))"
-    , "(assert (forall ( (s1 (set Int))"
-    , "                  (s2 (set Int)) )"
-    , "                (! (=> (subset s1 s2)"
-    , "                       (=> (finite@@Int s2) (finite@@Int s1)))"
-    , "                   :pattern"
-    , "                   ( (finite@@Int s2)"
-    , "                     (finite@@Int s1) ))))"
     , "(assert (forall ( (i Int) )"
     , "                (! (= (elem@@Int i (dom@@Int@@Int f))"
     , "                      (and (<= 0 i) (< i n)))"
@@ -1289,8 +1072,8 @@ result11 = unlines
     , "; m0/evt/INV/inv5/main goal/step 4"
     ]
 
-path12 :: String
-path12 = "Tests/cubes-t10.tex"
+path12 :: FilePath
+path12 = [path|Tests/cubes-t10.tex|]
 
 result12 :: String
 result12 = unlines 
@@ -1687,18 +1470,17 @@ result13 = unlines
     , "                       (finite@@Int (union s1 s2)))"
     , "                   :pattern"
     , "                   ( (finite@@Int (union s1 s2)) ))))"
+    , "(assert (forall ( (s1 (set Int))"
+    , "                  (s2 (set Int)) )"
+    , "                (! (=> (and (finite@@Int s2) (not (finite@@Int s1)))"
+    , "                       (not (finite@@Int (set-diff@@Int s1 s2))))"
+    , "                   :pattern"
+    , "                   ( (finite@@Int (set-diff@@Int s1 s2)) ))))"
     , "(assert (forall ( (x Int) )"
     , "                (! (finite@@Int (mk-set@@Int x))"
     , "                   :pattern"
     , "                   ( (finite@@Int (mk-set@@Int x)) ))))"
     , "(assert (finite@@Int empty-set@@Int))"
-    , "(assert (forall ( (s1 (set Int))"
-    , "                  (s2 (set Int)) )"
-    , "                (! (=> (subset s1 s2)"
-    , "                       (=> (finite@@Int s2) (finite@@Int s1)))"
-    , "                   :pattern"
-    , "                   ( (finite@@Int s2)"
-    , "                     (finite@@Int s1) ))))"
     , "(assert (forall ( (r1 (set Int)) )"
     , "                (! (= (set@@Int@@Int r1 ident@@Int) r1)"
     , "                   :pattern"

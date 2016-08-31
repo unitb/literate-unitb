@@ -59,8 +59,8 @@ result0 = unlines
 input :: Either String RawMachineAST
 input = unsafePerformIO $ fmap (view' syntax.raw) <$> parse path0
 
-path0 :: String
-path0 = "Tests/cubes-t8.tex"
+path0 :: FilePath
+path0 = [path|Tests/cubes-t8.tex|]
 
 case0 :: IO String
 case0 = do x <- runEitherT $ do

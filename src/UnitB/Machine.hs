@@ -3,7 +3,10 @@
     , ScopedTypeVariables
     , StandaloneDeriving
     #-} 
-module UnitB.Machine where
+module UnitB.Machine 
+    ( module UnitB.Machine 
+    , HasTimeout(..) )
+where
 
     -- Modules
 import Logic.Expr.Scope
@@ -71,8 +74,10 @@ type MachineAST' = Compose Checked MachineBase
 data MachineBase expr = 
     Mch 
         { _machineBaseName :: Name
-        , _theory     :: Theory
+        , _theory     :: Theory' expr
         , _variables  :: Table Name Var
+        , _oldDefs    :: Table Name expr
+        , _machineBaseDefs     :: Table Name expr
         , _machineBaseAbs_vars :: Table Name Var
         , _del_vars   :: Table Name Var
         , _init_witness :: Table Name (Witness' expr)
@@ -82,7 +87,8 @@ data MachineBase expr =
         , _inh_props  :: PropertySet' expr
         , _props      :: PropertySet' expr
         , _derivation :: Table ProgId ProofTree         
-        , _comments   :: Table DocItem String }
+        , _comments   :: Table DocItem String 
+        , _machineBaseTimeout :: Float }
     deriving (Eq,Show,Typeable,Functor,Foldable,Traversable,Generic)
 
 instance ZoomEq expr => ZoomEq (MachineBase expr) where
@@ -153,18 +159,18 @@ class (Controls mch (Internal mch expr)
     type Internal mch expr :: *
     empty_machine :: Name -> mch
 
-instance HasExpr expr => HasMachine (MachineAST' expr) expr where
+instance (HasExpr expr,ZoomEq expr) => HasMachine (MachineAST' expr) expr where
     type Internal (MachineAST' expr) expr = MachineBase expr
     empty_machine = empty_machine'
 
-instance HasExpr expr => HasMachine (MachineBase expr) expr where
+instance (HasExpr expr,ZoomEq expr) => HasMachine (MachineBase expr) expr where
     type Internal (MachineBase expr) expr = MachineBase expr
     empty_machine = view content' . empty_machine'
 
-instance (HasExpr expr) => HasName (MachineAST' expr) Name where
+instance (HasExpr expr,ZoomEq expr) => HasName (MachineAST' expr) Name where
     name = content.name
 
-instance (HasExpr expr) => HasInvariant (MachineBase expr) where
+instance (HasExpr expr,ZoomEq expr) => HasInvariant (MachineBase expr) where
     invariant m = withPrefix (render $ m^.name) $ do
             "inv0" ## F.all ((`isSubmapOf` (m^.variables)).frame.view (new.actions)) (conc_events m) 
             "inv1" ## F.all validEvent (m^.props.transient)
@@ -181,7 +187,7 @@ instance (HasExpr expr) => HasInvariant (MachineBase expr) where
             "inv7" ## noClashes (m^.inh_props) (m^.props)
             withPrefix "inv8" $ forM_ (all_refs m) $ \ev -> 
                 [printf|%s - %s|] (pretty $ ev^.abstract._1) (pretty $ ev^.concrete._1) 
-                    ## (ev^.old.actions) === (ev^.abs_actions)
+                    ## (ev^.old.actions) .== (ev^.abs_actions)
                 -- Proofs match properties
             "inv9" ## Pretty ((m^.derivation) `M.difference` (m^.props.progress)) === Pretty M.empty
                 -- events in proofs
@@ -198,19 +204,21 @@ instance (HasExpr expr) => HasInvariant (MachineBase expr) where
             tr_wit_enough (Tr _ _ es (TrHint ws _)) = fmap M.keys (unions . L.map (view indices) <$> tr_evt es) == Just (M.keys ws)
             tr_evt es = mapM (flip M.lookup $ nonSkipUpwards m) (NE.toList es)
 
-instance HasExpr expr => HasScope (MachineBase expr) where
+instance (HasExpr expr,ZoomEq expr) => HasScope (MachineBase expr) where
     scopeCorrect' m = mconcat 
         [ withVars (symbols $ m^.theory) $ mconcat 
             [ withPrefix "inherited"
-                $ withVars' vars ((m^.del_vars) `M.union` (m^.abs_vars))
+                $ withVars' vars ((m^.del_vars) `M.union` absVarsNdefs)
                 $ scopeCorrect' $ m^.inh_props 
-            , withVars' vars ((m^.variables) `M.union` (m^.abs_vars))
+            , withVars' vars (varsNdefs `M.union` absVarsNdefs)
                 $ scopeCorrect' $ m^.props 
+            , withVars' vars ((m^.variables) `M.union` (m^.del_vars))
+                $ foldMapWithKey scopeCorrect'' $ m^.defs 
             , withPrefix "del init"
                 $ withVars' vars (m^.abs_vars)
                 $ foldMapWithKey scopeCorrect'' $ m^.del_inits
             , withPrefix "init" 
-                $ withVars' vars (m^.variables)
+                $ withVars' vars varsNdefs
                 $ foldMapWithKey scopeCorrect'' $ m^.inits
             , withPrefix "witnesses (var)" 
                 $ withVars ((m^.abs_vars) `M.difference` (m^.variables))
@@ -218,23 +226,34 @@ instance HasExpr expr => HasScope (MachineBase expr) where
                         (M.elems $ witVar <$> m^.init_witness) 
                         (M.elems $ witVar <$> m^.init_witness)
             , withPrefix "witnesses (expr)" 
-                $ withVars ((m^.variables) `M.union` (m^.abs_vars))
+                $ withVars (varsNdefs `M.union` (m^.abs_vars))
                 $ foldMapWithKey scopeCorrect'' $ m^.init_witness
             , withPrefix "abstract events"
-                $ withVars' vars (m^.abs_vars)
+                $ withVars' vars absVarsNdefs
                 $ foldMapWithKey scopeCorrect'' $ m^.events.to leftMap
             , withPrefix "concrete events"
                 $ withVars' abs_vars (m^.abs_vars)
-                $ withVars' vars (m^.variables)
+                $ withVars' vars varsNdefs
                 $ foldMapWithKey scopeCorrect'' $ m^.events.to rightMap
             , withPrefix "splitting events"
                 $ withVars' abs_vars (m^.abs_vars)
-                $ withVars' vars (m^.variables)
+                $ withVars' vars varsNdefs
                 $ foldMapWithKey scopeCorrect'' $ all_downwards m
             ]
         , withPrefix "theory"
             $ scopeCorrect' $ m^.theory
         ]
+        where
+            varsNdefs = (m^.variables) `M.union` (m^.definedSymbols)
+            absVarsNdefs = (m^.abs_vars) `M.union` (m^.oldDefinedSymbols)
+
+definedSymbols :: HasExpr expr 
+               => Getter (MachineBase expr) (Table Name Var)
+definedSymbols = defs.to (M.mapWithKey (\n -> Var n.type_of.getExpr))
+
+oldDefinedSymbols :: HasExpr expr 
+               => Getter (MachineBase expr) (Table Name Var)
+oldDefinedSymbols = oldDefs.to (M.mapWithKey (\n -> Var n.type_of.getExpr))
 
 instance Controls (MachineBase expr) (MachineBase expr) where 
 
@@ -416,12 +435,12 @@ all_props = to $ \m -> (m^.props) <> (m^.inh_props)
 
 all_notation :: HasMachine machine expr => machine -> Notation
 all_notation m = flip precede logical_notation 
-        $ L.foldl OP.combine empty_notation 
+        $ L.foldl' OP.combine empty_notation 
         $ L.map (view Th.notation) th
     where
-        th = (m!.theory) : ascElems (_extends $ m!.theory)
+        th = (getExpr <$> m!.theory) : ascElems (_extends $ m!.theory)
 
-instance (HasExpr expr) => Named (MachineAST' expr) where
+instance (HasExpr expr,ZoomEq expr) => Named (MachineAST' expr) where
     type NameOf (MachineAST' expr) = Name
     decorated_name' = adaptName . view name
 
@@ -442,11 +461,12 @@ ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions :: 
         eqPrime v = Word (prime v) `zeq` Word v
         noWitness = ((m!.del_vars) `M.intersection` (m!.abs_vars)) `M.difference` (evt^.witness)
 
-empty_machine' :: (HasScope expr, HasExpr expr) => Name -> MachineAST' expr
+empty_machine' :: (HasScope expr, HasExpr expr, ZoomEq expr) => Name -> MachineAST' expr
 empty_machine' n = check $ flip execState (makeMachineBase n (empty_theory n)) $ do
             -- & events .~ _ $ G.fromList _ _
             events .= G.fromList' [(skip,def)] [(skip,def)] [(skip,skip)]
             theory .= (empty_theory n) { _extends = preludeTheories } 
+            timeout .= 1.0
             -- & name
     where
         skip = Left SkipEvent

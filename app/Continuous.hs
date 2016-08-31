@@ -13,7 +13,7 @@ import Documentation.SummaryGen
 import Logic.Expr
 
 import UnitB.PO
-import UnitB.UnitB
+import UnitB.UnitB hiding (timeout)
 
 import Z3.Version
 

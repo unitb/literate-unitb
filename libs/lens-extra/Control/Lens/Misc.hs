@@ -29,7 +29,7 @@ combine' ln f x y = modify $ combine ln f x y
 
 combineAll :: (Foldable f, Functor f, Default a) 
            => Lens' b a -> (a -> a -> a) -> f b -> b -> b
-combineAll ln f xs = set ln $ F.foldl f def $ view ln <$> xs
+combineAll ln f xs = set ln $ F.foldl' f def $ view ln <$> xs
 
 combineAll' :: (Foldable f, Functor f, Default a) 
             => Lens' b a -> (a -> a -> a) -> f b -> State b ()
@@ -46,6 +46,11 @@ traverseValidation :: (Traversable t,Semigroup e)
                    => (a -> Either e b) 
                    -> t a -> Either e (t b)
 traverseValidation f = validationToEither . traverse (eitherToValidation . f)
+
+itraverseValidation :: (TraversableWithIndex k t,Semigroup e)
+                    => (k -> a -> Either e b) 
+                    -> t a -> Either e (t b)
+itraverseValidation f = validationToEither . itraverse (fmap eitherToValidation . f)
 
 unzipped :: Iso [(a,b)] [(c,d)] ([a],[b]) ([c],[d])
 unzipped = iso unzip (uncurry zip)

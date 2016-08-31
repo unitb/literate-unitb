@@ -291,6 +291,11 @@ find_proof_step = visitor
                     li <- ask        
                     set_proof $ LP.with_line_info li easy
             )
+        ,   (   "\\withTimeout"
+            ,   VCmdBlock $ \(Identity to) -> do
+                    li <- ask        
+                    set_proof $ LP.with_line_info li (easyWithTimeout to)
+            )
         ] 
 
 find_cases :: (MonadReader Thy m)

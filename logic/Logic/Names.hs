@@ -19,6 +19,7 @@ module Logic.Names
     , z3Render
     , dropSuffix 
     , addSuffix
+    , addPrefix
     , addBackslash
     , setSuffix
     , smt, tex

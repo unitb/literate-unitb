@@ -19,7 +19,7 @@ import           Bound.Scope
 import qualified Bound as B 
 
 import Control.DeepSeq
-import Control.Invariant
+import Control.Invariant as I
 import Control.Lens hiding (Const,elements)
 
 import Data.Bifoldable
@@ -116,7 +116,7 @@ newtype EventId = EventId Label
     deriving (Eq,Show,Ord,Typeable,Generic,Hashable,PrettyPrintable)
 
 instance ZoomEq EventId where
-    (.==) = (QC.===)
+    (.==) = (I.===)
 instance Arbitrary EventId where
     arbitrary = EventId . label <$> elements ((:[]) <$> take 13 ['a' ..])
     shrink = genericShrink
@@ -416,7 +416,7 @@ instance (Monad expr,Arbitrary (expr v),Lifting Arbitrary expr,Arbitrary lv,Arbi
                    <*> (NE.nub <$> arbitrary) 
                    <*> arbitrary
 instance ZoomEq ProgId where
-    (.==) = (QC.===)
+    (.==) = (I.===)
 instance Arbitrary ProgId where
     arbitrary = genericArbitrary
 instance ZoomEq (expr v) => ZoomEq (TrHint' expr v) where

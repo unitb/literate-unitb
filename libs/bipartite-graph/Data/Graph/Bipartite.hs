@@ -299,49 +299,45 @@ traverseBoth f (Graph lf rt ed) = Graph <$> (arVals.traverse) f lf
                                         <*> (arVals.traverse) f rt 
                                         <*> pure ed
 
-traverseArrayWithKey :: (Applicative f, Ix i) 
-                     => (i -> a -> f b) -> Array i a -> f (Array i b)
-traverseArrayWithKey f ar = listArray (bounds ar) <$> traverse (uncurry f) (A.assocs ar)
+traverseRightWithEdgeInfo :: IndexedTraversal k1 (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty (k0,v0)) vB
+traverseRightWithEdgeInfo f = traverseRightWithEdgeInfo' $ Indexed $ \k -> indexed f k.second (fmap fst)
 
-traverseRightWithEdgeInfo :: Traversal (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty (k0,v0)) vB
-traverseRightWithEdgeInfo f = traverseRightWithEdgeInfo' $ f.second (fmap fst)
-
-traverseRightWithEdgeInfo' :: Traversal (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty ((k0,v0),e)) vB
+traverseRightWithEdgeInfo' :: IndexedTraversal k1 (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty ((k0,v0),e)) vB
 traverseRightWithEdgeInfo' f gr = gr'
     where
         alist = gr^.rightAL
         alist' = gr^.leftAL
-        gr' = gr & (rightAL.arVals) (traverseArrayWithKey (fmap f.vert))
+        gr' = gr & (rightAL.arVals) (itraverse (\i -> indexed f ((alist^.arKey) ! i).vert i))
         vert i x = (x,incoming i <$> (alist^.arEdges) ! i)
         incoming i j = (((alist'^.arKey) ! j, (alist'^.arVals) ! j), (gr^.edges) ! (j,i))
 
-traverseRightWithEdges' :: Traversal (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty (k0,e)) vB
-traverseRightWithEdges' f = traverseRightWithEdgeInfo' $ f.second (fmap $ first fst)
+traverseRightWithEdges' :: IndexedTraversal k1 (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty (k0,e)) vB
+traverseRightWithEdges' f = traverseRightWithEdgeInfo' $ Indexed $ \k -> indexed f k.second (fmap $ first fst)
 
-traverseRightWithEdges :: Traversal (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty k0) vB
+traverseRightWithEdges :: IndexedTraversal k1 (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty k0) vB
 traverseRightWithEdges = traverseRightWithEdges'.trav
     where
-        trav f (x,xs) = f (x,fst <$> xs)
+        trav f = Indexed $ \k (x,xs) -> indexed f k (x,fst <$> xs)
 
-traverseLeftWithEdgeInfo :: Traversal (BiGraph' k0 vA k1 v1 e) (BiGraph' k0 vB k1 v1 e) (vA,NonEmpty (k1,v1)) vB
-traverseLeftWithEdgeInfo f = traverseLeftWithEdgeInfo' $ f.second (fmap fst)
+traverseLeftWithEdgeInfo :: IndexedTraversal k0 (BiGraph' k0 vA k1 v1 e) (BiGraph' k0 vB k1 v1 e) (vA,NonEmpty (k1,v1)) vB
+traverseLeftWithEdgeInfo f = traverseLeftWithEdgeInfo' $ lmap (second (fmap fst)) f
 
-traverseLeftWithEdgeInfo' :: Traversal (BiGraph' k0 vA k1 v1 e) (BiGraph' k0 vB k1 v1 e) (vA,NonEmpty ((k1,v1),e)) vB
+traverseLeftWithEdgeInfo' :: IndexedTraversal k0 (BiGraph' k0 vA k1 v1 e) (BiGraph' k0 vB k1 v1 e) (vA,NonEmpty ((k1,v1),e)) vB
 traverseLeftWithEdgeInfo' f gr = gr'
     where
         alist = gr^.leftAL
         alist' = gr^.rightAL
-        gr' = gr & (leftAL.arVals) (traverseArrayWithKey (fmap f.vert))
+        gr' = gr & (leftAL.arVals) (itraverse (\i -> indexed f ((alist^.arKey) ! i).vert i))
         vert i x = (x,incoming i <$> (alist^.arEdges) ! i)
         incoming i j = (((alist'^.arKey) ! j, (alist'^.arVals) ! j), (gr^.edges) ! (i,j))
 
-traverseLeftWithEdges' :: Traversal (BiGraph' k0 vA k1 v0 e) (BiGraph' k0 vB k1 v0 e) (vA,NonEmpty (k1,e)) vB
-traverseLeftWithEdges' f = traverseLeftWithEdgeInfo' $ f.second (fmap $ first fst)
+traverseLeftWithEdges' :: IndexedTraversal k0 (BiGraph' k0 vA k1 v0 e) (BiGraph' k0 vB k1 v0 e) (vA,NonEmpty (k1,e)) vB
+traverseLeftWithEdges' f = traverseLeftWithEdgeInfo' $ lmap (second (fmap $ first fst)) f
 
-traverseLeftWithEdges :: Traversal (BiGraph' k0 vA k1 v0 e) (BiGraph' k0 vB k1 v0 e) (vA,NonEmpty k1) vB
+traverseLeftWithEdges :: IndexedTraversal k0 (BiGraph' k0 vA k1 v0 e) (BiGraph' k0 vB k1 v0 e) (vA,NonEmpty k1) vB
 traverseLeftWithEdges = traverseLeftWithEdges'.trav
     where
-        trav f (x,xs) = f (x,fst <$> xs)
+        trav f = Indexed $ \k (x,xs) -> indexed f k (x,fst <$> xs)
 
 traverseEdges :: Traversal (BiGraph' k0 v0 k1 v1 eA) (BiGraph' k0 v0 k1 v1 eB) (v0,v1,eA) eB
 traverseEdges = traverseEdgesWithKeys . (.f)

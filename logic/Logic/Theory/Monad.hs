@@ -261,7 +261,7 @@ param_to_varE e = do
     e' <- rewriteM param_to_varE e
     case e' of
         FunApp (Fun ps n lift args rt wd) xs -> do
-            FunApp <$> (Fun <$> mapM param_to_varT ps 
+            funApp <$> (Fun <$> mapM param_to_varT ps 
                             <*> pure n 
                             <*> pure lift 
                             <*> mapM param_to_varT args 
