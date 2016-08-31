@@ -35,6 +35,19 @@ class Functor2 f where
                   => (a0 -> a1)
                   -> f a0 b c -> f a1 b c 
     fmap2 f = runIdentity . traverse2 (Identity . f)
+    fmapOn2 :: (a -> a') 
+            -> (b -> b') 
+            -> (c -> c') 
+            -> f a b c -> f a' b' c'
+    default fmapOn2 :: (Traversable2 f)
+                    => (a -> a') 
+                    -> (b -> b') 
+                    -> (c -> c') 
+                    -> f a b c -> f a' b' c'
+    fmapOn2 f g h = runIdentity . traverseOn2 
+                        (Identity . f)
+                        (Identity . g)
+                        (Identity . h)
 
 class Functor3 f where
     fmap3 :: (a -> b) -> f a c d e -> f b c d e
@@ -113,26 +126,96 @@ class (Functor1 t,Foldable1 t) => Traversable1 t where
     traverse1 :: Applicative f 
               => (a0 -> f a1)
               -> t a0 b -> f (t a1 b)
+    traverse1 f = traverseOn1 f pure
+    traverseOn1 :: Applicative f 
+                => (a -> f a') 
+                -> (b -> f b') 
+                -> t a b -> f (t a' b')
+    default traverseOn1 :: (t ~ t' z,Traversable2 t',Applicative f)
+                => (a -> f a') 
+                -> (b -> f b') 
+                -> t' z a b -> f (t' z a' b')
+    traverseOn1 = traverseOn2 pure
 
 class (Functor2 t,Foldable2 t) => Traversable2 t where
     traverse2 :: Applicative f 
               => (a0 -> f a1)
               -> t a0 b c -> f (t a1 b c)
+    traverse2 f = traverseOn2 f pure pure
+    traverseOn2 :: Applicative f 
+                => (a -> f a') 
+                -> (b -> f b') 
+                -> (c -> f c') 
+                -> t a b c -> f (t a' b' c')
+    default traverseOn2 :: (t ~ t' z,Traversable3 t',Applicative f)
+                => (a -> f a') 
+                -> (b -> f b') 
+                -> (c -> f c') 
+                -> t' z a b c -> f (t' z a' b' c')
+    traverseOn2 = traverseOn3 pure
+    -- default traverseOn2 :: (Traversable2 f)
+    --                 => (a -> a') 
+    --                 -> (b -> b') 
+    --                 -> (c -> c') 
+    --                 -> f a b c -> f a' b' c'
+    -- traverseOn2 f g h = runIdentity . traverseOn2 
+    --                     (Identity . f)
+    --                     (Identity . g)
+    --                     (Identity . h)
 
 class (Functor3 t,Foldable3 t) => Traversable3 t where
     traverse3 :: Applicative f 
               => (a0 -> f a1)
               -> t a0 b c d -> f (t a1 b c d)
+    traverse3 f = traverseOn3 f pure pure pure
+    traverseOn3 :: Applicative f 
+                => (a -> f a') 
+                -> (b -> f b') 
+                -> (c -> f c') 
+                -> (d -> f d') 
+                -> t a b c d -> f (t a' b' c' d')
+    default traverseOn3 :: (t ~ t' z,Traversable4 t',Applicative f)
+                => (a -> f a') 
+                -> (b -> f b') 
+                -> (c -> f c') 
+                -> (d -> f d') 
+                -> t' z a b c d -> f (t' z a' b' c' d')
+    traverseOn3 = traverseOn4 pure
 
 class (Functor4 t,Foldable4 t) => Traversable4 t where
     traverse4 :: Applicative f 
               => (a0 -> f a1)
               -> t a0 b c d e -> f (t a1 b c d e)
+    traverse4 f = traverseOn4 f pure pure pure pure
+    traverseOn4 :: Applicative f 
+                => (a -> f a') 
+                -> (b -> f b') 
+                -> (c -> f c') 
+                -> (d -> f d') 
+                -> (e -> f e') 
+                -> t a b c d e -> f (t a' b' c' d' e')
+    default traverseOn4 :: (t ~ t' z,Traversable5 t',Applicative f)
+                => (a -> f a') 
+                -> (b -> f b') 
+                -> (c -> f c') 
+                -> (d -> f d') 
+                -> (e -> f e') 
+                -> t' z a b c d e -> f (t' z a' b' c' d' e')
+    traverseOn4 = traverseOn5 pure
 
 class (Functor5 t,Foldable5 t) => Traversable5 t where
     traverse5 :: Applicative f 
               => (a0 -> f a1)
               -> t a0 b c d e g -> f (t a1 b c d e g)
+    traverse5 f = traverseOn5 f pure pure pure pure pure
+    traverseOn5 :: Applicative f 
+                => (a -> f a') 
+                -> (b -> f b') 
+                -> (c -> f c') 
+                -> (d -> f d') 
+                -> (e -> f e') 
+                -> (x -> f x') 
+                -> t a b c d e x -> f (t a' b' c' d' e' x')
 
 instance Traversable1 f => Traversable (Swap1 f a) where
     traverse f = fmap Swap1 . traverse1 f . swap1

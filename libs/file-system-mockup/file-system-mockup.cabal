@@ -59,7 +59,7 @@ library
   default-extensions:    RankNTypes, TemplateHaskell, FlexibleContexts, GeneralizedNewtypeDeriving, DeriveFunctor, DeriveFoldable, DeriveTraversable, TupleSections
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <5, lens >=4.13, mtl >=2.2, data-default >=0.5, containers >=0.5, directory >=1.2, filelock >=0.1, filepath >=1.4, invariant, cereal, either, bytestring, zlib, invariants
+  build-depends:       base >=4.8 && <5, lens, mtl, data-default, containers, directory, filelock, filepath, invariant, cereal, either, bytestring, zlib, invariants
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

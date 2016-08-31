@@ -57,7 +57,7 @@ library
   default-extensions:    TypeOperators, ScopedTypeVariables, BangPatterns, StandaloneDeriving, RankNTypes, TemplateHaskell, DeriveGeneric, TupleSections, GeneralizedNewtypeDeriving, FlexibleContexts, TypeSynonymInstances, FlexibleInstances
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <5, deepseq >=1.4, data-default >=0.5, data-ordlist >=0.4, containers >=0.5, QuickCheck >=2.8, loop >=0.3, mtl >=2.2, array >=0.5, lens >=4.13, semigroups >=0.18, cereal >=0.5, invariants, data-map-class, axiomatic-classes
+  build-depends:       base >=4.8 && <5, deepseq, data-default, data-ordlist, containers, QuickCheck, loop, mtl, array, lens, semigroups, cereal, invariants, data-map-class, axiomatic-classes
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

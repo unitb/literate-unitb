@@ -60,7 +60,7 @@ library
   default-extensions:    TemplateHaskell, QuasiQuotes, DefaultSignatures, MultiParamTypeClasses, RankNTypes, FlexibleInstances, FlexibleContexts
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <5, deepseq >=1.4, lens >=4.13, data-default >=0.5, either >=4.4, transformers >=0.4, hashable >=1.2, dlist >=0.7, containers >=0.5, semigroups >=0.18, tagged >=0.8, cereal >=0.5, template-haskell >=2.10, QuickCheck >=2.8, mtl, reducers, constraints
+  build-depends:       base >=4.8 && <5, deepseq, lens, data-default, either, transformers, hashable, dlist, containers, semigroups, tagged, cereal, template-haskell, QuickCheck, mtl, reducers, constraints
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

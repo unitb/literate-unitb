@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase
-        , TypeFamilies #-}
+        , TypeFamilies
+        , ConstraintKinds #-}
 module Logic.Expr.Type where
 
     -- Modules
@@ -65,6 +66,8 @@ makePrisms ''Sort
 
 referenced_types :: FOType -> S.Set FOType
 referenced_types t@(FOT _ ts) = S.insert t $ S.unions $ map referenced_types ts
+
+type HasType a t = (Typed a, TypeOf a ~ t)
 
 class TypeOf a ~ TypeOf (TypeOf a) => Typed a where
     type TypeOf a :: *

@@ -13,6 +13,7 @@ import Control.Lens hiding (rewrite,Context
                            ,Traversable1(..))
 import Control.Precondition
 
+import Data.Bytes.Serial
 import Data.Data
 import Data.Map.Class as M
 import Data.Serialize
@@ -66,7 +67,7 @@ instance (TypeSystem t, IsName n) => PrettyPrintable (AbsVar n t) where
 instance Functor1 AbsVar where
 instance Foldable1 AbsVar where
 instance Traversable1 AbsVar where
-    traverse1 f (Var n t) = Var <$> f n <*> pure t
+    traverseOn1 f g (Var n t) = Var <$> f n <*> g t
 
 prime :: IsName n => AbsVar n t -> AbsVar n t
 prime (Var n t) = Var (addPrime n) t
@@ -89,4 +90,5 @@ instance (IsName n,Typeable t) => Named (AbsVar n t) where
     type NameOf (AbsVar n t) = n
     decorated_name' (Var x _) = adaptName x
 
+instance (Serial n,Serial t) => Serial (AbsVar n t) where
 instance (Serialize n,Serialize t) => Serialize (AbsVar n t) where

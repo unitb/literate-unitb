@@ -57,7 +57,7 @@ library
   default-extensions:    DataKinds, TypeOperators, KindSignatures, GADTs, TypeFamilies, ScopedTypeVariables, PatternSynonyms, ConstraintKinds, QuasiQuotes, TemplateHaskell, MultiParamTypeClasses, FunctionalDependencies, RankNTypes, FlexibleContexts, FlexibleInstances
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <5, lens >=4.13, tagged >=0.8, template-haskell >=2.10, invariants, classy-lens-hierarchy
+  build-depends:       base >=4.8 && <5, lens, tagged, template-haskell, invariants, classy-lens-hierarchy
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

@@ -57,7 +57,7 @@ library
   default-extensions:    TemplateHaskell
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <5, template-haskell >=2.10
+  build-depends:       base >=4.8 && <5, template-haskell
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

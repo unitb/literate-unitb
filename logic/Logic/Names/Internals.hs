@@ -12,6 +12,7 @@ import Control.Monad
 import Control.Monad.State
 import Control.Precondition
 
+import Data.Bytes.Serial
 import Data.Char
 import Data.Data
 import Data.Either.Combinators
@@ -445,8 +446,12 @@ instance NFData Encoding where
 instance NFData Name where
 instance NFData InternalName where
 instance Serialize Encoding where
+instance Serial Encoding where
 instance Serialize Name where
+instance Serial Name where
+instance Serial a => Serial (NonEmpty a) where
 instance Serialize InternalName where
+instance Serial InternalName where
 
 class Translatable a b | a -> b where
     translate :: a -> b

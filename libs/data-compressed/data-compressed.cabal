@@ -57,7 +57,7 @@ library
   default-extensions:    FlexibleContexts, DeriveGeneric
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <5, lens >=4.13, mtl >=2.2, array >=0.5, hashable >=1.2, unordered-containers >=0.2, cereal, invariants
+  build-depends:       base >=4.8 && <5, lens, mtl, array, hashable, unordered-containers, cereal, invariants
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

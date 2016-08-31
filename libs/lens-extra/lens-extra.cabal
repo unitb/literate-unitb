@@ -57,7 +57,7 @@ library
   default-extensions:    RankNTypes
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <5, lens >=4.13, mtl >=2.2, data-default >=0.5, either >=4.4, semigroups >=0.18, data-map-class
+  build-depends:       base >=4.8 && <5, lens, mtl, data-default, either, semigroups, data-map-class
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

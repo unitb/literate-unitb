@@ -57,7 +57,7 @@ library
   default-extensions:    ScopedTypeVariables, TemplateHaskell, RankNTypes, TemplateHaskell, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, FlexibleInstances, DeriveGeneric
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <5, mtl >=2.2, QuickCheck >=2.8, lens >=4.13, semigroups >=0.18, axiomatic-classes, portable-lines, parsec
+  build-depends:       base >=4.8 && <5, mtl, QuickCheck, lens, semigroups, axiomatic-classes, portable-lines, parsec
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
