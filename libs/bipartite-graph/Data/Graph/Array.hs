@@ -33,11 +33,7 @@ import Test.QuickCheck hiding (frequency,elements)
 import qualified Test.QuickCheck as QC
 import Test.QuickCheck.Report as QC
 
-class AllZero a where
-    zeros :: a
 
-instance AllZero () where
-    zeros = ()
 
 data Color = White | Grey | Black
     deriving (Eq)

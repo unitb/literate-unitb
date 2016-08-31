@@ -51,15 +51,17 @@ makeRecordConstrAs makeName' n = do
             where
                 x' = nameBase x
         withUpper = changeCap toUpper . mkName . dropWhile (== '_') . nameBase
-        fieldCons (n,(t,t'),_) = normalC (withUpper n) [strictType notStrict $ pure t,strictType notStrict $ pure t']
+        notStrict = bangType (bang noSourceUnpackedness noSourceStrictness)
+        fieldCons (n,(t,t'),_) = normalC (withUpper n) [notStrict $ pure t,notStrict $ pure t']
     fields'' <- mapM (uncurry isMapType) fields
     let fields' = rights fields''
         params  = lefts fields''
     params' <- forM params $ \v -> (v,) <$> newName "p"
     let fieldType = dataD (cxt []) typeName 
                 (map PlainTV args) 
+                Nothing
                 (map fieldCons fields') 
-                []
+                (pure [])
         fieldInit (n,(_t,_t'),_) = (n,) <$> [e| fromList (concatMap $(varE $ prefix "_" n) $(varE xs)) |]
         fieldGetter (n,(_t,_t'),_) = funD (prefix "_" n) 
                 [ clause [conP (withUpper n) [varP x,varP y]] 

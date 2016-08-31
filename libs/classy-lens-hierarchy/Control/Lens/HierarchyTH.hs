@@ -161,8 +161,8 @@ typeKind :: Name -> Q Int
 typeKind n = do
         i <- reify n
         case i of 
-            TyConI (DataD _ _ args _ _) -> return $ length args
-            TyConI (NewtypeD _ _ args _ _) -> return $ length args
+            TyConI (DataD _ _ args _ _ _) -> return $ length args
+            TyConI (NewtypeD _ _ args _ _ _) -> return $ length args
             TyConI (TySynD _ _ t) -> do
                 n <- degree t
                 return n
@@ -187,7 +187,7 @@ typeOf :: Name -> TypeQ
 typeOf n = do
     t <- reify n
     case t of
-        VarI _ t _ _ -> return t
+        VarI _ t _ -> return t
         _ -> error "not a variable"
 
 lensDecl :: Name -> Name -> ExpQ

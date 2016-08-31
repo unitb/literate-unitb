@@ -5,7 +5,7 @@ module Data.TypeList where
 
 import Control.Lens hiding (curried,uncurried)
 import Control.Monad
-import Control.Precondition
+-- import Control.Precondition
 
 import Data.Proxy
 import Data.Proxy.TH
@@ -152,7 +152,7 @@ do
             toFun = lam1E (tupleP argP) (typeListE argE)
             fromFun = lamCaseE $
                         [ match (typeListP argP) (normalB $ tupleE argE) [] ]
-                        ++ (guard (i > 0) >> [ match wildP (normalB [e|undefined'|]) [] ])
+                        -- ++ (guard (i > 0) >> [ match wildP (normalB [e|undefined'|]) [] ])
             curry' = lamE (ffP:argP) (appE ffE $ tupleE argE)
             uncurry' = lamE [ffP,tupleP argP] (appsE $ ffE : argE)
         [d| instance AsTypeList $t $f where

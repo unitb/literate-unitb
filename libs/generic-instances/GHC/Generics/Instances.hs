@@ -109,8 +109,6 @@ class Applicative f => MapFields a (f :: * -> *) where
     type Mapped a f :: * -> *
     put :: f (a p) -> Mapped a f p
     get :: Mapped a f p -> f (a p)
-    mapped :: Iso' (f (a p)) (Mapped a f p)
-    mapped = iso put get
 
 instance MapFields c f => MapFields (M1 a b c) f where
     type Mapped (M1 a b c) f = M1 a b (Mapped c f)
@@ -373,12 +371,10 @@ instance Lift a => Lift1 ((,) a) where
 instance Lift1 Maybe where
     lift1 = lift
 
-instance Semigroup (DList a) where
 
 deriving instance Generic (Validation a b)
 deriving instance Generic Fingerprint
 deriving instance Generic TypeRep
-deriving instance Generic TyCon
 
 arbitraryCompose :: Arbitrary (f (g a)) => Gen (Compose f g a)
 arbitraryCompose = Compose <$> arbitrary
@@ -404,6 +400,11 @@ instance Serialize (f (g a))
         => Serialize (Compose f g a) where
 instance Serialize Fingerprint where
 instance Serialize TyCon where
+    put x = do
+        S.put $ tyConPackage x
+        S.put $ tyConModule x
+        S.put $ tyConName x
+    get = mkTyCon3 <$> S.get <*> S.get <*> S.get
 instance Serialize TypeRep where
 instance Serialize a => Serialize (NonEmpty a) where
 instance Serialize a => Serialize (Identity a) where

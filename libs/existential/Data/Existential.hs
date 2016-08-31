@@ -215,8 +215,6 @@ readInst1 f = getConst . traverseInst1 (Const . f)
 -- |
 -- = Combinators =
 
-class (c0 a,c1 a) => (c0 :&: c1) a where
-instance (c0 a,c1 a) => (c0 :&: c1) a where
 
 apply2Cells :: Functor f
             => (forall a. (constr a,Typeable a) 
@@ -442,7 +440,7 @@ arbitraryInstanceOf' :: Name -> Name -> [TypeQ] -> ExpQ
 arbitraryInstanceOf' cons cl ts = do
         ClassI _ is <- reify cl
         ts <- sequence ts
-        let getArg (InstanceD [] (AppT _ t) []) 
+        let getArg (InstanceD _ [] (AppT _ t) []) 
                 | t `notElem` ts = return (Just t)
                 | otherwise      = return Nothing
             getArg t = do

@@ -36,7 +36,6 @@ import           Data.Default
 import           Data.Monoid
 import           Data.Foldable as F (all,toList)
 import           Data.Functor.Compose
-import           Data.Functor.Classes
 import           Data.Graph.Bipartite as G
 import           Data.List as L hiding ( union, inits )
 import           Data.List.NonEmpty as NE hiding (inits)
@@ -49,6 +48,8 @@ import qualified Data.Traversable as T
 import           Data.Typeable
 
 import GHC.Generics.Instances
+
+import Prelude.Extras
 
 import Test.QuickCheck.ZoomEq
 

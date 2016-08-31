@@ -31,7 +31,7 @@ appsT [x] = x
 appsT (x:y:xs) = appsT (appT x y : xs) 
 
 fieldList :: Info -> Q ([Name],Name,[(Name,Type)])
-fieldList (TyConI (DataD _ _ args [RecC n cs] _)) = return (L.map name args,n,L.map f cs)
+fieldList (TyConI (DataD _ _ args _ [RecC n cs] _)) = return (L.map name args,n,L.map f cs)
     where
         f (n,_,t) = (n,t)
         name (PlainTV n) = n

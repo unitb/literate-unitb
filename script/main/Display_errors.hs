@@ -25,7 +25,7 @@ import Shelly (shelly,rm_f)
 
 compile_script :: Build ()
 compile_script = do
-        compile_file
+        -- compile_file
         -- profile_test 
         --     >>= run_benchmark
         compile_test 

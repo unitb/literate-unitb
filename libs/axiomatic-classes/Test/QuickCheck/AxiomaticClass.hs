@@ -60,7 +60,7 @@ quickCheckClassTests cl = do
         match' t t' = error $ [printf|\n%s\n%s\n|] (pprint t) (pprint t')
         match :: Type -> Type -> Type
         match t t' = fromMaybe t' $ t'^?_ForallT.to (\x -> withInt $ substType (M.unions $ mapMaybe (flip match' t) $ x^._2) (x^._3))
-        clInst (InstanceD _ t _) = t
+        clInst (InstanceD _ _ t _) = t
         clInst _ = undefined
         decName (SigD n _) = n
         decName _ = undefined

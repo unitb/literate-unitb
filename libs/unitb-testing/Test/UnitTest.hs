@@ -44,7 +44,6 @@ import           Data.Tuple
 import           Data.Typeable
 
 import GHC.Stack
-import GHC.SrcLoc
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote

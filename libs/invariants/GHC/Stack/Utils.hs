@@ -7,7 +7,6 @@ where
 import Data.Maybe
 
 import GHC.Stack
-import GHC.SrcLoc
 
 import PseudoMacros
 

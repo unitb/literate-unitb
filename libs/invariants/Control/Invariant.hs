@@ -27,13 +27,13 @@ import Control.Precondition
 
 import Data.Default
 import Data.Functor.Compose
-import Data.Functor.Classes
 import Data.List
 import Data.Set (isSubsetOf,isProperSubsetOf,Set)
 import Data.Typeable
 
 import GHC.Stack.Utils
 
+import Prelude.Extras
 import PseudoMacros
 
 import Test.QuickCheck hiding ((===))

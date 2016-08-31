@@ -18,7 +18,6 @@ import qualified Data.String.Lines as L
 
 import GHC.Generics.Instances
 import GHC.Read
-import GHC.SrcLoc
 import GHC.Stack.Utils
 
 import Safe
