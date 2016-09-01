@@ -73,7 +73,7 @@ rewrite_types xs e = -- typesOf %~ suffix_generics tag
             t'          = ft t
         Cast b e t -> Cast b (rewrite_types xs e) (suffix_generics xs t)
         Lift e t -> Lift (rewrite_types xs e) (suffix_generics xs t)
-        FunApp f args -> funApp f' new_args
+        FunApp f args _ -> mkFunApp f' new_args
           where
             f'          = substitute_types ft f
             new_args    = map fe args
@@ -88,7 +88,7 @@ class TypeSystem t => TypeSystem2 t where
                => [AbsExpr n t q] 
                -> AbsFun n t 
                -> Maybe (AbsExpr n t q) 
-    check_args xs f = check_args' (\f xs _ -> funApp f xs) f xs
+    check_args xs f = check_args' (\f xs _ -> mkFunApp f xs) f xs
     check_args' :: (IsQuantifier q,IsName n)
                 => (AbsFun n t -> [AbsExpr n t q] -> [t] -> AbsExpr n t q)
                 -> AbsFun n t 
@@ -162,7 +162,7 @@ check_type :: (IsQuantifier q,IsName n)
            => AbsFun n Type 
            -> [ExprPG n Type q] 
            -> ExprPG n Type q
-check_type = check_type' $ \fun xs _ -> funApp fun xs
+check_type = check_type' $ \fun xs _ -> mkFunApp fun xs
 
 check_type' :: (IsQuantifier q,IsName n)
             => (AbsFun n Type
@@ -265,7 +265,7 @@ unify :: GenericType -> GenericType -> Maybe (Map InternalName GenericType)
 unify t0 t1 = 
     unify_aux [(suffix_generics "1" t0, suffix_generics "2" t1)]
 
-strip_generics :: IsName n 
+strip_generics :: (IsName n,IsQuantifier q)
                => AbsExpr n Type q 
                -> Maybe (AbsExpr InternalName FOType q)
 strip_generics (Word v)    = do
@@ -282,10 +282,10 @@ strip_generics (Lift e t) = do
     e <- strip_generics e
     t <- type_strip_generics t
     return (Lift e t)
-strip_generics (FunApp f xs) = do
+strip_generics (FunApp f xs _) = do
     f  <- fun_strip_generics f
     xs <- mapM strip_generics xs
-    return (funApp f xs)
+    return (mkFunApp f xs)
 strip_generics (Binder q vs r t et) = do
     vs <- mapM var_strip_generics vs
     r  <- strip_generics r
@@ -309,7 +309,9 @@ fun_strip_generics (Fun ts n lf ps rt wd) = do
     rt <- type_strip_generics rt
     return (Fun ts (asInternal n) lf ps rt wd)
 
-def_strip_generics :: IsName n => AbsDef n Type q -> Maybe (AbsDef InternalName FOType q)
+def_strip_generics :: (IsName n,IsQuantifier q)
+                   => AbsDef n Type q
+                   -> Maybe (AbsDef InternalName FOType q)
 def_strip_generics (Def ts n ps rt val) = do
     ts  <- mapM type_strip_generics ts
     ps  <- mapM var_strip_generics ps
@@ -416,7 +418,7 @@ instance (TypeSystem t,HasGenerics t,IsName n,IsQuantifier q) => HasGenerics (Ab
     types_of (Lit _ t)   = types_of t
     types_of (Cast _ e t)     = S.union (types_of t) (types_of e)
     types_of (Lift e t)     = S.union (types_of t) (types_of e)
-    types_of (FunApp f xp)    = S.unions $ types_of f : map types_of xp
+    types_of (FunApp f xp _)    = S.unions $ types_of f : map types_of xp
     types_of (Binder _ vs r xp t) = S.unions $ types_of t : types_of r : types_of xp : map types_of vs
     types_of (Record x t) = S.unions $ types_of t : (x^.partsOf (traverseRecExpr.to types_of))
 
@@ -439,7 +441,7 @@ ambiguities e@(Cast _ e' t)
 ambiguities e@(Lift e' t)
         | not $ S.null $ generics t = [e]
         | otherwise                 = ambiguities e'
-ambiguities e@(FunApp f xp)    
+ambiguities e@(FunApp f xp _)    
         | not $ L.null children     = children
         | not $ S.null $ generics f = [e]
         | otherwise                 = []

@@ -12,6 +12,8 @@ import Data.Semigroup
 
 import GHC.Generics.Instances
 
+import Logic.Theories
+
 import Utilities.Table
 
 import Control.Lens hiding ( Context )
@@ -93,4 +95,4 @@ theory_setting th = (setting_from_context (th_notation th) (theory_ctx th))
 
 theory_setting' :: Table Name Theory -> ParserSetting
 theory_setting' theories = theory_setting $ (empty_theory' "empty")
-    { _extends = theories }
+    { _extends = preludeTheories `union` theories }

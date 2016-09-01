@@ -294,10 +294,24 @@
 |  |  |  +- Proofs with record lookup
 |  |  |  +- Testing the parser (\qforall{x,y}{}{x = y})
 |  |  |  +- Testing the parser (\neg (-2) = 2)
-|  |  +- [ Success: 35 / 35 ]
+|  |  |  +- Subtyping test
+   Exception:  
+couldn't type check expression:
+(x \fun y) \bunion (y \fun x):1:1:
+    arguments of 'union' do not match its signature:
+   signature: [\set [_a],\set [_a]] -> \set [_a]
+   left argument: (mk-fun x y)
+     type \pfun [\set [\Int],\set [\Int]]
+   right argument: (mk-fun y x)
+     type \pfun [\set [\Int],\set [\Int]]
+
+
+|  |  |  *** FAILED ***
+./Logic/Test.hs:227:11
+|  |  +- [ Success: 35 / 36 ]
 |  |  +- 6: unless with except and split event
 |  |  +- 7: QuickCheck names
-|  +- [ Success: 43 / 43 ]
+|  +- [ Success: 43 / 44 ]
 |  +- latex parser
 |  |  +- quickcheck
 |  |  +- sample.tex
@@ -366,17 +380,17 @@
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 297 / 297 ]
++- [ Success: 297 / 298 ]
 Data.Map.Base
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-   39132 total
+   39220 total
     1160 src/UnitB/PO.hs
      873 src/Document/Phase/Expressions.hs
-     828 logic/Logic/Expr/Expr.hs
+     841 logic/Logic/Expr/Expr.hs
      804 src/Document/Phase.hs
      795 src/Document/Visitor.lhs
-Run time: 2m 16s
+Run time: 4m 21s

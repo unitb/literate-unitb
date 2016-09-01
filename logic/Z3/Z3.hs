@@ -142,7 +142,7 @@ instance Tree Z3Command where
 z3_pattern :: S.Set FOVar -> FOExpr -> [FOExpr]
 z3_pattern vs e = runReader (head e) False
     where
-        head e'@(FunApp f [_,y])
+        head e'@(FunApp f [_,y] _)
             | view name f == fromString'' "=>" = do
                 xs <- head y
                 if null xs -- The heads found so far don't contain proper patterns 
@@ -150,7 +150,7 @@ z3_pattern vs e = runReader (head e) False
                     else return xs
         head e = lhs vs e
 
-        lhs vs (FunApp f xs)
+        lhs vs (FunApp f xs _)
             | view name f `elem` map fromString'' ["and","or","not","=>"]
                 && vs `S.isSubsetOf` S.unions (map used_var xs) 
                 = do
@@ -158,7 +158,7 @@ z3_pattern vs e = runReader (head e) False
                     return $ if vs `S.isSubsetOf` S.unions (map used_var ps) 
                         then ps 
                         else []
-        lhs vs (FunApp f xs@[x,_])
+        lhs vs (FunApp f xs@[x,_] _)
             | view name f == fromString'' "="     = do
                 b  <- ask
                 x' <- lhs vs x 

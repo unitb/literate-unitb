@@ -149,7 +149,7 @@ checkScopesAux e@(Word v) = do
     unless (b0 == Just v || b1 || b2) $ 
         tell [e]
 checkScopesAux (Lit _ _) = return ()
-checkScopesAux e@(FunApp fn args) = do
+checkScopesAux e@(FunApp fn args _) = do
     b0 <- views functions (M.member $ fn^.name)
     b1 <- views definitions (M.member $ fn^.name)
     unless (b0 || b1 || ((z3_name fn) `elem` predefined)) 
@@ -333,7 +333,7 @@ flatten_assoc :: (IsAbsExpr expr,TypeT expr ~ Type)
               => FunT expr -> [expr] -> [expr]
 flatten_assoc fun xs = concatMap f xs
     where
-        f (FunApp fun' xs)
+        f (FunApp fun' xs _)
             | fun == fun' = concatMap f xs
         f e = [e]
 
@@ -369,7 +369,7 @@ apply_monotonicity po = fromMaybe po $
                         | otherwise = zforall vs rs ts
                 return $ apply_monotonicity $ po' & constants %~ M.insert (view name v) v
                                                   & goal .~ rename nam (v^.name) g'
-            FunApp f [lhs, rhs] ->
+            FunApp f [lhs, rhs] _ ->
                 case (lhs,rhs) of
                     (Binder Forall vs r0 t0 _, Binder Forall us r1 t1 _) 
                         | shared vs us && z3_name f `elem` [[smt|=|],[smt|=>|]] -> do
@@ -379,7 +379,7 @@ apply_monotonicity po = fromMaybe po $
                             return $ apply_monotonicity $ 
                                 po' & goal .~ 
                                     (zforall vs' ztrue $ 
-                                        funApp f [zforall vs0 r0 t0, zforall vs1 r1 t1])
+                                        mkFunApp f [zforall vs0 r0 t0, zforall vs1 r1 t1])
                     (Binder Exists vs r0 t0 _, Binder Exists us r1 t1 _) 
                         | shared vs us && z3_name f `elem` [[smt|=|],[smt|=>|]] -> do
                             let vs0 = vs L.\\ us
@@ -388,7 +388,7 @@ apply_monotonicity po = fromMaybe po $
                             return $ apply_monotonicity $
                                 po' & goal .~ 
                                     (zforall vs' ztrue $ 
-                                        funApp f [zexists vs0 r0 t0, zexists vs1 r1 t1])
+                                        mkFunApp f [zexists vs0 r0 t0, zexists vs1 r1 t1])
                     (Binder q0 vs r0 t0 _, Binder q1 us r1 t1 _)
                         | q0 == q1 && vs == us 
                             && r0 == r1 && z3_name f == [smt|=|] -> 
@@ -398,13 +398,13 @@ apply_monotonicity po = fromMaybe po $
                             && t0 == t1 && z3_name f == [smt|=|] -> 
                                 return $ apply_monotonicity $
                                     po' & goal .~ (zforall vs ztrue $ r0 `zeq` r1)
-                    (FunApp g0 xs, FunApp g1 ys)
+                    (FunApp g0 xs _, FunApp g1 ys _)
                         | (length xs /= length ys && isNothing (isAssociative mm' g0))
                             || g0 /= g1 -> Nothing
                         | z3_name f == [smt|=|] -> do
                             (_,x,y) <- difference g0 xs ys
                             return $ apply_monotonicity $
-                                po' & goal .~ funApp f [x, y]
+                                po' & goal .~ mkFunApp f [x, y]
                         | otherwise -> do
                                 -- and(0,1), or(0,1), 
                                 --      =>(1)       -> f.x => f.y -> x => y

@@ -236,9 +236,9 @@ lambdas (Binder Exists vs r t et) = do
     return $ binder FOExists (L.map translate vs) r' t' et
 lambdas (Word v) = return (Word $ translate v)
 lambdas (Lit v t) = return (Lit v t)
-lambdas (FunApp fun args) = do
+lambdas (FunApp fun args _) = do
     args' <- mapM lambdas args
-    return $ funApp (fun & namesOf %~ asInternal) args'
+    return $ mkFunApp (fun & namesOf %~ asInternal) args'
 lambdas (Cast b e t) = (\e' -> Cast b e' t) <$> lambdas e
 lambdas (Lift e t) = (`Lift` t) <$> lambdas e
 lambdas (Record e t) = Record <$> traverseRecExpr lambdas e 

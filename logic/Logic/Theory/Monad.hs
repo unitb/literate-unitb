@@ -260,14 +260,14 @@ param_to_varE :: Expr -> RewriteST Expr
 param_to_varE e = do
     e' <- rewriteM param_to_varE e
     case e' of
-        FunApp (Fun ps n lift args rt wd) xs -> do
-            funApp <$> (Fun <$> mapM param_to_varT ps 
-                            <*> pure n 
-                            <*> pure lift 
-                            <*> mapM param_to_varT args 
-                            <*> param_to_varT rt
-                            <*> pure wd) 
-                   <*> pure xs
+        FunApp (Fun ps n lift args rt wd) xs _ -> do
+            mkFunApp <$> (Fun <$> mapM param_to_varT ps 
+                              <*> pure n 
+                              <*> pure lift 
+                              <*> mapM param_to_varT args 
+                              <*> param_to_varT rt
+                              <*> pure wd) 
+                     <*> pure xs
         _ -> return e'
 
 param_to_varT :: Type -> RewriteST Type

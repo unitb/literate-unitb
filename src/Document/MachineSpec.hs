@@ -70,7 +70,12 @@ data ExprNotation = ExprNotation Context Notation RawExpr
     deriving Generic
 
 instance Show ExprNotation where
-     show (ExprNotation _ n e) = showExpr n e
+     show (ExprNotation c n e) = L.intercalate "\n"
+        [ "Context:"
+        , pretty c
+        , "ExprNotation:"
+        , showExpr n e
+        ]
 
 instance Arbitrary ExprNotation where
     arbitrary = sized $ \n -> resize (n `min` 20) $ do
@@ -137,11 +142,11 @@ permute_aux n xs = sized $ \size -> do
 showExpr :: (TypeSystem t, IsQuantifier q) => Notation -> AbsExpr Name t q -> String
 showExpr notation e = show_e e
     where
-        root_op (FunApp f _) = find_op f
+        root_op (FunApp f _ _) = find_op f
         root_op _ = Nothing
         find_op f = view name f `M.lookup` m_ops 
         show_e v@(Word _) = pretty v
-        show_e (FunApp f xs) 
+        show_e (FunApp f xs _)
             | length xs == 2 = [printf|%s %s %s|] 
                                 (show_left_sub_e op x)
                                 op_name
@@ -152,7 +157,7 @@ showExpr notation e = show_e e
             | length xs == 0 = error $ [printf|show_e: not a binary or unary operator '%s' %s|]
                                     (render $ f^.name)
                                     (L.intercalate ", " $ map pretty xs)
-            | otherwise      = show_e (funApp f $ [head xs, funApp f $ tail xs])
+            | otherwise      = show_e (mkFunApp f $ [head xs, mkFunApp f $ tail xs])
             where
                 x = xs ! 0
                 y = xs ! 1
@@ -354,7 +359,7 @@ fun_map = M.fromList
         ]
 
 zelem' :: RawExpr -> RawExpr -> RawExpr
-zelem' e0 e1 = funApp (mk_fun' [int] "elem" [int,set_type int] bool) [e0,e1 :: RawExpr]
+zelem' e0 e1 = mkFunApp (mk_fun' [int] "elem" [int,set_type int] bool) [e0,e1 :: RawExpr]
         -- zeq' e0 e1 = funApp (mk_fun [] "=" [int,int] bool) [e0,e1 :: Expr]
 
 choose_expr :: Bool -> Type -> EGen RawExpr
@@ -387,7 +392,7 @@ subexpression e = f [] e
     where
         f xs e = (e, type_of e, comment e) : visit f xs e
         comment :: RawExpr -> String
-        comment (FunApp (Fun act f _ argt rt _) arg) = [printf|%s %s (%s) : %s -> %s|] 
+        comment (FunApp (Fun act f _ argt rt _) arg _) = [printf|%s %s (%s) : %s -> %s|] 
                     (pretty act) (render f) 
                     (pretty arg) (pretty argt) 
                     (pretty rt)

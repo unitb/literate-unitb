@@ -398,19 +398,19 @@ eval_expr m e =
                     return $ "v_" ++ render n
                 | otherwise              -> return $ "c_" ++ render n
             Lit n _    -> return $ pretty n
-            FunApp f [] 
+            FunApp f [] _
                 | view name f `M.member` nullops_code -> return $ nullops_code ! view name f
-            FunApp f0 [e0,FunApp f1 [e1,e2]] 
+            FunApp f0 [e0,FunApp f1 [e1,e2] _] _
                 | view name f0 == z3Name "ovl" && view name f1 == z3Name "mk-fun" -> do
                     c0 <- eval_expr m e0
                     c1 <- eval_expr m e1
                     c2 <- eval_expr m e2
                     return $ [printf|(M.insert %s %s %s)|] c1 c2 c0
-            FunApp f [e]
+            FunApp f [e] _
                 | view name f `M.member` unops_code -> do
                     c <- eval_expr m e
                     return $ (unops_code ! view name f) c
-            FunApp f [e0,e1] 
+            FunApp f [e0,e1] _
                 | view name f `M.member` binops_code -> do
                     c0 <- eval_expr m e0
                     c1 <- eval_expr m e1
@@ -455,13 +455,13 @@ assign_code _ act@(BcmIn _ _) = left $ [printf|Action is non deterministic: %s|]
 init_value_code :: Evaluator m => RawMachineAST -> Expr -> m [(Bool,(Name,String))]
 init_value_code m e =
         case e of
-            FunApp f [Word (Var n _),e0]
+            FunApp f [Word (Var n _),e0] _
                     |      n `M.member` (m!.variables)
                         && view name f == z3Name "=" -> do
                                 b  <- is_shared n
                                 c0 <- eval_expr m e0
                                 return [(b,(n,c0))]
-            FunApp f es
+            FunApp f es _
                     | view name f == z3Name "and" -> do
                         rs <- mapM (init_value_code m) es
                         return $ concat rs

@@ -279,7 +279,7 @@ term = do
                 else do
                     args <- replicateM n $
                         brackets Curly expr
-                    return $ UE $ FunApp f args
+                    return $ UE $ mkFunApp f args
         , UE <$> recordSetOrLit
         , do    quant <- from quants 
                 ns <- brackets Curly

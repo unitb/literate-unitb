@@ -10,7 +10,7 @@
 #'
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-resolver: lts-6.4
+resolver: lts-6.14
 compiler: ghc-7.10.3
 
 ghc-options:
@@ -57,14 +57,20 @@ packages:
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
 - assert-0.0.1.2
-- directory-1.2.5.1
 - monoid-transformer-0.0.3
 - portable-lines-0.1
 - pqueue-1.3.1.1
-- process-1.4.2.0
+- lens-4.14
 - pseudomacros-0.0.2
-- reactive-banana-1.1.0.0
 - transformers-compat-0.5.1.4
+- bifunctors-5.4.1
+- directory-1.2.7.0
+- kan-extensions-5.0.1
+- process-1.4.2.0
+- reactive-banana-1.1.0.1
+- semigroupoids-5.1
+- these-0.7
+
 
 # Override default flag values for local packages and extra-deps
 flags: {}

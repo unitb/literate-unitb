@@ -69,7 +69,7 @@ data GenExpr n t a q =
         Word !(AbsVar n t) 
         | Record !(RecordExpr (GenExpr n t a q)) t
         | Lit !Value !t
-        | FunApp !(AbsFun n a) ![GenExpr n t a q]
+        | FunApp !(AbsFun n a) ![GenExpr n t a q] !t
         | Binder !q ![AbsVar n t] !(GenExpr n t a q) !(GenExpr n t a q) !t
         | Cast !CastType !(GenExpr n t a q) !a
         | Lift !(GenExpr n t a q) !a
@@ -103,7 +103,7 @@ instance (Arbitrary t,Arbitrary n,Arbitrary a,Arbitrary q,TypeSystem t,IsQuantif
         inductive $ \arb -> 
             [ Word   <$> arbitrary' 
             , Lit    <$> arbitrary' <*> arbitrary'
-            , funApp <$> arbitrary' <*> listOf' arb
+            , funApp <$> arbitrary' <*> listOf' arb <*> arbitrary'
             , binder <$> arbitrary' <*> arbitrary' <*> arb <*> arb <*> arbitrary'
             , Cast   <$> arbitrary' <*> arb <*> arbitrary'
             , Lift   <$> arb <*> arbitrary'
@@ -172,8 +172,14 @@ binder :: q -> [AbsVar n t]
        -> GenExpr n t a q
 binder q = Binder q . evalList
 
-funApp :: AbsFun n a -> [GenExpr n t a q] -> GenExpr n t a q
-funApp fun = FunApp fun . evalList
+funApp :: AbsFun n a -> [GenExpr n t a q] -> t -> GenExpr n t a q
+funApp fun args t = FunApp fun (evalList args) t
+
+mkFunApp :: TypeAnnotationPair t a
+         => AbsFun n a
+         -> [GenExpr n t a q]
+         -> GenExpr n t a q
+mkFunApp f@(Fun _ _ _ _ t _) args = FunApp f (evalList args) (strippedType t)
 
 {-# INLINE traverseRecExpr #-}
 traverseRecExpr :: Traversal (RecordExpr expr) (RecordExpr expr')
@@ -189,7 +195,9 @@ instance Traversable1 (GenExpr a b) where
     traverse1 _ (Lit v t)  = pure $ Lit v t
     traverse1 f (Cast b e t) = Cast b <$> traverse1 f e <*> f t
     traverse1 f (Lift e t) = Lift <$> traverse1 f e <*> f t
-    traverse1 f (FunApp fun e) = liftA2 funApp (traverse f fun) ((traverse.traverse1) f e)
+    traverse1 f (FunApp fun e t) = funApp <$> traverse f fun
+                                          <*> (traverse.traverse1) f e
+                                          <*> pure t
     traverse1 f (Binder a b c d e) = binder a b <$> traverse1 f c 
                                                 <*> traverse1 f d 
                                                 <*> pure e
@@ -201,8 +209,9 @@ instance Traversable2 (GenExpr a) where
     traverse2 f (Lit v t)  = Lit v <$> f t
     traverse2 f (Cast b e t) = Cast b <$> traverse2 f e <*> pure t
     traverse2 f (Lift e t) = Lift <$> traverse2 f e <*> pure t
-    traverse2 f (FunApp fun e) = funApp fun 
+    traverse2 f (FunApp fun e t) = funApp fun 
                                         <$> (traverse.traverse2) f e
+                                        <*> f t
     traverse2 f (Binder a b c d e) = binder a <$> (traverse.traverse) f b
                                               <*> traverse2 f c 
                                               <*> traverse2 f d
@@ -216,7 +225,9 @@ instance Traversable3 GenExpr where
     traverse3 _ (Lit v t) = pure $ Lit v t
     traverse3 f (Cast b e t) = Cast b <$> traverse3 f e <*> pure t
     traverse3 f (Lift e t) = Lift <$> traverse3 f e <*> pure t
-    traverse3 f (FunApp fun e) = funApp <$> traverse1 f fun <*> (traverse.traverse3) f e
+    traverse3 f (FunApp fun e t) = funApp <$> traverse1 f fun
+                                          <*> (traverse.traverse3) f e
+                                          <*> pure t
     traverse3 f (Binder a b c d e) = binder a <$> (traverse.traverse1) f b
                                               <*> traverse3 f c
                                               <*> traverse3 f d
@@ -248,7 +259,7 @@ expSize (Record (RecLit m) _) = 1 + sum (M.map expSize m)
 expSize (Record (RecSet m) _) = 1 + sum (M.map expSize m)
 expSize (Record (RecUpdate e m) _) = 1 + expSize e + sum (M.map expSize m)
 expSize (Record (FieldLookup e _) _) = 1 + expSize e
-expSize (FunApp _ xs) = 1 + sum (fmap expSize xs)
+expSize (FunApp _ xs _) = 1 + sum (fmap expSize xs)
 expSize (Binder _ _ r t _) = 1 + expSize r + expSize t
 expSize (Cast _ e _) = 1 + expSize e
 expSize (Lift e _) = 1 + expSize e
@@ -327,8 +338,8 @@ instance ( IsName n
         => HasGenExpr (GenExpr n t a q) where
     type ExprT (GenExpr n t a q)  = GenExpr n t a q
     asExpr = id
-    ztrue  = funApp true_fun []
-    zfalse = funApp false_fun []
+    ztrue  = mkFunApp true_fun []
+    zfalse = mkFunApp false_fun []
     zword  = Word
 
 class ( IsGenExpr expr, AnnotT expr ~ TypeT expr )
@@ -347,13 +358,13 @@ instance ( IsName n,TypeSystem t,TypeSystem a
     type TypeOf (GenExpr n t a q) = t
     type_of e = type_of $ aux $ asExpr e
         where
-            aux (Word (Var _ t))       = t
-            aux (Lit _ t)              = t
-            aux (Cast _ _ t)           = strippedType t
-            aux (Lift _ t)             = strippedType t
-            aux (Record _ t)           = t
-            aux (FunApp (Fun _ _ _ _ t _) _) = strippedType t
-            aux (Binder _ _ _ _ t)   = t
+            aux (Word (Var _ t))   = t
+            aux (Lit _ t)          = t
+            aux (Cast _ _ t)       = strippedType t
+            aux (Lift _ t)         = strippedType t
+            aux (Record _ t)       = t
+            aux (FunApp _ _ t)     = t
+            aux (Binder _ _ _ _ t) = t
 
 typeOfRecord :: ( TypeSystem t, TypeSystem a
                 , TypeAnnotationPair t a
@@ -386,10 +397,10 @@ ztuple [x0,x1]      = pair x0 $ pair x1 unit    -- FunApp (Fun [tx, txs] "pair" 
 ztuple (x0:x1:xs)   = pair x0 $ ztuple (x1:xs)  -- FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
 
 unit :: (TypeSystem t,IsName n) => AbsExpr n t q
-unit = funApp (mkConstant "null" null_type) []
+unit = mkFunApp (mkConstant "null" null_type) []
 
 pair :: (IsName n,TypeSystem t,IsQuantifier q) => AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
-pair x y = funApp fun [x,y]
+pair x y = mkFunApp fun [x,y]
     where
         fun = mk_fun [] (fromString'' "pair") [t0,t1] $ pair_type t0 t1
         t0 = type_of x
@@ -458,13 +469,13 @@ makeDef ps n args t e = Def (evalList ps) n (evalList args) t e
 instance HasScope Def where
     scopeCorrect' (Def _tp _n args _t e) = withVars args $ scopeCorrect' e
 
-instance Functor1 (AbsDef n) where
+instance (IsName n) => Functor1 (AbsDef n) where
 instance Functor2 AbsDef where
 
-instance Foldable1 (AbsDef n) where
+instance (IsName n) => Foldable1 (AbsDef n) where
 instance Foldable2 AbsDef where
 
-instance Traversable1 (AbsDef n) where
+instance (IsName n) => Traversable1 (AbsDef n) where
     traverse1 f (Def a b c d e) = makeDef
         <$> traverse f a
         <*> pure b 
@@ -543,7 +554,7 @@ instance (TypeSystem a, TypeSystem t
         List <$> sequenceA [pure $ Str $ accessor field, as_tree' x]
     as_tree' (Word (Var xs _))    = return $ Str $ render xs
     as_tree' (Lit xs _)         = return $ Str $ pretty xs
-    as_tree' (FunApp f@(Fun _ _ _ _ t _) [])
+    as_tree' (FunApp f@(Fun _ _ _ _ t _) [] _)
             | isLifted f = List <$> sequence   
                                [ List 
                                  <$> (map Str ["_","map"] ++) 
@@ -551,7 +562,7 @@ instance (TypeSystem a, TypeSystem t
                                , Str <$> render_decorated f
                                ]
             | otherwise  = Str <$> render_decorated f
-    as_tree' (FunApp f ts)  = do
+    as_tree' (FunApp f ts _)  = do
         ts' <- mapM as_tree' ts
         f   <- if isLifted f 
             then (List . map Str) 
@@ -570,15 +581,16 @@ instance (TypeSystem a, TypeSystem t
                           , r'
                           , xp' ] ]
     -- {-# INLINE rewriteM #-}
-    rewriteM _ x@(Word _)           = pure x
-    rewriteM _ x@(Lit _ _)        = pure x
-    rewriteM f (Record e t)       = Record <$> traverseRecExpr f e <*> pure t
-    rewriteM f (Lift e t)    = Lift <$> f e <*> pure t
-    rewriteM f (Cast b e t)  = Cast b <$> f e <*> pure t
-    rewriteM f (FunApp g xs) = funApp g <$> traverse f xs
-    rewriteM f (Binder q xs r x t)  = binder q xs <$> f r <*> f x <*> pure t
+    rewriteM _ x@(Word _)          = pure x
+    rewriteM _ x@(Lit _ _)         = pure x
+    rewriteM f (Record e t)        = Record <$> traverseRecExpr f e <*> pure t
+    rewriteM f (Lift e t)          = Lift <$> f e <*> pure t
+    rewriteM f (Cast b e t)        = Cast b <$> f e <*> pure t
+    rewriteM f (FunApp g xs _)     = mkFunApp g <$> traverse f xs
+    rewriteM f (Binder q xs r x t) = binder q xs <$> f r <*> f x <*> pure t
 
-rewriteExpr :: (t0 -> t1)
+rewriteExpr :: (TypeAnnotationPair t1 t1,IsName n,TypeSystem t1,IsQuantifier q1)
+            => (t0 -> t1)
             -> (q0 -> q1)
             -> (AbsExpr n t0 q0 -> AbsExpr n t1 q1)
             -> AbsExpr n t0 q0 -> AbsExpr n t1 q1
@@ -595,9 +607,10 @@ rewriteExprM' fT fA fQ fE e =
         case e of
             Word v -> Word <$> fvar v
             Lit v t -> Lit v <$> fT t
-            FunApp f args -> 
+            FunApp f args t -> 
                 funApp <$> ffun f
                        <*> traverse fE args
+                       <*> fT t
             Binder q vs re te t ->
                 binder <$> fQ q 
                        <*> traverse fvar vs 
@@ -711,7 +724,7 @@ used_fun e = visit f s e
     where
         f x y = S.union x (used_fun y)
         s = case e of
-                FunApp f _ -> S.singleton f
+                FunApp f _ _ -> S.singleton f
                 _          -> S.empty
 
 free_vars' :: HasExpr expr

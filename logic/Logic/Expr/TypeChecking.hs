@@ -32,7 +32,7 @@ import Utilities.Syntactic
 stripTypes :: GenExpr n t0 t1 q -> GenExpr n () t1 q
 stripTypes (Word (Var n _))  = Word (Var n ())
 stripTypes (Lit n _)         = Lit n ()
-stripTypes (FunApp fun args) = FunApp fun (map stripTypes args)
+stripTypes (FunApp fun args _) = mkFunApp fun (map stripTypes args)
 stripTypes (Binder q vs r t _) = Binder q (f vs) (stripTypes r) (stripTypes t) ()
     where
         f = map (\(Var n _) -> (Var n ()))
@@ -102,7 +102,7 @@ checkTypes' _ (Lit n ()) = do
              RealVal _ -> real
              IntVal _  -> int
     return (Lit n t)
-checkTypes' c (FunApp f args) = do
+checkTypes' c (FunApp f args _) = do
     let targs = map (checkTypes' c) args
     check_type f targs
 checkTypes' c (Record (FieldLookup e field) _) = do

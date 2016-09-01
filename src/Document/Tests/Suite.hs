@@ -168,7 +168,7 @@ stripAnnotation :: Expr -> Expr
 stripAnnotation e = E.rewrite stripAnnotation $ f e
     where
         strip = set annotation [] 
-        f (FunApp fun xs) = FunApp (strip fun) xs
+        f (FunApp fun xs _) = mkFunApp (strip fun) xs
         f e = e
 
 proof_obligation_stripped :: FilePath -> String -> Int -> IO String

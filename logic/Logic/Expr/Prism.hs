@@ -29,9 +29,9 @@ fun = QuasiQuoter
         , quoteDec  = undefined }
 
 {-# INLINE selectFun #-}
-selectFun :: Eq n => n -> Traversal' (AbsFun n t,[GenExpr n t a q]) [GenExpr n t a q]
-selectFun fn f (fn',args') | fn == (fn'^.name) = (fn',) <$> f args'
-                           | otherwise         = pure (fn',args')
+selectFun :: Eq n => n -> Traversal' (AbsFun n t,[GenExpr n t a q],t) [GenExpr n t a q]
+selectFun fn f (fn',args',t) | fn == (fn'^.name) = (fn',,t) <$> f args'
+                             | otherwise         = pure (fn',args',t)
 
 zipRecord' :: [Maybe String] -> ExpQ
 zipRecord' args = 

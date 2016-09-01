@@ -5,8 +5,10 @@ module Logic.Test where
 import Logic.Expr hiding (field)
 import Logic.Expr.Const
 import Logic.Expr.Parser
+import Logic.Expr.TypeChecking
 import Logic.Proof.Monad
 import Logic.QuasiQuote hiding (var)
+import qualified Logic.QuasiQuote as QQ 
 import Logic.Theories
 import Logic.Theory
 import Logic.Theories.SetTheory
@@ -222,6 +224,7 @@ test = test_cases "genericity"
         , aCase "Proofs with record lookup" case22 result22
         , aCase "Testing the parser (\\qforall{x,y}{}{x = y})" case23 result23
         , aCase "Testing the parser (\\neg (-2) = 2)" case24 result24
+        , aCase "Subtyping test" case25 result25
         ]
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
@@ -247,8 +250,8 @@ case5   :: IO Expr
 result5 :: Expr
 case6   :: IO Expr
 result6 :: Expr
-case3 = return $ specialize (fromList [(a,gB)]) $ funApp union [x3,x4]
-result3 = funApp (mk_fun' [gB] "union" [set_type gB,set_type gB] $ set_type gB) [x3,x4] 
+case3 = return $ specialize (fromList [(a,gB)]) $ mkFunApp union [x3,x4]
+result3 = mkFunApp (mk_fun' [gB] "union" [set_type gB,set_type gB] $ set_type gB) [x3,x4] 
 case5 = return $ p
 result5 = q
 case6 = return $ pp
@@ -278,25 +281,25 @@ c :: InternalName
 c = fromString'' "c"
 
 pp :: Expr
-pp = funApp member [funApp union [x1,x2], specialize (fromList [(a,set_type gA)]) $ funApp union [x3,x4]]
+pp = mkFunApp member [mkFunApp union [x1,x2], specialize (fromList [(a,set_type gA)]) $ mkFunApp union [x3,x4]]
 
 qq :: Expr
-qq = funApp member [funApp union [x1,x2], funApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA,set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
+qq = mkFunApp member [mkFunApp union [x1,x2], mkFunApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA,set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
 p :: Expr
-p = funApp member [funApp union [x1,x2], specialize (fromList [(a,set_type $ gA)]) $ funApp union [x3,x4]]
+p = mkFunApp member [mkFunApp union [x1,x2], specialize (fromList [(a,set_type $ gA)]) $ mkFunApp union [x3,x4]]
 q :: Expr
-q = funApp member [funApp union [x1,x2], funApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA, set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
+q = mkFunApp member [mkFunApp union [x1,x2], mkFunApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA, set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
 
 case7   :: IO ExprP
 result7 :: ExprP
 (case7, result7) = 
         ( return (x `zelem` zempty_set)
-        , Right $ funApp (mk_fun' [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
+        , Right $ mkFunApp (mk_fun' [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
         )
     where
         train = Gen (z3Sort "\\train" "train" 0) []
         (x,_) = var "x" train
-        empty_set_of_train = funApp (mk_fun' [train] "empty-set" [] $ set_type train) []
+        empty_set_of_train = mkFunApp (mk_fun' [train] "empty-set" [] $ set_type train) []
 
 result8 :: String
 result8 = unlines
@@ -893,3 +896,21 @@ case24 = return $ either show_error id $ untypedExpression
 
 result24 :: UntypedExpr
 result24 = znot (fun2 (zeq_fun gA) (zopp $ zint 2) (zint 2))
+
+case25 :: IO String
+case25 = return $ either type_err pretty typed_expr
+    where
+        expr = "(x \\fun y) \\bunion (y \\fun x)"
+        stringLi = asStringLi (mkLI expr) expr
+        c = ctxWith (M.elems supportedTheories) $ do
+                    expected_type .= Nothing
+                    [QQ.var| x, y : \set [\Int] |]
+        setting = c id
+        untypedExpression = parse_expression setting stringLi
+        ue = either show_error id untypedExpression
+        show_error = \x -> error ("couldn't parse expression:\n" ++ show_err x)
+        typed_expr = checkTypes (setting^.expected_type) (contextOf setting) ue stringLi
+        type_err = \x -> error ("couldn't type check expression:\n" ++ show_err x)
+
+result25 :: String
+result25 = ""

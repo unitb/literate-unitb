@@ -190,13 +190,13 @@ instance (NFData n,NFData t,NFData q) => NFData (GenContext n t q)
 instance IsName n => Translatable (GenContext n t q) (GenContext InternalName t q) where
     translate = namesOf %~ asInternal
 
-instance Functor1 (GenContext n) where
+instance IsName n => Functor1 (GenContext n) where
 --instance Functor2 GenContext where
 
-instance Foldable1 (GenContext n) where
+instance IsName n => Foldable1 (GenContext n) where
 --instance Foldable2 GenContext where
 
-instance Traversable1 (GenContext n) where
+instance IsName n => Traversable1 (GenContext n) where
     traverse1 f (Context a b c d e) = Context a 
             <$> (traverse.traverse) f b
             <*> (traverse.traverse) f c

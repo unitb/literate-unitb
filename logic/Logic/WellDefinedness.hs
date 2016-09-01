@@ -23,7 +23,7 @@ is_true (Binder Exists vs r t tt) = Binder Exists vs ztrue (is_true $ r `zand` t
 is_true (Binder (UDQuant _ _ _ _) _ _ _ _) = undefined'
 is_true (Cast _ e _) = is_true e
 is_true (Lift e _) = is_true e
-is_true e@(FunApp fun xs) 
+is_true e@(FunApp fun xs _)
         | view name fun == [smt|not|]   = is_false x0
         | view name fun == [smt|and|]   = zall $ map is_true xs
         | view name fun == [smt|or|]    = zsome $ map is_true xs
@@ -43,7 +43,7 @@ is_false (Binder Exists vs r t tt) = Binder Forall vs ztrue (is_false $ r `zand`
 is_false (Binder (UDQuant _ _ _ _) _ _ _ _) = undefined'
 is_false (Cast _ e _) = is_false e
 is_false (Lift e _) = is_false e
-is_false e@(FunApp fun xs) 
+is_false e@(FunApp fun xs _)
         | view name fun == [smt|not|]   = is_true x0
         | view name fun == [smt|and|]   = zsome $ map is_false xs
         | view name fun == [smt|or|]    = zall $ map is_false xs
@@ -79,7 +79,7 @@ well_definedness (Binder q vs r t _) = case q of
                                 InfiniteWD -> ztrue
 well_definedness (Cast _ e _) = well_definedness e
 well_definedness (Lift e _) = well_definedness e
-well_definedness (FunApp fun xs) 
+well_definedness (FunApp fun xs _)
         | view name fun == [smt|and|]   = linearRecurse zall zsome id
         | view name fun == [smt|or|]    = linearRecurse zsome zall znot
         | view name fun == [smt|=>|]    = well_definedness 

@@ -79,10 +79,10 @@ pfalse_fun :: Fun
 pfalse_fun = mk_fun [gA] [smt|pfalse|] [] (pred_type gA)
 
 ptrue :: ExprP
-ptrue   = Right $ funApp ptrue_fun []
+ptrue   = Right $ mkFunApp ptrue_fun []
 
 pfalse :: ExprP
-pfalse  = Right $ funApp pfalse_fun []
+pfalse  = Right $ mkFunApp pfalse_fun []
 
 pred_sort :: Sort
 pred_sort = DefSort [tex|\pred|] [smt|pred|] [[smt|a|]] $ array gA bool

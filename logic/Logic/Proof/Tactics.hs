@@ -611,7 +611,7 @@ by_symmetry vs hyp mlbl proof = do
         lbl  <- maybe (fresh_label "symmetry") return mlbl
         goal <- get_goal
         case cs of
-            FunApp f cs
+            FunApp f cs _
                 | view name f /= (z3Name "or") -> fail err0
                 | otherwise -> do
                     ps <- forM (permutations vs) $ \us -> do
@@ -662,9 +662,9 @@ indirect_inequality dir op zVar@(Var _ t) proof = do
         goal <- get_goal
         let is_op f x y = either (const False) id $ do
                             xp <- mk_expr op x y
-                            return $ FunApp f [x,y] == xp
+                            return $ mkFunApp f [x,y] == xp
         case goal of
-            FunApp f [lhs,rhs] 
+            FunApp f [lhs,rhs] _
                 | is_op f x y -> do
                     new_goal <- make_expr $ mzforall [z_decl] mztrue $ thm_rhs lhs rhs
                     g_lbl   <- fresh_label "new:goal"
@@ -704,7 +704,7 @@ indirect_equality dir op zVar@(Var _ t) proof = do
         thm  <- make_expr $ mzforall [x_decl,y_decl] mztrue $ Right (zeq x y) `mzeq` thm_rhs x y
         goal <- get_goal
         case goal of
-            FunApp f [lhs,rhs] 
+            FunApp f [lhs,rhs] _
                 | view name f == z3Name "=" -> do
                     new_goal <- make_expr $ mzforall [z_decl] mztrue $ thm_rhs lhs rhs
                     assert 

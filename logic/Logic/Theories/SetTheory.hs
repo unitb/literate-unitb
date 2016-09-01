@@ -26,12 +26,12 @@ import Utilities.MapSyntax
 import Utilities.Table
 
 as_array :: TypeSystem t => t -> Name -> AbsExpr Name t q
-as_array t x = funApp (mk_lifted_fun [] x [] t) []
+as_array t x = mkFunApp (mk_lifted_fun [] x [] t) []
 
 map_array :: Name -> Type -> [ExprP] -> ExprP
 map_array name t xs = do
     xs <- sequence xs
-    return $ funApp (mk_lifted_fun [] name (L.map type_of xs) t) xs
+    return $ mkFunApp (mk_lifted_fun [] name (L.map type_of xs) t) xs
 
 mzfinite :: (IsName n,IsQuantifier q)
          => ExprPG n Type q -> ExprPG n Type q
@@ -254,9 +254,9 @@ zset = typ_fun2 comprehension_fun
 
 zset_select = typ_fun2 (mk_fun' [] "select" [set_type gA, gA] bool)
 
-zempty_set   = Right $ funApp zempty_set_fun []
-zempty_set'  = funApp zempty_set_fun []
-zset_all     = Right $ funApp zset_all_fun []
+zempty_set   = Right $ mkFunApp zempty_set_fun []
+zempty_set'  = mkFunApp zempty_set_fun []
+zset_all     = Right $ mkFunApp zset_all_fun []
 zsubset      = typ_fun2 subset_fun
 zsetdiff     = typ_fun2 zsetdiff_fun
 zstsubset    = typ_fun2 st_subset_fun
