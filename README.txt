@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/literate-unitb/literate-unitb.svg?branch=master)](https://travis-ci.org/literate-unitb/literate-unitb)
+
 What you need to do
 ===================
 

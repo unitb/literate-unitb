@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import qualified Reactive as R ()
 import Document.Document as Doc ( syntaxSummary )
 import Document.Phase.Expressions as PExp
 import Document.MachineSpec as MSpec
@@ -10,15 +9,15 @@ import Document.Tests.Definitions  as Def
 import Document.Tests.GarbageCollector  as GC
 import Document.Tests.Lambdas as Lam
 import Document.Tests.LockFreeDeque as Deq
-import Document.Tests.Parser as Parser
-import Document.Tests.Phase  as Sync
+import Document.Tests.Parser  as Parser
+import Document.Tests.Phase   as Sync
 import Document.Tests.Puzzle  as Puzz
 import Document.Tests.SmallMachine  as SM
 import Document.Tests.Suite hiding (proof_obligation)
 import Document.Tests.TerminationDetection  as Term
-import Document.Tests.TrainStation  as TS
+import Document.Tests.TrainStation     as TS
 import Document.Tests.TrainStationRefinement  as TSRef
-import Document.Tests.TrainStationSets  as TSS
+import Document.Tests.TrainStationSets as TSS
 import Logic.Expr
 import Logic.Test as Logic
 import Z3.Test as Z3
@@ -49,8 +48,6 @@ import Control.Monad
 
 -- import System.FilePath.Lens
 
-import Reactive.Banana.Property as Prop
-import Reactive.Banana.Test as RB
 import System.Process
 -- import System.Timeout
 
@@ -114,7 +111,5 @@ main = timeIt $ void $ do
     return $ run_test_cases Parser.test_case
     return $ run_test_cases Z3.test_case
     return $ run_test_cases Doc.test_case
-    return $ run_test_cases RB.test_case
-    return $ printQuickCheckResult Prop.run_tests
     return $ printQuickCheckResult EScope.run_tests
     return ()

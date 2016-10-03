@@ -17,8 +17,6 @@ import qualified Utilities.Test as UT
 import qualified Code.Test as Code
 import qualified Documentation.Test as Sum
 
-import Reactive.Banana.Test as RB
-
 import Shelly hiding (time,get)
 
 import System.Directory
@@ -41,7 +39,6 @@ test_case = test_cases
         ,  UT.test_case
         ,  Code.test_case
         ,  Sum.test_case
-        ,  RB.test_case
         ]
 
 main :: IO ()
