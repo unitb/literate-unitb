@@ -70,7 +70,7 @@ packages:
     commit: fe80d6e750e8cffba3a9d8cf2b4d34650aca4059
 - location:
     git: https://github.com/literate-unitb/classy-lens-hierarchy.git
-    commit: 8246070459f331341aefc66ac5cb5030d2d5a14b
+    commit: 405e85716d6bc967476dc74292f4edcf150d50e9
 - location:
     git: https://github.com/literate-unitb/generic-instances.git
     commit: 9c45c7caff4e93d0df96622ffb5238f04fa8b5af
