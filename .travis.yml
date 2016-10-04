@@ -130,14 +130,16 @@ before_install:
 
 # Download z3
 - mkdir $HOME/z3 || echo exists
-- if [ `uname` = "Darwin" ]
+- |
+  if [ `uname` = "Darwin" ]
   then
     travis_retry wget -O z3.zip https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-osx-10.11.zip
   else
     travis_retry wget -O z3.zip https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-ubuntu-14.04.zip
   fi
 - unzip z3.zip
-- if [ `uname` = "Darwin" ]
+- |
+  if [ `uname` = "Darwin" ]
   then
     cp z3-4.4.1-x64-osx-10.11/bin/z3 $HOME/z3
   else
