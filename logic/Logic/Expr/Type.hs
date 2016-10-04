@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase
+{-# LANGUAGE LambdaCase, CPP
         , TypeFamilies #-}
 module Logic.Expr.Type where
 
@@ -361,6 +361,12 @@ instance Serialize Field where
 instance ZoomEq Field where
 instance ZoomEq Sort where
 instance ZoomEq GenericType where
+
+#if !(MIN_VERSION_QuickCheck(2,8,2))
+instance (Arbitrary k,Arbitrary a,Ord k) => Arbitrary (M.Map k a) where
+    arbitrary = M.fromList <$> arbitrary
+    shrink = fmap M.fromList . shrink . M.toList
+#endif
 
 instance Arbitrary GenericType where
     arbitrary = oneof (

@@ -35,7 +35,7 @@ import Control.Precondition
 
 import Data.Data
 import Data.Hashable
-import Data.List.NonEmpty
+import Data.List.NonEmpty hiding (unlines)
 import Data.Packaged
 import Data.Serialize
 

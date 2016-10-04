@@ -18,7 +18,6 @@ import Control.Parallel.Strategies
 import Control.Precondition
 import Control.Monad.State
 
-import Data.ByteString.Builder
 import qualified Data.ByteString.Lazy as Lazy
 import           Data.Either.Combinators
 import           Data.Either.Validation
@@ -28,6 +27,7 @@ import           Data.Map.Class as M
         , empty, mapKeys )
 import qualified Data.Map.Class as M 
 import           Data.Serialize as Ser ( Serialize(..), encodeLazy, decodeLazy ) 
+import           Data.Serialize.Builder (Builder)
 import           Data.Serialize.Put 
 import           Data.Tuple
 import qualified Data.HashMap.Strict as H

@@ -19,7 +19,7 @@ import Data.Either.Combinators
 import Data.List as L
 import Data.List.Lens as L
 import qualified Data.List.Ordered as Ord
-import Data.List.NonEmpty as NE
+import Data.List.NonEmpty as NE hiding (unlines)
 import qualified Data.Map.Class as M
 import Data.Serialize
 import Data.Semigroup hiding (option)

@@ -10,20 +10,13 @@ import Control.Arrow
 import Control.DeepSeq
 import Control.Lens  hiding (argument)
 import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.RWS
-import Control.Monad.State
-import Control.Monad.Trans.Either as E
 import Control.Precondition
 
 import Data.Char
-import Data.Either
 import Data.Either.Combinators
 import qualified Data.Foldable as F
-import Data.Graph
 import Data.List ( intercalate )
 import qualified Data.List as L
-import Data.Map as M  hiding ( foldl, map, null, size, (!) )
 import Data.Semigroup hiding ( (<>) )
 import qualified Data.Semigroup as S 
 import Data.String.Lines as LN
@@ -33,9 +26,7 @@ import GHC.Generics (Generic)
 
 import Safe
 
-import System.Directory
 import System.IO.Unsafe
-import System.FilePath
 
 import Text.Parsec ((<?>),(<|>))
 import qualified Text.Parsec as P
@@ -45,7 +36,6 @@ import qualified Text.Parsec.Pos as P
 import Text.Pretty
 import Text.Printf.TH
 
-import Utilities.Graph hiding ( map, empty, size, (!) )
 import Utilities.Syntactic
 
 data LatexNode = 
@@ -578,80 +568,6 @@ do_while cmd = do
         if b then
             do_while cmd
         else return ()
-
-fill_holes :: String -> Map String [DocWithHoles] 
-           -> Either [Error] [(LatexToken,LineInfo)]
-fill_holes fname m = do
-        m <- foldM propagate M.empty order
-        return (m ! fname)
-    where
-        propagate :: (Map String [(LatexToken, LineInfo)])
-                  -> SCC String
-                  -> Either [Error] (Map String [(LatexToken, LineInfo)])
-        propagate m1 (AcyclicSCC v) = Right (insert v (g (m ! v) m1) m1)
-        propagate _ (CyclicSCC xs@(y:_)) = Left 
-            [ (Error (msg $ intercalate "," xs) 
-                $ LI y 1 1)]
-        propagate _ (CyclicSCC []) = error "fill_holes: a cycle has to include two or more vertices"
-        g :: [DocWithHoles]
-          -> Map String [(LatexToken,LineInfo)] 
-          -> [(LatexToken,LineInfo)] 
-        g doc m = concatMap (h m) doc
-        h :: Map String [(LatexToken,LineInfo)] 
-          -> DocWithHoles
-          -> [(LatexToken,LineInfo)] 
-        h _ (Right x)       = [x]
-        h m (Left (name,_)) = m ! name
-        msg = [printf|A cycle exists in the LaTeX document structure: %s|]
-        order = cycles_with [fname] edges 
-        edges :: [(String,String)]
-        edges    = concatMap f $ toList m
-        f (x,ys) = [ (x,y) | y <- map fst $ lefts ys ]
-        --m ! x = case M.lookup x m of
-        --            Just y  -> y
-        --            Nothing -> error $ 
-        --                "Map.!: given key is not an element in the map: " 
-        --                ++ show x ++ " - " ++ show (keys m) ++ " - " ++ show order
-
-scan_doc :: String -> IO (Either [Error] [(LatexToken,LineInfo)])
-scan_doc fname = runEitherT $ do
-    let dir = takeDirectory fname
-    fname  <- liftIO $ canonicalizePath fname
-    (m,xs) <- flip execStateT (M.empty,[(fname,(LI fname 1 1))]) 
-            $ fix $ \rec -> do
-        (m,ys) <- get
-        case ys of
-            (x,(LI _ i j)):xs -> do
-                if not $ x `member` m then do
-                    ct  <- liftIO $ readFile x
-                    ct  <- lift $ hoistEither $ scan_file x ct
-                    ct  <- forM ct $ \path -> do
-                        either 
-                            (\(path,li) -> do
-                                b0 <- liftIO $ doesFileExist $ dir </> path
-                                b1 <- liftIO $ doesFileExist $ (dir </> path ++ ".tex")
-                                path <- if b1 
-                                    then return $ (dir </> path ++ ".tex")
-                                    else if b0 
-                                    then return $ dir </> path
-                                    else lift $ E.left 
-                                        [ Error ("file '" ++ path ++ "' does not exist") 
-                                            $ LI x i j]
-                                path <- liftIO $ canonicalizePath path
-                                return $ Left (path,li))
-                            (return . Right) path
-                    put (insert x ct m,xs ++ lefts ct)
-                else put (m,xs)
-                rec
-            [] -> return ()
-    unless (L.null xs) $ error "scan_doc: xs should be null"
-    hoistEither $ fill_holes fname m
-        
-
-parse_latex_document :: FilePath -> IO (Either [Error] LatexDoc)
-parse_latex_document fname = runEitherT $ do
-        ys <- EitherT $ scan_doc fname 
-        hoistEither $ latex_content fname ys (1,1)
 
 latex_structure :: FilePath -> String -> Either [Error] LatexDoc
 latex_structure fn xs = do

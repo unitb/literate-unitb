@@ -50,7 +50,7 @@ library
   -- Modules exported by the library.
   exposed-modules:
         Latex.Monad
-        Latex.OldMonad
+        -- Latex.OldMonad
         Latex.Parser
         Latex.Scanner
         -- TEST CASES
@@ -70,7 +70,7 @@ library
          -j8
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >= 4.8 && < 5, lens, mtl, semigroups, safe, deepseq, transformers >= 0.3, either, containers, directory >= 1.2.3.0, filepath, parsec, QuickCheck, literate-unitb-utils, invariants, printf-th, axiomatic-classes, string-lenses, show-with, unitb-testing, generic-instances, pretty-printable
+  build-depends:       base >= 4.8 && < 5, lens, mtl, semigroups, safe, deepseq, transformers >= 0.3, either, containers, directory, filepath, parsec, QuickCheck, literate-unitb-utils, invariants, printf-th, axiomatic-classes, string-lenses, show-with, unitb-testing, generic-instances, pretty-printable
   
   -- Directories containing source files.
   hs-source-dirs:      .

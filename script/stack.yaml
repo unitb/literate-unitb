@@ -28,10 +28,7 @@ ghc-options:
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
-- utils/
-- script/
-- latex/
-- logic/
+- ../utils/
 - location:
     git: https://github.com/literate-unitb/existential.git
     commit: e1bb9c7e183b3d6a17587e93eb8d8fe21ff9845a
@@ -104,9 +101,7 @@ packages:
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps: 
 - assert-0.0.1.2
-- monoid-transformer-0.0.3
 - portable-lines-0.1
-- pseudomacros-0.0.2
 
 # Override default flag values for local packages and extra-deps
 flags: {}

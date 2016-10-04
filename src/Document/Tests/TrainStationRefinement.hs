@@ -6,7 +6,7 @@ where
 import Document.Tests.Suite
 
     -- Libraries
-import Data.List.NonEmpty as NE
+import Data.List.NonEmpty as NE hiding (unlines)
 import Test.UnitTest
 
 test_case :: TestCase
