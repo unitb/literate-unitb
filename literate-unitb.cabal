@@ -140,7 +140,7 @@ library
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
   
   if flag(HashedKeys)
@@ -172,7 +172,7 @@ executable unitb
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
   
   -- LANGUAGE extensions used by modules in this package.
@@ -191,7 +191,7 @@ executable run_tests
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
   
   -- LANGUAGE extensions used by modules in this package.
@@ -209,7 +209,7 @@ executable test_tmp
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
   
   -- LANGUAGE extensions used by modules in this package.
@@ -230,7 +230,7 @@ executable test
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
   
   -- LANGUAGE extensions used by modules in this package.
@@ -248,7 +248,7 @@ test-suite tests
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
    default-extensions:  OverloadedStrings
    -- type: exitcode-stdio-1.0

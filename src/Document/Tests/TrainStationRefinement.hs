@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Document.Tests.TrainStationRefinement 
     ( test, test_case, path3 )
 where
@@ -6,7 +7,11 @@ where
 import Document.Tests.Suite
 
     -- Libraries
+#if MIN_VERSION_semigroups(0,18,0)
+import Data.List.NonEmpty as NE
+#else
 import Data.List.NonEmpty as NE hiding (unlines)
+#endif
 import Test.UnitTest
 
 test_case :: TestCase

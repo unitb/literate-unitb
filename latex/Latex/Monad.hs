@@ -55,6 +55,18 @@ begin name args body = do
     node $ EnvNode $ Env liBegin name li (sconcat $ fromList $ args ++ [body]) li'
     return x
 
+open :: BracketType -> LatexGen ()
+open b = do
+    li <- LatexGen get
+    updateLI [fst $ bracketPair b]
+    token $ Open b li
+
+close :: BracketType -> LatexGen ()
+close b = do
+    li <- LatexGen get
+    updateLI [snd $ bracketPair b]
+    token $ Close b li
+
 brackets :: LatexGen a -> LatexGen a
 brackets = brackets' Curly
 

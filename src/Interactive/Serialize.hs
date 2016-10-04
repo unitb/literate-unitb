@@ -18,6 +18,11 @@ import Control.Parallel.Strategies
 import Control.Precondition
 import Control.Monad.State
 
+#if MIN_VERSION_cereal(5,0,0)
+import Data.ByteString.Builder (Builder)
+#else
+import Data.Serialize.Builder (Builder)
+#endif
 import qualified Data.ByteString.Lazy as Lazy
 import           Data.Either.Combinators
 import           Data.Either.Validation
@@ -27,7 +32,6 @@ import           Data.Map.Class as M
         , empty, mapKeys )
 import qualified Data.Map.Class as M 
 import           Data.Serialize as Ser ( Serialize(..), encodeLazy, decodeLazy ) 
-import           Data.Serialize.Builder (Builder)
 import           Data.Serialize.Put 
 import           Data.Tuple
 import qualified Data.HashMap.Strict as H
