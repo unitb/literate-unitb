@@ -139,9 +139,9 @@ before_install:
 - unzip z3.zip
 - if [ `uname` = "Darwin" ]
   then
-    cp z3-4.4.1-x64-osx-10.11/bin/z3 $HOME/z3
+    travis_retry cp z3-4.4.1-x64-osx-10.11/bin/z3 $HOME/z3
   else
-    cp z3-4.4.1-x64-ubuntu-14.04/bin/z3 $HOME/z3
+    travis_retry cp z3-4.4.1-x64-ubuntu-14.04/bin/z3 $HOME/z3
   fi
 - export PATH="$HOME/z3:$PATH"
 - z3 -h
