@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module UnitB.Property where
 
     -- Modules
@@ -15,6 +16,11 @@ import Control.Lens hiding (Const,elements)
 
 import Data.Default
 import Data.Foldable
+#if MIN_VERSION_transformers(0,5,0)
+import           Prelude.Extras hiding (Lift1)
+import qualified Data.Functor.Classes as F
+#else
+#endif
 import Data.Hashable
 import Data.List as L
 import Data.List.NonEmpty as NE hiding (take)
