@@ -1,6 +1,6 @@
 {-# LANGUAGE KindSignatures
         , GADTs, TypeOperators
-        , Arrows
+        , Arrows, CPP
         , PatternSynonyms
         , ScopedTypeVariables
         , ConstraintKinds
@@ -39,7 +39,11 @@ import Data.Existential
 import Data.Factory
 import Data.ForallInstances
 import Data.Functor.Compose
+#if MIN_VERSION_transformers(0,5,0)
+import Prelude.Extras hiding (Lift1)
+#else
 import Data.Functor.Classes
+#endif
 import Data.Foldable as F
 import Data.List.Ordered
 import Data.Maybe
@@ -102,6 +106,11 @@ instance LivenessRule rule => Show (Inference rule) where
             (show1 z)
             (show1 v)
             (show1 w)
+
+#if MIN_VERSION_transformers(0,5,0)
+eq1 :: (Eq1 f,Eq a) => f a -> f a -> Bool
+eq1 = (==#)
+#endif
 
 instance LivenessRule rule => Eq (Inference rule) where
     Inference x0 y0 z0 v0 w0 == Inference x1 y1 z1 v1 w1 = 

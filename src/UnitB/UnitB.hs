@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies,StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies,StandaloneDeriving,CPP #-}
 module UnitB.UnitB 
     ( module UnitB.Syntax
     , module UnitB.UnitB 
@@ -30,7 +30,11 @@ import Control.Precondition
 import           Data.Default
 import           Data.Compressed
 import           Data.Either.Validation
-import           Data.Functor.Classes
+#if MIN_VERSION_transformers(0,5,0)
+import Prelude.Extras hiding (Lift1)
+#else
+import Data.Functor.Classes
+#endif
 import           Data.Functor.Compose
 import           Data.List as L hiding (inits, union,insert)
 import           Data.Map.Class as M hiding 

@@ -1,6 +1,6 @@
 {-# LANGUAGE KindSignatures
         , GADTs, TypeOperators
-        , Arrows
+        , Arrows, CPP
         , PatternSynonyms
         , ScopedTypeVariables
         , ConstraintKinds
@@ -24,7 +24,11 @@ import Control.Lens
 import Data.Default
 import Data.Existential
 import Data.ForallInstances
+#if MIN_VERSION_transformers(0,5,0)
+import Prelude.Extras hiding (Lift1)
+#else
 import Data.Functor.Classes
+#endif
 import Data.Maybe
 import Data.Serialize hiding (label)
 import Data.Typeable

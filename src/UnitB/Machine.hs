@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings
-    , TypeFamilies
+    , TypeFamilies, CPP
     , ScopedTypeVariables
     , StandaloneDeriving
     #-} 
@@ -36,7 +36,12 @@ import           Data.Default
 import           Data.Monoid
 import           Data.Foldable as F (all,toList)
 import           Data.Functor.Compose
-import           Data.Functor.Classes
+#if MIN_VERSION_transformers(0,5,0)
+import           Prelude.Extras hiding (Lift1)
+import qualified Data.Functor.Classes as F
+#else
+import Data.Functor.Classes
+#endif
 import           Data.Graph.Bipartite as G
 import           Data.List as L hiding ( union, inits )
 import           Data.List.NonEmpty as NE hiding (inits)
@@ -95,7 +100,11 @@ instance ZoomEq expr => ZoomEq (MachineBase expr) where
 instance ZoomEq expr => ZoomEq (EventTable expr) where
 
 instance Eq1 MachineBase where
+#if MIN_VERSION_transformers(0,5,0)
+    (==#) x y = x == y
+#else
     eq1 x y = x == y
+#endif
 
 instance Show1 MachineBase where
     showsPrec1 n m = showsPrec n m

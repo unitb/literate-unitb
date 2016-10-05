@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Logic.Theory.Internals where
 
     -- Modules
@@ -11,6 +12,13 @@ import Control.Lens hiding (Context,(.=),from,to,rewriteM)
 import Control.Lens.HierarchyTH
 import Control.Precondition
 
+#if MIN_VERSION_transformers(0,5,0)
+import           Prelude.Extras hiding (Lift1)
+import qualified Data.Functor.Classes as F
+#else
+import           Data.Functor.Classes
+#endif
+import           Data.Map.Class as M
 import           Data.Serialize
 import           Data.Typeable
 

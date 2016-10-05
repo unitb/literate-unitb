@@ -1,4 +1,4 @@
-{-# LANGUAGE UndecidableInstances #-} 
+{-# LANGUAGE UndecidableInstances,CPP #-} 
 module UnitB.System where
 
     -- Modules
@@ -20,7 +20,11 @@ import Control.Lens hiding (indices)
 import Control.Precondition
 
 import Data.Default
+#if MIN_VERSION_transformers(0,5,0)
+import Prelude.Extras hiding (Lift1)
+#else
 import Data.Functor.Classes
+#endif
 import Data.Functor.Compose
 import Data.Graph.Bipartite
 import Data.Map.Class as M
@@ -70,10 +74,17 @@ instance (Show mch,HasMachine mch expr,HasExpr expr,ZoomEq expr)
 instance Controls (SystemBase mch) (SystemBase mch) where
 
 instance Eq1 SystemBase where
+#if MIN_VERSION_transformers(0,5,0)
+    (==#) = (==)
+#else
     eq1 = (==)
+#endif
 
 instance Show1 SystemBase where
+#if MIN_VERSION_transformers(0,5,0)
+#else
     showsPrec1 = showsPrec
+#endif
 
 instance Default (SystemBase mch) where
     def = Sys [] M.empty 
