@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Interactive.Serialize where
 
     -- Modules
@@ -18,7 +19,7 @@ import Control.Parallel.Strategies
 import Control.Precondition
 import Control.Monad.State
 
-#if MIN_VERSION_cereal(5,0,0)
+#if MIN_VERSION_cereal(0,5,0)
 import Data.ByteString.Builder (Builder)
 #else
 import Data.Serialize.Builder (Builder)

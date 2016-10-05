@@ -62,7 +62,7 @@ library
   default-extensions:    QuasiQuotes, OverloadedStrings, FlexibleContexts
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <5, containers >=0.5 && <0.6, directory >=1.2 && <1.3, filepath >=1.4 && <1.5, lens, literate-unitb-utils >=0.1 && <0.2, MissingH >=1.3 && <1.4, mtl >=2.2 && <2.3, printf-th, process >=1.2 && <1.5, string-lenses, time >=1.5 && <1.6, transformers >=0.4 && <0.5, either, ConfigFile
+  build-depends:       base >=4.8 && <5, containers >=0.5 && <0.6, directory >=1.2 && <1.3, filepath >=1.4 && <1.5, lens, literate-unitb-utils >=0.1 && <0.2, MissingH >=1.3 && <1.5, mtl >=2.2 && <2.3, printf-th, process >=1.2 && <1.5, string-lenses, time >=1.5 && <1.7, transformers >=0.4 && <0.6, either, ConfigFile
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
