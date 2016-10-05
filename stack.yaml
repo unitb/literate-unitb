@@ -15,11 +15,6 @@ compiler: ghc-7.10.3
 
 ghc-options:
     # All packages
-    "*": -W -j8 -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -fno-ignore-asserts
-         -fwarn-tabs
     literate-unitb: -Werror
     literate-unitb-scripts: -Werror
     literate-unitb-utils: -Werror
@@ -73,7 +68,7 @@ packages:
     commit: 405e85716d6bc967476dc74292f4edcf150d50e9
 - location:
     git: https://github.com/literate-unitb/generic-instances.git
-    commit: 9c45c7caff4e93d0df96622ffb5238f04fa8b5af
+    commit: 51cfdcd0b715f22c17f9da0321295ae67f641f25
 - location:
     git: https://github.com/literate-unitb/data-map-class.git
     commit: f1672a380d7f069ccc080c2380554acf0b2bf258
@@ -107,6 +102,7 @@ extra-deps:
 - monoid-transformer-0.0.3
 - portable-lines-0.1
 - pseudomacros-0.0.2
+- map-syntax-0.2.0.1
 
 # Override default flag values for local packages and extra-deps
 flags: {}

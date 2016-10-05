@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies,CPP #-}
 module Logic.Names.Packaged
     ( Name, InternalName
     , IsName(..)
@@ -35,7 +35,11 @@ import Control.Precondition
 
 import Data.Data
 import Data.Hashable
-import Data.List.NonEmpty hiding (unlines)
+#if MIN_VERSION_semigroups(0,18,0)
+import Data.List.NonEmpty as NE
+#else
+import Data.List.NonEmpty as NE hiding (unlines)
+#endif
 import Data.Packaged
 import Data.Serialize
 
