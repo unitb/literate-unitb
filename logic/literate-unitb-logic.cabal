@@ -16,7 +16,7 @@ version:             0.1.0.0
 synopsis:            Logic modules for Literate Unit-B
 
 -- A longer description of the package.
--- description:         
+description:         Backend prover for doing predicate calculus with sequent calculus proofs
 
 -- The license under which the package is released.
 license:             MIT
