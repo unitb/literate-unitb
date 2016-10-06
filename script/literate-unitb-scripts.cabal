@@ -88,7 +88,6 @@ executable call_z3
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
@@ -107,7 +106,6 @@ executable compile
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
@@ -126,7 +124,6 @@ executable diff_fail
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
@@ -143,7 +140,6 @@ executable find
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
@@ -156,7 +152,6 @@ executable find_case
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
@@ -169,7 +164,6 @@ executable modulestruct
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
@@ -182,7 +176,6 @@ executable open_errors
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
@@ -195,7 +188,6 @@ executable periodic
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
@@ -209,7 +201,6 @@ executable display_errors
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8

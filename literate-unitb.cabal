@@ -170,7 +170,6 @@ executable unitb
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
@@ -189,7 +188,6 @@ executable run_tests
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
@@ -207,7 +205,6 @@ executable test_tmp
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
@@ -228,7 +225,6 @@ executable test
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
@@ -246,7 +242,6 @@ test-suite tests
    ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
-         -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs
          -j8
