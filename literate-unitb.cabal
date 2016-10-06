@@ -66,6 +66,10 @@ Flag PackagedNames
     -- Description: stuff
     default: False
 
+source-repository head
+  type:     git
+  location: https://github.com/literate-unitb/literate-unitb
+
 library
   hs-source-dirs: src
   exposed-modules: 
