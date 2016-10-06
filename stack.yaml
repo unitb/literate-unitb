@@ -13,12 +13,17 @@
 resolver: lts-6.4
 compiler: ghc-7.10.3
 
-ghc-options:
+# ghc-options:
     # All packages
-    literate-unitb: -Werror
-    literate-unitb-scripts: -Werror
-    literate-unitb-utils: -Werror
-    literate-unitb-latex: -Werror
+    # "*": -W -j8 -fwarn-missing-signatures 
+    #      -fwarn-incomplete-uni-patterns
+    #      -fwarn-missing-methods
+    #      -fno-ignore-asserts
+    #      -fwarn-tabs
+    # literate-unitb: -Werror
+    # literate-unitb-scripts: -Werror
+    # literate-unitb-utils: -Werror
+    # literate-unitb-latex: -Werror
 
 # Local packages, usually specified by relative directory name
 packages:
