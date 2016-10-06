@@ -56,6 +56,8 @@ makeFields ''POParam
 mkCons ''POParam
 instance NFData POParam
 
+instance Semigroup (DList a) where
+
 empty_param :: POParam
 empty_param = makePOParam
 

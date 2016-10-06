@@ -68,7 +68,7 @@ library
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
 
   -- Directories containing source files.
@@ -90,7 +90,7 @@ executable call_z3
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
   
   -- LANGUAGE extensions used by modules in this package.
@@ -109,7 +109,7 @@ executable compile
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
   
   -- LANGUAGE extensions used by modules in this package.
@@ -128,7 +128,7 @@ executable diff_fail
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
   
   -- LANGUAGE extensions used by modules in this package.
@@ -145,7 +145,7 @@ executable find
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
 executable find_case
   -- .hs or .lhs file containing the Main module.
@@ -158,7 +158,7 @@ executable find_case
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
 executable modulestruct
   -- .hs or .lhs file containing the Main module.
@@ -171,7 +171,7 @@ executable modulestruct
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
 executable open_errors
   -- .hs or .lhs file containing the Main module.
@@ -184,7 +184,7 @@ executable open_errors
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
 executable periodic
   -- .hs or .lhs file containing the Main module.
@@ -197,7 +197,7 @@ executable periodic
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
 executable display_errors
   -- .hs or .lhs file containing the Main module.
@@ -211,5 +211,5 @@ executable display_errors
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
          -j8
