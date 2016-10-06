@@ -19,7 +19,7 @@ ghc-options:
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -fno-ignore-asserts
-         -fwarn-tabs -Werror
+         -fwarn-tabs
 
 # Local packages, usually specified by relative directory name
 packages:
