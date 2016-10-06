@@ -139,15 +139,15 @@ runParser' p = runParserWith $ Param
         (p^.language) 
         vars'
     where
-        -- | f <$> y
-        -- | x <$ y = const x <$> y
-        -- | f <$> Just x  = Just (f x)
-        -- | f <$> Nothing = Nothing
-        -- | const x _ = x
-        -- |   x <$ Just y
-        -- | = const x <$> Just y
-        -- | = Just (const x y)
-        -- | = Just x
+        --  f <$> y
+        --  x <$ y = const x <$> y
+        --  f <$> Just x  = Just (f x)
+        --  f <$> Nothing = Nothing
+        --  const x _ = x
+        --    x <$ Just y
+        --  = const x <$> Just y
+        --  = Just (const x y)
+        --  = Just x
         ctx = contextOf p
         vars  = (() <$) <$> ctx^.constants
         vars' = M.map Word vars `M.union` M.mapMaybe f defs

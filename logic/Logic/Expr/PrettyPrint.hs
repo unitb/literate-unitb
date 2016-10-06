@@ -1,5 +1,5 @@
 {-# LANGUAGE 
-        TypeOperators
+        TypeOperators,CPP
         ,ScopedTypeVariables
         ,OverloadedStrings #-}
 module Logic.Expr.PrettyPrint 
@@ -14,7 +14,12 @@ import Logic.Expr.Classes
 
     -- Libraries
 import Control.Invariant
+#if MIN_VERSION_lens(4,13,0)
 import Control.Lens hiding (List,cons,uncons)
+#else
+import Control.Lens hiding (cons,uncons)
+#endif
+
 import Control.Monad.Reader
 
 import Data.DList as D (DList)

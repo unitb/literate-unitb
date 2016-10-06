@@ -405,8 +405,8 @@ one_point_rule = foo . one_point_rule'
         foo e = case rewrite foo e of
                     [fun| (= $lhs $rhs) |] 
                         | lhs == rhs -> ztrue
-                        -- | lhs == ztrue -> lhs
-                        -- | lhs == ztrue -> lhs
+                        --  lhs == ztrue -> lhs
+                        --  lhs == ztrue -> lhs
                     Binder q _ x y _
                         | q == qExists && x == ztrue && y == ztrue     -> ztrue
                         | q == qExists && (x == zfalse || y == zfalse) -> zfalse
@@ -459,7 +459,7 @@ conjuncts x = [x]
 disjuncts :: (IsName n,TypeSystem2 t) => AbsExpr n t q -> [AbsExpr n t q]
 disjuncts (FunApp f xs)
     | z3_name f == [smt|or|] = xs
-    -- | name f == "=>"  = map znot (take 1 xs) ++ drop 1 xs
+    --  name f == "=>"  = map znot (take 1 xs) ++ drop 1 xs
 disjuncts x = [x]
 
 applyAssoc :: (Int -> AbsFun n a) -> [GenExpr n t a q] -> GenExpr n t a q

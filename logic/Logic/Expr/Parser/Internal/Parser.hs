@@ -251,7 +251,6 @@ binding' term tok = do
 data Term = 
         Cmd Command 
         | Field Field
-        -- | E Expr
         | UE UntypedExpr
     deriving (Show)
 
@@ -398,9 +397,9 @@ recordFields field = do
             ]
         validateFields xs
 
-        -- | \dummy{ x : \Int }
-        -- | \qforall{y}{}{f.y}
-        -- | \qforall{f,x}{f.x \le 3}
+-- | \dummy{ x : \Int }
+-- | \qforall{y}{}{f.y}
+-- | \qforall{f,x}{f.x \le 3}
 dummy_types :: [Name] -> Context -> [Var]
 dummy_types vs (Context _ _ _ _ dums) = map f vs
     where

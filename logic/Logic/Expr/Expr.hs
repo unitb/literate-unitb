@@ -9,7 +9,7 @@ module Logic.Expr.Expr
 where
 
     -- Module
-import Logic.Expr.Classes
+import Logic.Expr.Classes as Expr
 import Logic.Expr.Fun
 import Logic.Expr.PrettyPrint
 import Logic.Expr.Scope
@@ -26,7 +26,7 @@ import Control.Monad.Identity
 import Control.Monad.Reader
 import Control.Monad.State
 import Control.Lens hiding (rewrite,Context,elements
-                           ,Const,Context',List,rewriteM
+                           ,Const,Context',rewriteM
                            ,Traversable1(..))
 import Control.Precondition
 
@@ -431,9 +431,9 @@ instance IsName n => HasNames (GenExpr n t a q) n where
     namesOf = traverse3
 
 instance (Data n,IsName n,Data t,Data q,TypeSystem t, IsQuantifier q) => Tree (AbsDef n t q) where
-    as_tree' d@(Def _ _ argT rT e) = List <$> sequenceA
+    as_tree' d@(Def _ _ argT rT e) = Expr.List <$> sequenceA
             [ Str  <$> render_decorated d
-            , List <$> mapM as_tree' argT 
+            , Expr.List <$> mapM as_tree' argT 
             , as_tree' rT 
             , as_tree' e ]
 
@@ -518,34 +518,34 @@ instance (TypeSystem a, TypeSystem t
     as_tree' (Cast CodeGen e t)   = do
         t' <- as_tree' t
         e' <- as_tree' e
-        return $ List [Str "as", e', t']
+        return $ Expr.List [Str "as", e', t']
     as_tree' (Cast Parse e _)   = as_tree' e
     as_tree' (Lift e t) = do
         t' <- as_tree' t
         e' <- as_tree' e
-        return $ List [ List [ Str "as", Str "const", t']
+        return $ Expr.List [ Expr.List [ Str "as", Str "const", t']
                              , e']
     as_tree' (Record (RecLit m) _)  = 
-        List <$> liftA2 (:) 
+        Expr.List <$> liftA2 (:) 
             (pure $ Str $ render (recordName m)) 
             (traverse as_tree' $ M.elems m)
     as_tree' (Record (RecSet m) _)  = 
-        List <$> liftA2 (:) 
+        Expr.List <$> liftA2 (:) 
             (pure $ Str $ render (recordName m)) 
             (traverse as_tree' $ M.elems m)
     as_tree' (Record (RecUpdate x m') _)  = 
-            List <$> liftA2 (:) 
+            Expr.List <$> liftA2 (:) 
                 (pure $ Str $ render (recordName m)) 
                 (traverse as_tree' $ M.elems m)
         where
           m = m' `M.union` lookupFields x
     as_tree' (Record (FieldLookup x field) _) =
-        List <$> sequenceA [pure $ Str $ accessor field, as_tree' x]
+        Expr.List <$> sequenceA [pure $ Str $ accessor field, as_tree' x]
     as_tree' (Word (Var xs _))    = return $ Str $ render xs
     as_tree' (Lit xs _)         = return $ Str $ pretty xs
     as_tree' (FunApp f@(Fun _ _ _ _ t _) [])
-            | isLifted f = List <$> sequence   
-                               [ List 
+            | isLifted f = Expr.List <$> sequence   
+                               [ Expr.List 
                                  <$> (map Str ["_","map"] ++) 
                                  <$> mapM as_tree' [t]
                                , Str <$> render_decorated f
@@ -554,18 +554,18 @@ instance (TypeSystem a, TypeSystem t
     as_tree' (FunApp f ts)  = do
         ts' <- mapM as_tree' ts
         f   <- if isLifted f 
-            then (List . map Str) 
+            then (Expr.List . map Str) 
                             <$> (["_","map"] ++) 
                             <$> mapM render_decorated [f]
             else Str <$> render_decorated f
-        return $ List (f : ts')
+        return $ Expr.List (f : ts')
     as_tree' (Binder q xs r xp _)  = do
         xs' <- mapM as_tree' xs
         r'  <- as_tree' r
         xp' <- as_tree' xp
-        return $ List [ Str $ pretty q
-                      , List xs'
-                      , List 
+        return $ Expr.List [ Str $ pretty q
+                      , Expr.List xs'
+                      , Expr.List 
                           [ merge_range q
                           , r'
                           , xp' ] ]

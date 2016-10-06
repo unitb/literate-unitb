@@ -19,7 +19,11 @@ import Data.Either.Combinators
 import Data.List as L
 import Data.List.Lens as L
 import qualified Data.List.Ordered as Ord
+#if MIN_VERSION_semigroups(0,18,0)
+import Data.List.NonEmpty as NE
+#else
 import Data.List.NonEmpty as NE hiding (unlines)
+#endif
 import qualified Data.Map.Class as M
 import Data.Serialize
 import Data.Semigroup hiding (option)

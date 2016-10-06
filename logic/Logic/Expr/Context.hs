@@ -2,7 +2,7 @@
 module Logic.Expr.Context where
 
     -- Module
-import Logic.Expr.Classes
+import Logic.Expr.Classes as Expr
 import Logic.Expr.Expr
 import Logic.Expr.Type
 import Logic.Names
@@ -13,7 +13,7 @@ import Control.DeepSeq
 import Control.Monad.Reader
 import Control.Monad.State
 import Control.Lens hiding (rewrite,Context,elements
-                           ,Const,Context',List,rewriteM
+                           ,Const,Context',rewriteM
                            ,Traversable1(..),children)
 import Control.Lens.Misc
 

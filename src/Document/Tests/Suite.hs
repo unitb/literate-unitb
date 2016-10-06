@@ -64,11 +64,11 @@ list_file_obligations' path = many_file_obligations' $ pure path
 
 many_file_obligations' :: NonEmpty FilePath -> IO (POS MachineId Machine,POS String Theory)
 many_file_obligations' files = do
-        -- | modifyMVar is important for exception safety
-        -- | if this procedure crashes without restoring the
-        -- | state of pos, every other thread attempting any 
-        -- | call on this module is going to with a mysterious
-        -- | MVar exception
+        --  modifyMVar is important for exception safety
+        --  if this procedure crashes without restoring the
+        --  state of pos, every other thread attempting any 
+        --  call on this module is going to with a mysterious
+        --  MVar exception
     b <- liftIO $ mapM doesFileExist files
     if and b then do
         modifyMVar pos $ \m -> do

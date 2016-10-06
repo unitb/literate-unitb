@@ -15,15 +15,11 @@ compiler: ghc-7.10.3
 
 ghc-options:
     # All packages
-    "*": -W -j8 -fwarn-missing-signatures 
+    literate-unitb-logic: -W -j8 -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -fno-ignore-asserts
-         -fwarn-tabs
-    literate-unitb: -Werror
-    literate-unitb-scripts: -Werror
-    literate-unitb-utils: -Werror
-    literate-unitb-latex: -Werror
+         -fwarn-tabs -Werror
 
 # Local packages, usually specified by relative directory name
 packages:

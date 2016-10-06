@@ -3,14 +3,14 @@
 module Logic.Expr.Type where
 
     -- Modules
-import Logic.Expr.Classes
+import Logic.Expr.Classes as Expr
 import Logic.Expr.PrettyPrint
 import Logic.Names
 
     -- Libraries
 import Control.Applicative
 import Control.DeepSeq
-import Control.Lens hiding (List,elements,rewriteM)
+import Control.Lens hiding (elements,rewriteM)
 import Control.Monad.Reader
 import Control.Precondition
 
@@ -164,7 +164,7 @@ cons_to_tree s ts = do
     let n = case opt of
                 ProverOutput -> render $ z3_name s
                 UserOutput -> render $ s^.name
-    return $ List (Str n : map as_tree ts)
+    return $ Expr.List (Str n : map as_tree ts)
 
 typeParams :: Sort -> Int
 typeParams (RecordSort m) = M.size m
@@ -350,7 +350,7 @@ z3_decoration' t = do
             ProverOutput -> f <$> as_tree' t
             UserOutput -> return ""
     where
-        f (List ys) = [printf|@Open%s@Close|] xs
+        f (Expr.List ys) = [printf|@Open%s@Close|] xs
             where xs = concatMap f ys :: String
         f (Str y)   = [printf|@@%s|] y
 

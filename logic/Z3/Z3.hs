@@ -29,7 +29,7 @@ module Z3.Z3
 where
 
     -- Modules
-import Logic.Expr hiding ((</>))
+import Logic.Expr as Expr hiding ((</>))
 import Logic.Expr.Declaration
 import Logic.Proof
 
@@ -39,7 +39,7 @@ import Z3.Version
 import Control.Applicative
 import Control.Arrow hiding (left)
 import Control.DeepSeq
-import Control.Lens hiding (Context,Context',List)
+import Control.Lens hiding (Context,Context')
 
 import Control.Concurrent
 import Control.Concurrent.SSem
@@ -74,25 +74,25 @@ total_caps = unsafePerformIO $ new $ z3c_capacity z3_config
 
 instance Tree Z3Command where
     as_tree' = return . as_tree
-    as_tree (Push)        = List [Str "push"]
-    as_tree (Pop)         = List [Str "pop"]
+    as_tree (Push)        = Expr.List [Str "push"]
+    as_tree (Pop)         = Expr.List [Str "pop"]
     as_tree (Decl d)      = as_tree d
-    as_tree (SetOption name b) = List 
+    as_tree (SetOption name b) = Expr.List 
                         [ Str "set-option"
                         , Str $ ':' : name
                         , Str $ map toLower b]
-    as_tree GetUnsatCore  = List [Str "get-unsat-core"]
-    as_tree (Assert xp _n) = List [Str "assert", f $ g xp]
+    as_tree GetUnsatCore  = Expr.List [Str "get-unsat-core"]
+    as_tree (Assert xp _n) = Expr.List [Str "assert", f $ g xp]
         where
             g (Binder FOForall vs r t _) = 
-                    List 
+                    Expr.List 
                         [ Str "forall"
-                        , List $ map as_tree vs
-                        , List 
+                        , Expr.List $ map as_tree vs
+                        , Expr.List 
                             [ Str "!"
                             , as_tree $ r `zimplies` t
                             , Str ":pattern"
-                            , List $ map as_tree $ z3_pattern (S.fromList vs) t
+                            , Expr.List $ map as_tree $ z3_pattern (S.fromList vs) t
                             ]
                         ]
             g e = as_tree e
@@ -101,7 +101,7 @@ instance Tree Z3Command where
             --         Nothing -> x
             --         Just n  -> List [Str "!",x,Str ":named",Str n]
     as_tree (Comment str) = Str $ intercalate "\n" $ map ("; " ++) $ lines str
-    as_tree (CheckSat)    = List [Str "check-sat-using", 
+    as_tree (CheckSat)    = Expr.List [Str "check-sat-using", 
                                     strat
                                          [ [ Str "qe"
                                            , Str "smt" ]
@@ -115,12 +115,12 @@ instance Tree Z3Command where
                                            , Str "smt"] ] ]
         where
 --            strat ts = List $ Str "or-else" : map f ts ++ [List (map Str ["then", "simplify", "bit-blast", "sat"])]
-            using_param str param val = List [ Str "using-params"
+            using_param str param val = Expr.List [ Str "using-params"
                                              , str
                                              , Str param
                                              , Str val]
-            strat ts = List $ Str "or-else" : map f ts
-            f t = List $ Str "then" : t --, Str "smt"]
+            strat ts = Expr.List $ Str "or-else" : map f ts
+            f t = Expr.List $ Str "then" : t --, Str "smt"]
 --            strat ts = List [Str "then", List $ Str "repeat" : [List $ Str "or-else" : ts], Str "smt"]
 --    as_tree (CheckSat)    = List [Str "check-sat-using", 
 --                                    List ( Str "or-else" 
@@ -136,7 +136,7 @@ instance Tree Z3Command where
 --                                           ++ [ Str "smt" ]) ]
 --        where
 --            strat t = List [Str "try-for", Str "200", List [Str "then", t, Str "sat"] ]
-    as_tree GetModel      = List [Str "get-model"]
+    as_tree GetModel      = Expr.List [Str "get-model"]
     rewriteM _ = pure
 
 z3_pattern :: S.Set FOVar -> FOExpr -> [FOExpr]

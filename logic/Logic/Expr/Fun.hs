@@ -2,7 +2,7 @@
 module Logic.Expr.Fun where
 
     -- Module
-import Logic.Expr.Classes
+import Logic.Expr.Classes as Expr
 import Logic.Expr.PrettyPrint
 import Logic.Expr.Type
 import Logic.Names
@@ -10,7 +10,7 @@ import Logic.Names
     -- Library
 import Control.DeepSeq
 import Control.Lens hiding (rewrite,Context,elements
-                           ,Const,Context',List,rewriteM
+                           ,Const,Context',rewriteM
                            ,Traversable1(..))
 import Control.Precondition
 
@@ -126,9 +126,9 @@ type FOFun = AbsFun InternalName FOType
 type InternalFun = AbsFun InternalName Type
 
 instance (Data n,Data t,IsName n,TypeSystem t) => Tree (AbsFun n t) where
-    as_tree' f@(Fun _ _ _ argT rT _) = List <$> sequenceA
+    as_tree' f@(Fun _ _ _ argT rT _) = Expr.List <$> sequenceA
             [ Str  <$> render_decorated f
-            , List <$> mapM as_tree' argT 
+            , Expr.List <$> mapM as_tree' argT 
             , as_tree' rT ]
 
 instance (Serialize n,Serialize t) => Serialize (AbsFun n t) where

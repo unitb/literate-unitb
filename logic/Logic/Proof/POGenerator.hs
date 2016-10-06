@@ -92,7 +92,7 @@ existential vs (POGen cmd) = do
                     return $ zforall vs ztrue $ zall (h0 ++ M.ascElems h1) `zimplies` goal
             f (Context s vs fs def _) 
                 | not $ M.null s = error "existential: cannot add sorts in existentials"
-                -- |    not (M.null fs) 
+                --      not (M.null fs) 
                 --   || not (M.null def) = error "existential: cannot introduce new function symbols in existentials"
                 | otherwise = do
                     E.definitions %= merge def

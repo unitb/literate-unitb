@@ -2,7 +2,7 @@
 module Logic.Expr.Declaration where
 
     -- Module
-import Logic.Expr.Classes
+import Logic.Expr.Classes as Expr
 import Logic.Expr.Context
 import Logic.Expr.Expr
 import Logic.Expr.Type
@@ -12,7 +12,7 @@ import Logic.Names
 import Control.Arrow
 import Control.DeepSeq
 import Control.Lens hiding (rewrite,Context,elements
-                           ,Const,Context',List,rewriteM)
+                           ,Const,Context',rewriteM)
 import Control.Monad.Reader
 import Control.Precondition
 
@@ -71,20 +71,20 @@ instance (TypeSystem t, IsQuantifier q) => Tree (AbsDecl t q) where
             t    <- as_tree' ran
             n    <- onOutputName render $
                     decorated_name' d
-            return $ List [ Str "declare-fun", 
+            return $ Expr.List [ Str "declare-fun", 
                 Str n, 
-                (List argt), t ]
+                (Expr.List argt), t ]
     as_tree' (ConstDecl n t) = do
             t' <- as_tree' t
-            return $ List [ Str "declare-const", Str $ render n, t' ]
+            return $ Expr.List [ Str "declare-const", Str $ render n, t' ]
     as_tree' d@(FunDef _ _ dom ran val) = do
             argt <- mapM as_tree' dom
             rt   <- as_tree' ran
             def  <- as_tree' val
             n    <- onOutputName render $
                     decorated_name' d
-            return $ List [ Str "define-fun", 
-                Str n, (List argt), 
+            return $ Expr.List [ Str "define-fun", 
+                Str n, (Expr.List argt), 
                 rt, def ]
     as_tree' (SortDecl IntSort)    = return $ Str "; comment: we don't need to declare the sort Int"
     as_tree' (SortDecl BoolSort)   = return $ Str "; comment: we don't need to declare the sort Bool" 
@@ -97,32 +97,32 @@ instance (TypeSystem t, IsQuantifier q) => Tree (AbsDecl t q) where
             make   = makeZ3Name $ z3Render rec
             fields = accessorName <$> M.keys m
     as_tree' (SortDecl s@(Sort _ _ n)) = do
-            return $ List [ 
+            return $ Expr.List [ 
                 Str "declare-sort",
                 Str (render $ z3_name s),
                 Str $ show n ]
     as_tree' (SortDecl s@(DefSort _ _ xs def)) = do
             def' <- as_tree' def 
-            return $ List 
+            return $ Expr.List 
                 [ Str "define-sort"
                 , Str (render $ z3_name s)
-                , List $ map (Str . render) xs
+                , Expr.List $ map (Str . render) xs
                 , def'
                 ]
     as_tree' (SortDecl (Datatype xs n alt)) = do
             alt' <- mapM (f.(render *** map (first render))) alt
-            return $ List 
+            return $ Expr.List 
                 [ Str "declare-datatypes"
-                , List $ map (Str . render) xs
-                , List [List (Str (render n) : alt')] ]
+                , Expr.List $ map (Str . render) xs
+                , Expr.List [Expr.List (Str (render n) : alt')] ]
         where
             f (x,[])    = return $ Str x
             f (x,xs)    = do
                 ys <- mapM g xs
-                return $ List (Str x : ys)
+                return $ Expr.List (Str x : ys)
             g (n,t)     = do
                 t' <- as_tree' t
-                return $ List [Str n, t']
+                return $ Expr.List [Str n, t']
     rewriteM _ = pure
 
 instance (IsQuantifier t,TypeSystem n) 

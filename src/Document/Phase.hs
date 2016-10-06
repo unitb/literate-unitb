@@ -401,7 +401,7 @@ pNewEvents f = (pEventRef.traverseRightWithEdges) g
             | L.null $ rights (NE.toList xs) = f e
             | otherwise                      = pure e
 
-    -- | Concrete events that are inherited from refined machine
+-- | Concrete events that are inherited from refined machine
 pOldEvents :: (HasMachineP1 phase)
            => Getter phase (Table EventId (CEvtType phase))
 pOldEvents = pEventMerge.to (M.map fst . M.filter (not . L.null . snd))

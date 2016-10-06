@@ -2,14 +2,14 @@
 module Logic.Expr.Variable where
 
     -- Module
-import Logic.Expr.Classes
+import Logic.Expr.Classes as Expr
 import Logic.Expr.PrettyPrint
 import Logic.Expr.Type
 import Logic.Names
 
     -- Library
 import Control.Lens hiding (rewrite,Context
-                           ,Const,Context',List
+                           ,Const,Context'
                            ,Traversable1(..))
 import Control.Precondition
 
@@ -53,7 +53,7 @@ instance IsName n => Translatable (AbsVar n t) (AbsVar InternalName t) where
 instance (TypeSystem t,IsName n) => Tree (AbsVar n t) where
     as_tree' (Var vn vt) = do
         t <- as_tree' vt
-        return $ List [Str $ render vn, t]
+        return $ Expr.List [Str $ render vn, t]
     rewriteM _ = pure
 
 instance (TypeSystem t, IsName n) => Typed (AbsVar n t) where

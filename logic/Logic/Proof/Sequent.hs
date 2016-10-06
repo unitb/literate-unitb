@@ -409,16 +409,16 @@ apply_monotonicity po = fromMaybe po $
                                 -- and(0,1), or(0,1), 
                                 --      =>(1)       -> f.x => f.y -> x => y
                                 -- not (0), =>(0)   -> f.x => f.y -> y => x
-                                -- | arithmetic relations are not implement
+                                --   arithmetic relations are not implement
                                 -- <=(0)            -> f.x => f.y -> y <= x
                                 -- <=(1)            -> f.x => f.y -> x <= y
                                 -- +(0,1),-(0)      -> f.x <= f.y -> x <= y
                                 -- -(1)             -> f.x <= f.y -> y <= x
-                                -- | How would we treat the case of:
-                                -- | context => a+b+x R a+b+y
-                                -- | we need a means to distinguish an 
-                                -- | implication that introduces contextual
-                                -- | information
+                                --   How would we treat the case of:
+                                --   context => a+b+x R a+b+y
+                                --   we need a means to distinguish an 
+                                --   implication that introduces contextual
+                                --   information
                             x <- mono (view name f) g0 xs ys
                             return $ apply_monotonicity $ po' & goal .~ x
 --                            let op = name g0

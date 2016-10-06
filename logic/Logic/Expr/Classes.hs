@@ -1,9 +1,13 @@
-{-# LANGUAGE TypeFamilies,GADTs #-}
+{-# LANGUAGE TypeFamilies,GADTs,CPP #-}
 module Logic.Expr.Classes where
 
 import Logic.Names
 
+#if MIN_VERSION_lens(4,13,0)
 import Control.Lens hiding (List,rewriteM,rewrite,children)
+#else
+import Control.Lens hiding (rewriteM,rewrite,children)
+#endif
 import Control.Monad.Reader
 import Control.Monad.State
 

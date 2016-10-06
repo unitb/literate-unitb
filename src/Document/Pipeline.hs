@@ -217,7 +217,6 @@ brackets n doc = case unconsTex doc of
             where
                 (args,r) = brackets (n-1) xs
         Just (Text (Blank _ _),ys) -> brackets n ys
-            -- | otherwise      -> ([],doc)
         _ -> ([],doc)
 
 {-# INLINE withInput #-}

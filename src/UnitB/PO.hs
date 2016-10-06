@@ -651,19 +651,19 @@ ind_wit_fis_po m (lbl, evts) =
 removeSkip :: NonEmpty (SkipOrEvent, t) -> [(EventId, t)]
 removeSkip = rights.fmap (view distrLeft).NE.toList
 
+-- | When using witnesses with event indices:
+-- | as /\ cs.i
+-- | either 
+-- |     ∀i:: as => cs.i
+-- | or
+-- |     as ↦ (∃i:: cs.i)
+-- |     cs.i  unless  ¬as
+-- | or
+-- |     witness: i = f.x
+-- |     as ↦ i = f.x ∧ cs.i
+-- |     i = f.x ∧ cs.i  unless  ¬as
 csched_ref_safety :: OldNewPair k -> RawEventSplitting -> [(Label,RawSafetyProp)]
 csched_ref_safety (old,new) ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_label *** safe)
-        -- | When using witnesses with event indices:
-        -- | as /\ cs.i
-        -- | either 
-        -- |     ∀i:: as => cs.i
-        -- | or
-        -- |     as ↦ (∃i:: cs.i)
-        -- |     cs.i  unless  ¬as
-        -- | or
-        -- |     witness: i = f.x
-        -- |     as ↦ i = f.x ∧ cs.i
-        -- |     i = f.x ∧ cs.i  unless  ¬as
     where
         ind cevt = M.ascElems $ M.union (cevt^.indices) (ev^.indices)
         safe :: ConcrEvent' RawExpr -> RawSafetyProp
@@ -696,12 +696,12 @@ replace_csched_po m (lbl,evt') = do
                 let (plbl,prog) = ref^.sch_prog
                     new_part_c  = NE.map new_coarse_scheds $ evt'^.evt_pairs
                     new_coarse_scheds e = (e^.added.coarse_sched) `M.intersection` view add ref
-                        -- | we don't need (_ `M.union` keep_c) because,
-                        -- | whenever 'old ∧ keep_c' are true forever,
-                        -- | that includes that keep_c is true forever
-                        -- | and therefore, provided 'new' eventually
-                        -- | holds, it will hold at the same time as
-                        -- | 'keep_c'
+                        --  we don't need (_ `M.union` keep_c) because,
+                        --  whenever 'old ∧ keep_c' are true forever,
+                        --  that includes that keep_c is true forever
+                        --  and therefore, provided 'new' eventually
+                        --  holds, it will hold at the same time as
+                        --  'keep_c'
                     LeadsTo vs p0 q0  = prog
                 with (do
                         POG.variables $ symbol_table vs
@@ -711,13 +711,13 @@ replace_csched_po m (lbl,evt') = do
                     emit_goal ["prog",plbl,"lhs"] p0
                 with (do
                         POG.variables $ symbol_table vs) $ do
-                            -- | For the next set of proof obligations there are
-                            -- | two possibilities: (1) either we are faced with
-                            -- | a regular one-to-one refinement or (2) we have
-                            -- | an event splitting. If we have a one-to-one
-                            -- | refinement (1), we can prove that q ⇒ csched
-                            -- | one schedule at a time. Otherwise, we have to
-                            -- | prove one big disjunction.
+                            --  For the next set of proof obligations there are
+                            --  two possibilities: (1) either we are faced with
+                            --  a regular one-to-one refinement or (2) we have
+                            --  an event splitting. If we have a one-to-one
+                            --  refinement (1), we can prove that q ⇒ csched
+                            --  one schedule at a time. Otherwise, we have to
+                            --  prove one big disjunction.
                     let new_part' = case new_part_c of
                                         cs :| [] -> cs
                                         cs -> singleton "split" $ zsome $ NE.map zall cs
@@ -745,9 +745,9 @@ weaken_csched_po m (lbl,evt) = do
                         POG.variables $ e^.added.indices
                     named_hyps $ invariants m 
                     named_hyps $ M.mapKeys as_label $ witnessDef <$> evt^.ind_witness
-                        -- | old version admits old_f as assumption
-                        -- | why is it correct or needed?
-                        -- | named_hyps old_f
+                        --  old version admits old_f as assumption
+                        --  why is it correct or needed?
+                        --  named_hyps old_f
                     named_hyps old_c  ) $ do
                 unless (isOneToOne evt) $
                     with (do
