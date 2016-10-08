@@ -25,7 +25,9 @@ ghc-options:
 packages:
 - '.'
 - ../utils/
-- ../latex/
+- location:
+    git: https://github.com/literate-unitb/literate-unitb-latex.git
+    commit: cf698b53b13fc472753f77cd9c8bd0e6d9a26fc0
 - location:
     git: https://github.com/literate-unitb/existential.git
     commit: e1bb9c7e183b3d6a17587e93eb8d8fe21ff9845a

@@ -62,7 +62,6 @@ library
         Utilities.GraphSpec
         Utilities.Language
         Utilities.MapSyntax
-        Utilities.Syntactic
         Utilities.Table
         Utilities.Table.BucketTable
         Utilities.Table.HashKey
@@ -84,7 +83,7 @@ library
          -j8
   
   -- Other library packages from which modules are imported.
-  build-depends:       array, async, base >=4.8 && < 5, bytestring, cereal < 5, containers, data-default, data-map-class, data-ordlist, deepseq, directory, dlist, either, filepath, generic-instances, hashable, invariants, lens, mtl, parsec, printf-th, process, QuickCheck, safe, semigroups, string-lenses, template-haskell, time, transformers >=0.3, zlib, axiomatic-classes, pretty-printable
+  build-depends:       array, async, base >=4.8 && < 5, bytestring, cereal < 5, containers, data-default, data-map-class, data-ordlist, deepseq, directory, dlist, either, filepath, generic-instances, hashable, invariants, lens, mtl, parsec, printf-th, process, QuickCheck, safe, semigroups, string-lenses, template-haskell, time, transformers >=0.3, zlib, axiomatic-classes, pretty-printable, literate-unitb-latex
 
   -- Directories containing source files.
   hs-source-dirs:      .
