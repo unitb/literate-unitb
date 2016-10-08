@@ -28,7 +28,7 @@ packages:
     commit: 9f90a2b17286c64e731a121ba3f02ddaf45883ae
 - location:
     git: https://github.com/literate-unitb/literate-unitb-latex.git
-    commit: cf698b53b13fc472753f77cd9c8bd0e6d9a26fc0
+    commit: 818b4a4145357c636c2bce48f6e864956a67c5ae
 - location:
     git: https://github.com/literate-unitb/unfoldable.git
     commit: 8dc15076a4c6c3efdb2c6680e6c5944633a25ae7
