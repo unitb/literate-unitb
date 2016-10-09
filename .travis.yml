@@ -214,6 +214,7 @@ script:
         tar zxfv "$SRC_TGZ"
         cd "$PKGVER"
         cabal configure --enable-tests
+        cp -r $ORIGDIR/Tests .
         cabal build
         cd $ORIGDIR
       done
