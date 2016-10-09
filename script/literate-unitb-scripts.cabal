@@ -16,7 +16,7 @@ version:             0.1.0.0
 synopsis:            scripts for building and testing Literate Unit-B
 
 -- A longer description of the package.
--- description:         
+description:         scripts for building and testing Literate Unit-B
 
 -- The license under which the package is released.
 license:             MIT
