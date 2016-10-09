@@ -42,6 +42,7 @@ packages:
 - location:
     git: https://github.com/literate-unitb/printf-th.git
     commit: e7c85fc6f210516e9c66e1e7f6bf52996653629c
+# - ../unitb-testing
 - location:
     git: https://github.com/literate-unitb/unitb-testing.git
     commit: 1bba52534a65c3b4df131532802719d5162cc0f9
