@@ -44,7 +44,7 @@ packages:
     commit: e7c85fc6f210516e9c66e1e7f6bf52996653629c
 - location:
     git: https://github.com/literate-unitb/unitb-testing.git
-    commit: a3a166811723e2be8a21570f9aa7596a33750d78
+    commit: 1bba52534a65c3b4df131532802719d5162cc0f9
 - location:
     git: https://github.com/literate-unitb/typelist-functor.git
     commit: 5e97b991f81714941f93436905f14c1bda90d89b
