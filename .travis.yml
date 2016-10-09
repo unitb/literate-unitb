@@ -177,7 +177,7 @@ install:
   set -ex
   case "$BUILD" in
     stack)
-      travis_wait stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
+      travis_wait 70 stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
       ;;
     cabal)
       cabal --version
@@ -186,7 +186,7 @@ install:
       # Get the list of packages from the stack.yaml file
       PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@')
 
-      travis_wait cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
+      travis_wait 70 cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
       ;;
   esac
   set +ex
@@ -197,10 +197,10 @@ script:
   case "$BUILD" in
     stack)
       # stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
-      travis_wait stack --no-terminal $ARGS test --bench --no-run-benchmarks 
+      travis_wait 40 stack --no-terminal $ARGS test --bench --no-run-benchmarks 
       ;;
     cabal)
-      travis_wait cabal install --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
+      travis_wait 40 cabal install --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
 
       ORIGDIR=$(pwd)
       for dir in $PACKAGES
