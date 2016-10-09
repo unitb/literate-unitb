@@ -43,7 +43,7 @@ build-type:          Simple
 -- README.
 extra-source-files:  README.txt 
 data-files: 
-    Tests/cubes.tex
+    Tests/*.tex
     "Tests/garbage collector/*.tex"
     Tests/parser/*.tex
     Tests/definitions/*.tex
