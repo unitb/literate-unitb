@@ -47,7 +47,7 @@ cabal-version:       >=1.10
 
 source-repository head
   type:     git
-  location: https://github.com/literate-unitb/literate-unitb
+  location: https://github.com/literate-unitb/literate-unitb-scripts
 
 library
   -- Modules exported by the library.
