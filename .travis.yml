@@ -156,9 +156,8 @@ before_install:
 - export PATH="$HOME/scripts:$PATH"
 - pwd
 - ls
-- ls literate-unitb/
-- chmod +x literate-unitb/literate-unitb/travis_long
-- cp literate-unitb/literate-unitb/travis_long $HOME/scripts
+- chmod +x travis_long.sh
+- cp travis_long.sh $HOME/scripts/travis_long
 # Download and unpack the stack executable
 - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$HOME/.local/bin:/opt/alex/$ALEXVER/bin:/opt/happy/$HAPPYVER/bin:$HOME/.cabal/bin:$PATH
 - mkdir -p ~/.local/bin
