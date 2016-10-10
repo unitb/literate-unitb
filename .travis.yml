@@ -152,6 +152,11 @@ before_install:
 - export PATH="$HOME/z3:$PATH"
 - z3 -h
 # Download and unpack the stack executable
+- mkdir $HOME/scripts || echo ""
+- export PATH="$HOME/scripts:$PATH"
+- chmod +x literate-unitb/travis_long
+- cp literate-unitb/travis_long $HOME/scripts
+# Download and unpack the stack executable
 - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$HOME/.local/bin:/opt/alex/$ALEXVER/bin:/opt/happy/$HAPPYVER/bin:$HOME/.cabal/bin:$PATH
 - mkdir -p ~/.local/bin
 - |
@@ -180,7 +185,7 @@ install:
   case "$BUILD" in
     stack)
       # travis_wait 70 stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
-      bash ./travis_long stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
+      travis_long stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
       ;;
     cabal)
       cabal --version
@@ -201,7 +206,7 @@ script:
     stack)
       # stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
       # travis_wait 40 stack --no-terminal $ARGS test --bench --no-run-benchmarks 
-      bash ./travis_long stack --no-terminal $ARGS test --bench --no-run-benchmarks 
+      travis_long stack --no-terminal $ARGS test --bench --no-run-benchmarks 
       ;;
     cabal)
       cabal install --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
