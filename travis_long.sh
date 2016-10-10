@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# https://docs.haskellstack.org/en/stable/travis_ci/
+# https://github.com/futurice/fum2github/blob/master/travis_long
+
 $* &
 pidA=$!
 minutes=0
