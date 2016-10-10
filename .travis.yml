@@ -154,6 +154,9 @@ before_install:
 # Download and unpack the stack executable
 - mkdir $HOME/scripts || echo ""
 - export PATH="$HOME/scripts:$PATH"
+- pwd
+- ls
+- ls literate-unitb/
 - chmod +x literate-unitb/literate-unitb/travis_long
 - cp literate-unitb/literate-unitb/travis_long $HOME/scripts
 # Download and unpack the stack executable
