@@ -193,7 +193,8 @@ install:
   case "$BUILD" in
     stack)
       # travis_wait 70 stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
-      travis_long stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
+      # travis_long stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
+      travis_long stack --no-terminal --install-ghc $ARGS build --bench --only-dependencies
       ;;
     cabal)
       cabal --version
