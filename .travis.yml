@@ -208,9 +208,9 @@ script:
     stack)
       # stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
       # travis_wait 40 stack --no-terminal $ARGS test --bench --no-run-benchmarks 
-      # travis_long stack --no-terminal $ARGS test --bench --no-run-benchmarks 
-      echo $HOME
-      echo not calling stack
+      travis_long stack --no-terminal $ARGS test --bench --no-run-benchmarks 
+      # echo $HOME
+      # echo not calling stack
       ;;
     cabal)
       cabal install --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
