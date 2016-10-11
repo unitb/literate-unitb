@@ -152,9 +152,11 @@ before_install:
 - export PATH="$HOME/z3:$PATH"
 - z3 -h
 # 
-- mkdir $HOME/Literate Unit-B || echo ""
-- echo [DEFAULT] > z3.config
-- echo capacity=16 >> z3.config
+- Z3_CONFIG="$HOME/Literate Unit-B"
+- mkdir $Z3_CONFIG || echo ""
+- echo [DEFAULT] > $Z3_CONFIG/z3.config
+- echo capacity=16 >> $Z3_CONFIG/z3.config
+- cat $Z3_CONFIG/z3.config
 # Deploy anti-timeout weapon
 - mkdir $HOME/scripts || echo ""
 - export PATH="$HOME/scripts:$PATH"
