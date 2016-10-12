@@ -22,7 +22,6 @@ cache:
   - $HOME/.stack
   - $HOME/z3
   - /Users/travis/build/literate-unitb/literate-unitb/.stack-work
-  - /Users/travis/build/literate-unitb/literate-unitb/.stack-work
 
 # The different configurations we want to test. We have BUILD=cabal which uses
 # cabal-install, and BUILD=stack which uses Stack. More documentation on each
@@ -151,6 +150,10 @@ before_install:
   fi
 - export PATH="$HOME/z3:$PATH"
 - z3 -h
+# 
+- ls "/Users/travis/build/literate-unitb" 
+- ls "/Users/travis/build/literate-unitb/literate-unitb" 
+- ls "/Users/travis/build/literate-unitb/literate-unitb/.stack-work" 
 # 
 - Z3_CONFIG="$HOME/Literate Unit-B"
 - mkdir "$Z3_CONFIG" || echo ""
