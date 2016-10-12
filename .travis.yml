@@ -153,7 +153,7 @@ before_install:
 - z3 -h
 # 
 - Z3_CONFIG="$HOME/Literate Unit-B"
-- mkdir $Z3_CONFIG || echo ""
+- mkdir "$Z3_CONFIG" || echo ""
 - echo [DEFAULT] > "$Z3_CONFIG/z3.config"
 - echo capacity=16 >> "$Z3_CONFIG/z3.config"
 - cat $Z3_CONFIG/z3.config
