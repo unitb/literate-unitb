@@ -24,6 +24,7 @@ import Z3.Z3
 import Control.DeepSeq
 import Control.Invariant
 import Control.Lens  hiding (indices,Context,Context',(.=))
+import Control.Lens.Misc
 import Control.Monad hiding (guard)
 import Control.Precondition
 
@@ -37,11 +38,11 @@ import Data.Functor.Classes
 #endif
 import           Data.Functor.Compose
 import           Data.List as L hiding (inits, union,insert)
-import           Data.Map.Class as M hiding 
-                    ( map
+import           Data.Map as M hiding 
+                    ( map, (!)
                     , delete, filter, null
                     , (\\), mapMaybe )
-import qualified Data.Map.Class as M
+import qualified Data.Map as M
 import           Data.Serialize
 import qualified Data.Set as S
 
@@ -52,7 +53,6 @@ import Test.QuickCheck.ZoomEq
 import Text.Printf.TH
 
 import Utilities.Syntactic
-import Utilities.Table
 
 type Machine' = Compose Checked MachinePO'
 type RawMachine = Machine' RawExpr
@@ -70,17 +70,17 @@ type MachineWithProofs = MachineWithProofs' RawExpr
 
 data MachineWithProofs' expr = MachineWithProofs 
                 (MachineBase expr) 
-                (Table Label (ProofBase expr))
+                (Map Label (ProofBase expr))
     deriving (Functor,Foldable,Traversable,Generic)
 
 type Key    = (Label,Label)
-type SeqTable = Table Key (Sequent,Maybe Bool)
+type SeqMap = Map Key (Sequent,Maybe Bool)
 
 data MachinePO' expr = MachinePO
     { _syntax :: MachineAST' expr 
-    , _proofs     :: Table Label Proof    
-    , _raw_proof_obligation_field :: Box (Table Label Sequent)
-    , _proof_obligation_field :: MemBox (Table Label Sequent) }
+    , _proofs     :: Map Label Proof    
+    , _raw_proof_obligation_field :: Box (Map Label Sequent)
+    , _proof_obligation_field :: MemBox (Map Label Sequent) }
     deriving (Functor,Foldable,Traversable,Show,Generic,Eq)
 
 newtype Box a = Box (() -> a)
@@ -114,7 +114,7 @@ instance Show a => Show (MemBox a) where
 
 makeLenses ''MachinePO'
 
-po_table :: SystemSemantics' expr -> SeqTable
+po_table :: SystemSemantics' expr -> SeqMap
 po_table sys = fmap (,Nothing) . uncurryMap $ proof_obligation <$> (mapKeys as_label $ sys!.machines)
 
 _machineSyntax :: Prism' MachineWithProofs RawMachine
@@ -132,11 +132,11 @@ makeMachinePO' :: MachineAST' expr -> MachinePO' expr
 makeMachinePO' x = MachinePO x def def def
 
 raw_proof_obligation :: Controls machine (MachinePO' expr)
-                     => machine -> Table Label Sequent
+                     => machine -> Map Label Sequent
 raw_proof_obligation = view $ content'.raw_proof_obligation_field.to unbox
 
 proof_obligation :: Controls machine (MachinePO' expr)
-                 => machine -> Table Label Sequent
+                 => machine -> Map Label Sequent
 proof_obligation = view (content'.proof_obligation_field.to unbox)
 
 instance Controls (MachinePO' expr) (MachinePO' expr) where
@@ -147,7 +147,7 @@ instance Controls (MachinePO' expr) (MachinePO' expr) where
     --func = 
 instance (HasExpr expr,ZoomEq expr) => HasMachineBase (MachinePO' expr) expr where
     machineBase = syntax.content
-instance (HasExpr expr,ZoomEq expr) => HasAbs_vars (MachinePO' expr) (Table Name Var) where
+instance (HasExpr expr,ZoomEq expr) => HasAbs_vars (MachinePO' expr) (Map Name Var) where
     abs_vars = machineBase.abs_vars
 instance HasName (MachinePO' expr) Name where
     name = syntax.content'.name
@@ -194,7 +194,7 @@ fromSyntax :: HasExpr expr => MachineAST' expr -> Machine' expr
 fromSyntax m = check $ makeMachinePO' m
 
 withProofs :: IsExpr expr
-           => Table Label (ProofBase expr)
+           => Map Label (ProofBase expr)
            -> MachineAST' expr
            -> Either [Error] (Machine' expr)
 withProofs p m = fmap check' $ do
@@ -204,13 +204,13 @@ withProofs p m = fmap check' $ do
             return $ MachinePO m p poBox (box $ \() -> pos)
 
 withProofs' :: (IsExpr expr,Pre)
-            => Table Label Proof 
+            => Map Label Proof 
             -> MachineAST' expr
             -> Machine' expr
 withProofs' p m = check $ makeMachinePO' m & proofs .~ p
 
 withPOs :: HasExpr expr 
-        => Table Label (Tactic Proof,LineInfo)
+        => Map Label (Tactic Proof,LineInfo)
         -> MachineAST' expr 
         -> Either [Error] (Machine' expr)
 withPOs ps m = fmap check' $ do
@@ -227,7 +227,7 @@ withPOs ps m = fmap check' $ do
             return $ MachinePO m p poBox (box $ \() -> pos)
             --proof_obligation_field (const $ box . const <$> proof_obligation' pos m) m'
 
-verify_changes :: Machine -> Table Label (Bool,Sequent) -> IO (Table Label (Bool,Sequent), String,Int)
+verify_changes :: Machine -> Map Label (Bool,Sequent) -> IO (Map Label (Bool,Sequent), String,Int)
 verify_changes m old_pos = do
         let pos = proof_obligation m
             new_pos = differenceWith f pos old_pos
@@ -270,7 +270,7 @@ verify_machine m = do
     putStrLn s
     return (i,j)
 
-format_result :: Table Label Bool -> IO (String,Int,Int)
+format_result :: Map Label Bool -> IO (String,Int,Int)
 format_result xs' = do
         let rs    = L.map f $ M.toAscList xs'
             total = L.length rs

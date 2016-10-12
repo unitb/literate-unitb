@@ -22,11 +22,9 @@ import Control.Lens.Misc hiding (combine)
 import Control.Monad.State
 
 import qualified Data.List.NonEmpty as NE
-import Data.Map.Class   as M hiding ( map )
+import Data.Map   as M hiding ( map )
 
 import Test.UnitTest
-
-import Utilities.Table
 
 test_case :: TestCase
 test_case = test
@@ -180,7 +178,7 @@ machine0 = newMachine trainName $ do
         axm4 = c [expr| \qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF } |]
         axm5 = c [expr| \qforall{p}{}{ p = ent \lor p = ext \equiv \neg p \in PLF } |]
 
-vars :: Table Name Var
+vars :: Map Name Var
 vars = symbol_table [in_decl,loc_decl]
 
 c :: Ctx
@@ -230,9 +228,9 @@ enter_evt = flip execState empty_event $ do
             [  ("grd1", c [expr| \neg t \in in |])
             ]
      actions .= fromList
-            [  ("a1", BcmSuchThat (M.ascElems vars)
+            [  ("a1", BcmSuchThat (M.elems vars)
                     (c $ [expr| in' = in \bunion \{ t \} |] . (is_step .~ True)))
-            ,  ("a2", BcmSuchThat (M.ascElems vars)
+            ,  ("a2", BcmSuchThat (M.elems vars)
                     (c $ [expr| loc' = loc \1| t \fun ent |] . (is_step .~ True)))
             ]
 
@@ -244,9 +242,9 @@ leave_evt = flip execState empty_event $ do
             [  ("grd0", c [expr| loc.t = ext \1\land t \in in |] )
             ]
     actions .= fromList 
-            [  ("a0", BcmSuchThat (M.ascElems vars)
+            [  ("a0", BcmSuchThat (M.elems vars)
                     (c $ [expr| in' = in \1\setminus \{ t \} |] . (is_step .~ True)))
-            ,  ("a3", BcmSuchThat (M.ascElems vars)
+            ,  ("a3", BcmSuchThat (M.elems vars)
                     (c $ [expr| loc' = \{t\} \domsub loc |] . (is_step .~ True)))
             ] 
 
@@ -374,7 +372,7 @@ result1 = unlines
     , "passed 96 / 97"
     ]
 
-case1 :: IO (String, Table Label Sequent)
+case1 :: IO (String, Map Label Sequent)
 case1 = verify path0 0 
         
 result2 :: String
@@ -5442,7 +5440,7 @@ result14 = unlines
     , "passed 64 / 66"
     ]
 
-case14 :: IO (String, Table Label Sequent)
+case14 :: IO (String, Map Label Sequent)
 case14 = verify path14 0
     
 path15 :: FilePath
@@ -5525,7 +5523,7 @@ result15 = unlines
     , "passed 69 / 72"
     ]
 
-case15 :: IO (String, Table Label Sequent)
+case15 :: IO (String, Map Label Sequent)
 case15 = verify path15 0
 
 path16 :: FilePath
@@ -5627,7 +5625,7 @@ result16 = unlines
     , "passed 90 / 91"
     ]
 
-case16 :: IO (String, Table Label Sequent)
+case16 :: IO (String, Map Label Sequent)
 case16 = verify path16 0
 
 path17 :: FilePath

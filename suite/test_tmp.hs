@@ -54,7 +54,7 @@ import System.Process
 -- import qualified Utilities.Lines as Lines
 import Utilities.TimeIt
 -- import Utilities.Timeout
--- import Utilities.Table
+-- import Utilities.Map
 
 import Test.QuickCheck hiding (label)
 import Test.QuickCheck.Report

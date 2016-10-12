@@ -45,11 +45,11 @@ import           Data.Foldable as F
 import           Data.List as L hiding (inits, union,insert)
 import           Data.List.NonEmpty as NE hiding (inits,(!!))
 import           Data.List.Utils as LU (replace)
-import           Data.Map.Class as M hiding 
-                    ( map
+import           Data.Map as M hiding 
+                    ( map, (!)
                     , delete, filter, null
                     , (\\), mapMaybe )
-import qualified Data.Map.Class as M
+import qualified Data.Map as M
 import           Data.Monoid.Monad
 import qualified Data.Traversable as T
 
@@ -59,7 +59,6 @@ import Text.Printf.TH
 
 import Utilities.Functor
 import Utilities.Syntactic
-import Utilities.Table
 
     -- 
     --
@@ -147,13 +146,13 @@ evt_saf_ctx evt  = Context M.empty (evt^.new.params) M.empty M.empty M.empty
 evt_live_ctx :: HasConcrEvent' event RawExpr => event -> Context
 evt_live_ctx evt = Context M.empty (evt^.new.indices) M.empty M.empty M.empty
 
-primed_vars :: Table Name Var -> POCtx ()
+primed_vars :: Map Name Var -> POCtx ()
 primed_vars = POG.variables . primeAll
 
 skipOrLabel :: SkipOrEvent -> Label
 skipOrLabel lbl = fromRight "SKIP" $ as_label <$> lbl
 
-invariants :: RawMachineAST -> Table Label RawExpr
+invariants :: RawMachineAST -> Map Label RawExpr
 invariants m = 
                   (_inv p0) 
         `M.union` (_inv_thm p0) 
@@ -163,7 +162,7 @@ invariants m =
         p0 = m!.props
         p1 = m!.inh_props
 
-invariants_only :: RawMachineAST -> Table Label RawExpr
+invariants_only :: RawMachineAST -> Map Label RawExpr
 invariants_only m = 
                   (_inv p0) 
         `M.union` (_inv p1)
@@ -171,13 +170,13 @@ invariants_only m =
         p0 = m!.props
         p1 = m!.inh_props
 
-raw_machine_pos' :: HasExpr expr => MachineAST' expr -> (Table Label Sequent)
+raw_machine_pos' :: HasExpr expr => MachineAST' expr -> (Map Label Sequent)
 raw_machine_pos' m' = eval_generator $ 
                 with (do
                         prefix_label $ as_label $ _name m
                         _context $ theory_ctx (m!.theory)
                         set_syntactic_props syn
-                        nameless_hyps $ M.ascElems unnamed 
+                        nameless_hyps $ M.elems unnamed 
                         named_hyps $ named_f
                         setTimeout $ m!.timeout
                         ) $ do
@@ -229,10 +228,10 @@ raw_machine_pos' m' = eval_generator $
         named_f = theory_facts (m!.theory) { _extends = M.empty }
 
 proof_obligation' :: IsExpr expr 
-                  => Table Label Sequent
-                  -> Table Label (ProofBase expr)
+                  => Map Label Sequent
+                  -> Map Label (ProofBase expr)
                   -> MachineAST' expr 
-                  -> Either [Error] (Table Label Sequent)
+                  -> Either [Error] (Map Label Sequent)
 proof_obligation' pos proofs m = do
         forM_ (M.toList proofs) (\(lbl,p) -> do
             let li = line_info p
@@ -274,13 +273,13 @@ ref_po m lbl r =
                 named_hyps $ invariants m) 
             $ refinement_po m r
 
-theory_po :: Theory -> Either [Error] (Table Label Sequent)
+theory_po :: Theory -> Either [Error] (Map Label Sequent)
 theory_po th = do
         xs <- mapM (uncurry f) $ M.toList $ M.mapWithKey g thm
         return $ M.fromList $ concat xs
     where
 --        axm = M.filterKeys (not . (`S.member` theorems th)) $ fact th
-        dep :: Table Label (Table Label ())
+        dep :: Map Label (Map Label ())
         dep       = M.map M.fromList $ M.fromListWith (++) 
                         [ (x,[(y,())]) | (x,y) <- th^.thm_depend ]
         depend x  = thm `M.intersection` findWithDefault M.empty x dep
@@ -299,8 +298,8 @@ theory_po th = do
                         _ -> return [(keys lbl, po')]
             po' = po & context  %~ (`merge_ctx` theory_ctx th)
                      & nameless %~ (concatMap 
-                            (M.ascElems . theory_facts) 
-                            (ascElems $ _extends th) ++) 
+                            (M.elems . theory_facts) 
+                            (elems $ _extends th) ++) 
 
 init_sim_po :: RawMachineAST -> M ()
 init_sim_po m = 
@@ -327,8 +326,8 @@ init_witness_fis_po m =
         (do _context (assert_ctx m)
             named_hyps $ m!.inits)
         (emit_exist_goal ["INIT/WFIS"] 
-            (M.ascElems $ (view' abs_vars m)  `M.difference` (view' variables m))
-            (M.ascElems $ witnessDef <$> m!.init_witness))
+            (M.elems $ (view' abs_vars m)  `M.difference` (view' variables m))
+            (M.elems $ witnessDef <$> m!.init_witness))
 
 init_fis_po :: RawMachineAST -> M ()
 init_fis_po m = 
@@ -337,10 +336,10 @@ init_fis_po m =
                 POG.variables det_vars
                 named_hyps $ uncurry (zeq . Word) <$> det_act)
             (emit_exist_goal [init_fis_lbl] 
-                (M.ascElems $ nonDet_vars) 
-                (M.ascElems $ new_act))
+                (M.elems $ nonDet_vars) 
+                (M.elems $ new_act))
     where
-        -- pvar = L.map prime $ M.ascElems $ (m!.variables) `M.union` (m!.abs_vars)
+        -- pvar = L.map prime $ M.elems $ (m!.variables) `M.union` (m!.abs_vars)
         (det_act,new_act) = splitDetInit vars $ m!.inits
         vars = (m!.variables)  `M.union` (m!.abs_vars)
         nonDet_vars = vars `M.difference` det_vars
@@ -404,7 +403,7 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = provided (null inds) $ do
                 following
     where
         TrHint hint' lt_fine = tr_hint
-        hint :: Table Name (Type,RawExpr)
+        hint :: Map Name (Type,RawExpr)
         hint = hint' & traverse._2 %~ asExpr
         xp = asExpr xp'
         stuff evt_lbl evt = 
@@ -425,7 +424,7 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = provided (null inds) $ do
                             (          asExpr xp 
                             `zimplies` (new_dummy ind $ zall $ asExpr <$> sch0))
 
-                new_defs = flip L.map (M.ascElems ind1) 
+                new_defs = flip L.map (M.elems ind1) 
                         $ \(Var n t) -> (setSuffix "param" n, mk_fun [] (setSuffix "param" n) [] t)
                 new_hyps = flip L.map (M.toList hint)
                         $ \(x,(_,e)) -> rename (addPrime x) (setSuffix "param" x) e
@@ -446,12 +445,12 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = provided (null inds) $ do
                     , m!.abs_vars
                     , m!.definedSymbols
                     ]
-        all_ind = M.ascElems $ M.unions $ fv : L.zipWith local_ind (NE.toList evt_lbl) es
-        inds    = L.map (fmap1 $ setSuffix "param") $ M.ascElems 
+        all_ind = M.elems $ M.unions $ fv : L.zipWith local_ind (NE.toList evt_lbl) es
+        inds    = L.map (fmap1 $ setSuffix "param") $ M.elems 
                         $ M.unions (L.map (view indices) es) `M.difference` hint
         es      = L.map (upward_event m.Right) (NE.toList evt_lbl)
         
-        local_ind :: EventId -> RawEventMerging -> Table Name Var
+        local_ind :: EventId -> RawEventMerging -> Map Name Var
         local_ind lbl e = renameAll' (add_suffix suff) $ e^.indices
             where
                 suff = mk_suff $ pretty lbl
@@ -460,7 +459,7 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = provided (null inds) $ do
             where
                 suff = mk_suff $ pretty lbl
             -- (M.elems ind) 
-        tagged_sched :: EventId -> RawEventMerging -> Table Label RawExpr
+        tagged_sched :: EventId -> RawEventMerging -> Map Label RawExpr
         tagged_sched lbl e = M.map (new_ind lbl e) $ e^.new.coarse_sched & traverse %~ asExpr
         all_csch  = concatMap M.elems $ L.zipWith tagged_sched (NE.toList evt_lbl) es
             
@@ -530,7 +529,7 @@ prop_saf' m excp (pname, Unless fv p q) =
             POG.variables $ symbol_table fv
             named_hyps $ invariants m) $ do
         let excps = maybe [] (NE.toList.view concrete_evts.downward_event m.Right) excp
-            inds :: Table SkipOrEvent (Table Name Var)
+            inds :: Map SkipOrEvent (Map Name Var)
             inds  = M.map (view indices) $ M.fromList excps
         forM_ evts $ \(evt_lbl,evt) -> do
             let grd = evt^.new.guards
@@ -539,7 +538,7 @@ prop_saf' m excp (pname, Unless fv p q) =
                 fvs = symbol_table fv 
                 neq x = znot $ Word x `zeq` Word (suff x)
                 isExcp = Right evt_lbl `M.member` inds
-                rng | isExcp    = zsome $ L.map neq $ ascElems inter
+                rng | isExcp    = zsome $ L.map neq $ elems inter
                     | otherwise = ztrue
                 inter = fvs `M.intersection` ind
                 diff  = fvs `M.difference` ind
@@ -550,7 +549,7 @@ prop_saf' m excp (pname, Unless fv p q) =
                     POG.variables $ evt^.new.indices
                     POG.variables $ evt^.new.params)
                 (emit_goal [as_label evt_lbl,"SAF",pname] $ 
-                    zforall (ascElems diff ++ L.map suff (ascElems ind))
+                    zforall (elems diff ++ L.map suff (elems ind))
                         rng
                         $ new_dummy inter $
                             zimplies (p `zand` znot q) 
@@ -595,9 +594,9 @@ wit_wd_po m (lbl, evt) =
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
         (do
             emit_goal ["WWD"] $ well_definedness $ zall 
-                $ M.ascElems $ witnessDef <$> evt^.witness
+                $ M.elems $ witnessDef <$> evt^.witness
             emit_goal ["WWD"] $ well_definedness $ zall 
-                $ M.ascElems $ witnessDef <$> evt^.param_witness)
+                $ M.elems $ witnessDef <$> evt^.param_witness)
 
 old_indices :: RawEventMerging -> Map Name Var
 old_indices evt = M.unions $ evt^.partsOf (abstract_evts.traverse._2.old.indices)
@@ -616,11 +615,11 @@ wit_fis_po m (lbl, evt) =
             let old_ind = old_indices evt
                 new_ind = evt^.new.params
             emit_exist_goal ["WFIS"] pvar 
-                $ M.ascElems $ witnessDef <$> evt^.witness
+                $ M.elems $ witnessDef <$> evt^.witness
             emit_exist_goal ["WFIS"] (M.elems $ old_ind `M.difference` new_ind)
-                $ M.ascElems $ witnessDef <$> evt^.param_witness)
+                $ M.elems $ witnessDef <$> evt^.param_witness)
     where
-        pvar = L.map prime $ M.ascElems $ view' abs_vars m `M.difference` view' variables m
+        pvar = L.map prime $ M.elems $ view' abs_vars m `M.difference` view' variables m
 
 ind_wit_wd_po :: RawMachineAST -> (EventId, RawEventSplitting) -> M ()
 ind_wit_wd_po m (lbl, evts) = 
@@ -632,7 +631,7 @@ ind_wit_wd_po m (lbl, evts) =
             forM_ (evts^.evt_pairs) $ \evt -> do
                 with (POG.variables $ evt^.new.indices) $
                     emit_goal ["IWWD",evt^.concrete._1.to as_label] $ well_definedness $ zall 
-                        $ M.ascElems $ witnessDef <$> evt^.ind_witness
+                        $ M.elems $ witnessDef <$> evt^.ind_witness
 
 ind_wit_fis_po :: RawMachineAST -> (EventId, RawEventSplitting) -> M ()
 ind_wit_fis_po m (lbl, evts) = 
@@ -645,8 +644,8 @@ ind_wit_fis_po m (lbl, evts) =
                  named_hyps $ evts^.old.fine_sched) $ do
             forM_ (evts^.evt_pairs) $ \evt -> do
                 let pvar = evt^.added.indices
-                emit_exist_goal ["IWFIS"] (M.ascElems pvar)
-                    $ M.ascElems $ witnessDef <$> ((evt^.ind_witness) `M.intersection` pvar)
+                emit_exist_goal ["IWFIS"] (M.elems pvar)
+                    $ M.elems $ witnessDef <$> ((evt^.ind_witness) `M.intersection` pvar)
 
 removeSkip :: NonEmpty (SkipOrEvent, t) -> [(EventId, t)]
 removeSkip = rights.fmap (view distrLeft).NE.toList
@@ -665,13 +664,13 @@ removeSkip = rights.fmap (view distrLeft).NE.toList
 csched_ref_safety :: OldNewPair k -> RawEventSplitting -> [(Label,RawSafetyProp)]
 csched_ref_safety (old,new) ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_label *** safe)
     where
-        ind cevt = M.ascElems $ M.union (cevt^.indices) (ev^.indices)
+        ind cevt = M.elems $ M.union (cevt^.indices) (ev^.indices)
         safe :: ConcrEvent' RawExpr -> RawSafetyProp
         safe cevt = Unless (ind cevt)
                     (zall new_sch) 
                     (znot $ zall $ (ev^.coarse_sched) `M.intersection` old) 
                 where
-                    new_sch = ascElems $ (cevt^.coarse_sched) `M.intersection` new
+                    new_sch = elems $ (cevt^.coarse_sched) `M.intersection` new
 
 replace_csched_po :: RawMachineAST -> (EventId,RawEventSplitting) -> M ()
 replace_csched_po m (lbl,evt') = do 
@@ -768,7 +767,7 @@ replace_fsched_po m (lbl,aevt) = do
         let evts   = aevt^.evt_pairs.to NE.toList
             evts'  = L.zip (NE.toList $ aevt^.multiConcrete.to (NE.map fst)) evts
             old_c  = unions $ L.map (view $ old.coarse_sched) evts
-            new_c  = L.nub $ concatMap (ascElems . view (new.coarse_sched)) evts
+            new_c  = L.nub $ concatMap (elems . view (new.coarse_sched)) evts
             old_f  = unions $ L.map (view $ old.fine_sched) evts
             new_fs = L.map (view $ new.fine_sched) evts
         with (do
@@ -821,7 +820,7 @@ replace_fsched_po m (lbl,aevt) = do
                         emit_goal ["eqv"] $ $typeCheck$
                             Right (zsome add_f) .=. Right (zsome del_f)
 
-intersections :: IsKey Table k => [Table k a] -> Table k a
+intersections :: Ord k => [Map k a] -> Map k a
 intersections []  = assertFalse' "intersection of empty list is undefined"
 intersections [x] = x
 intersections (x:xs) = x `intersection` intersections xs                                
@@ -844,7 +843,7 @@ strengthen_guard_po m (lbl,evt) =
             forM_ (M.toList $ evt^.deleted.guards) $ \(lbl,grd) -> do
                 emit_goal [lbl] grd
           es -> 
-            emit_goal [] $ zsome $ NE.map (zall . M.ascElems . view (deleted.guards)) es
+            emit_goal [] $ zsome $ NE.map (zall . M.elems . view (deleted.guards)) es
 
 sim_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
 sim_po m (lbl, evt) = 
@@ -878,9 +877,9 @@ fis_po m (lbl, evt) =
                  named_hyps $ evt^.new.guards
                  named_hyps $ review _AssignExpr <$> det_act)
             (emit_exist_goal [as_label lbl, fis_lbl] pvar 
-                $ M.ascElems $ ba_predicate' nonDet_vars $ new_act)
+                $ M.elems $ ba_predicate' nonDet_vars $ new_act)
     where
-        pvar = L.map prime $ M.ascElems $ (m!.variables) `M.union` (m!.abs_vars)
+        pvar = L.map prime $ M.elems $ (m!.variables) `M.union` (m!.abs_vars)
         (det_act,new_act) = splitNonDet $ evt^.new_actions 
         nonDet_vars = frame new_act
 
@@ -909,7 +908,7 @@ tr_wd_po  m (lbl, Tr vs p _ (TrHint wit _)) =
                  _context $ step_ctx m
                  named_hyps $ invariants m) $
             do  emit_goal ["WD"]
-                    $ well_definedness $ zforall (ascElems vs) ztrue p
+                    $ well_definedness $ zforall (elems vs) ztrue p
                 forM_ (M.toList wit) $ \(n,(t,e)) -> 
                     with (do
                         POG.variables $ 
@@ -979,8 +978,8 @@ init_wd_po m =
                     $ well_definedness $ zall $ m!.inits
 
 incremental_wd_po :: Label
-                  -> Table Label RawExpr  -- 
-                  -> Table Label RawExpr  -- 
+                  -> Map Label RawExpr  -- 
+                  -> Map Label RawExpr  -- 
                   -> M ()
 incremental_wd_po lbl old new = do
     let del  = old `M.difference` new
@@ -1125,7 +1124,7 @@ add_suffix :: Pre
            => String -> Var -> Var
 add_suffix = fmap1 . setSuffix
 
-new_dummy :: Pre => Table Name Var -> RawExpr -> RawExpr
+new_dummy :: Pre => Map Name Var -> RawExpr -> RawExpr
 new_dummy = make_unique "param"
 
 --check :: Calculation -> IO (Either [Error] [(Validity, Int)])
@@ -1135,7 +1134,7 @@ new_dummy = make_unique "param"
 --        let ln = L.filter ((/= Valid) . fst) $ L.zip rs [0..]
 --        return ln
 
-dump :: String -> Table Label Sequent -> IO ()
+dump :: String -> Map Label Sequent -> IO ()
 dump name pos = do
         withFile (name ++ ".z") WriteMode (\h -> do
             forM_ (M.toList pos) (\(lbl, po) -> do
@@ -1145,7 +1144,7 @@ dump name pos = do
                 hPutStrLn h ("; end of " ++ pretty lbl)
                 ) )
 
-verify_all :: Table Label Sequent -> IO (Table Label Bool)
+verify_all :: Map Label Sequent -> IO (Map Label Bool)
 verify_all pos' = do
     let xs         = M.toList pos'
         lbls       = L.map fst xs 

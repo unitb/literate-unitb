@@ -38,10 +38,10 @@ import Control.Precondition
 
 import           Data.Char
 import qualified Data.List as L
-import           Data.Map.Class as M 
+import           Data.Map as M 
                     ( insert, keys
                     , toList, unions )
-import qualified Data.Map.Class as M 
+import qualified Data.Map as M 
 
 import GHC.Generics (Generic)
 
@@ -52,7 +52,6 @@ import System.Process
 import Text.Printf.TH
 
 import Utilities.Syntactic
-import Utilities.Table
 import Utilities.TimeIt
 
     -- The pipeline is made of three processes:
@@ -68,7 +67,7 @@ data Shared = Shared
         { working    :: Observable Int
         , system     :: Observable System
         , error_list :: Observable [Error]
-        , pr_obl     :: Observable (Table Key (Seq,Maybe Bool))
+        , pr_obl     :: Observable (M.Map Key (Seq,Maybe Bool))
         , fname      :: FilePath
         , exit_code  :: MVar ()
         , parser_state :: Observable ParserState
@@ -80,7 +79,7 @@ data Shared = Shared
 data ParserState = Idle Double | Parsing
     deriving Eq
 
-type Params = Params' (Table Label (Table Label (Bool,Seq)))
+type Params = Params' (M.Map Label (M.Map Label (Bool,Seq)))
 
 data Params' pos = Params
         { path :: FilePath
@@ -129,8 +128,8 @@ parser (Shared { .. })  = return $ do
         parse = do
                 xs <- liftIO $ runEitherT $ do
                     s  <- EitherT $ parse_system fname
-                    ms <- hoistEither $ mapM f $ M.ascElems $ s!.machines
-                    pos <- hoistEither $ mapM theory_po $ M.ascElems $ s!.theories
+                    ms <- hoistEither $ mapM f $ M.elems $ s!.machines
+                    pos <- hoistEither $ mapM theory_po $ M.elems $ s!.theories
                     let cs = M.fromList $ map (uncurry h) $ do
                                 (x,ys) <- zip (map label (s!.theories.to keys)) pos
                                 y <- toList ys
@@ -138,7 +137,7 @@ parser (Shared { .. })  = return $ do
                     liftIO $ evaluate (ms, cs, s)
                 case xs of
                     Right (ms,cs,s) -> do
-                        let new_pos = unions (cs : map (M.mapKeys $ over _1 as_label) ms) :: Table Key Seq
+                        let new_pos = unions (cs : map (M.mapKeys $ over _1 as_label) ms) :: M.Map Key Seq
                             f (s0,b0) (s1,b1)
                                 | s0 == s1  = (s0,b0)
                                 | otherwise = (s1,b1)
@@ -188,14 +187,14 @@ prover (Shared { .. }) = do
             modify_obs pr_obl $ return . insert k (po,Just $ r == Valid)
 
 proof_report :: Maybe String
-             -> Table Key (Seq,Maybe Bool) 
+             -> M.Map Key (Seq,Maybe Bool) 
              -> [Error] -> Bool 
              -> [String]
 proof_report = proof_report' False
 
 proof_report' :: Bool
               -> Maybe String
-              -> Table Key (Seq,Maybe Bool) 
+              -> M.Map Key (Seq,Maybe Bool) 
               -> [Error] -> Bool 
               -> [String]
 proof_report' showSuccess pattern outs es isWorking = 

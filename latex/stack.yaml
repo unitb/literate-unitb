@@ -13,33 +13,30 @@
 resolver: lts-6.4
 compiler: ghc-7.10.3
 
-ghc-options:
+# ghc-options:
     # All packages
-    # "*": -W -j8 -fwarn-missing-signatures 
-    #      -fwarn-incomplete-uni-patterns
-    #      -fwarn-missing-methods
-    #      -fno-ignore-asserts
-    #      -fwarn-tabs
-    # literate-unitb: -Werror
-    # literate-unitb-scripts: -Werror
-    # literate-unitb-utils: -Werror
-    # literate-unitb-latex: -Werror
 
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
 - location:
-    git: https://github.com/literate-unitb/literate-unitb-latex.git
-    commit: cf698b53b13fc472753f77cd9c8bd0e6d9a26fc0
-- location:
     git: https://github.com/literate-unitb/existential.git
     commit: e1bb9c7e183b3d6a17587e93eb8d8fe21ff9845a
 - location:
-    git: https://github.com/literate-unitb/printf-th.git
-    commit: e7c85fc6f210516e9c66e1e7f6bf52996653629c
+    git: https://github.com/literate-unitb/unitb-testing.git
+    commit: e2012f9940e29e774323cd1b1c2cb360bb2ba5b7
+- location:
+    git: https://github.com/literate-unitb/transformer-lenses.git
+    commit: 405f81025293b9f9cd25145644ca86fe88a69388
 - location:
     git: https://github.com/literate-unitb/string-lenses.git
     commit: 4d328e046a9406191e8f3613c6135613c75e3856
+- location:
+    git: https://github.com/literate-unitb/show-with.git
+    commit: 5caa9c7798ff6648aa196bead95409c7fbe9e229
+- location:
+    git: https://github.com/literate-unitb/printf-th.git
+    commit: e7c85fc6f210516e9c66e1e7f6bf52996653629c
 - location:
     git: https://github.com/literate-unitb/axiomatic-classes.git
     commit: 643c833aa8836b23d8057cbbf410a9deedc76026
@@ -58,7 +55,7 @@ packages:
 - location:
     git: https://github.com/literate-unitb/pretty-printable.git
     commit: 742ac9f6e4f369881b4354906c19e65ea75d97b1
-
+# Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps: 
 - assert-0.0.1.2
 - portable-lines-0.1

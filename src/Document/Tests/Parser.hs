@@ -15,7 +15,7 @@ import UnitB.QuasiQuote
 import Control.Lens
 import Control.Monad.State
 
-import Data.Map.Class
+import Data.Map
 
 test_case :: TestCase
 test_case = test_cases 

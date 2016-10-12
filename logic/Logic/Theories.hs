@@ -11,9 +11,9 @@ import Logic.Theories.RelationTheory
 import Logic.Theories.SetTheory
 import Logic.Theory
 
-import Utilities.Table
+import Utilities.Map
 
-supportedTheories :: Table Name Theory
+supportedTheories :: Map Name Theory
 supportedTheories = symbol_table
     [ set_theory
     , function_theory
@@ -22,7 +22,7 @@ supportedTheories = symbol_table
     , pred_calc
     , interval_theory ]
 
-preludeTheories :: Table Name Theory
+preludeTheories :: Map Name Theory
 preludeTheories = symbol_table
     [ arithmetic
     , basic_theory ]

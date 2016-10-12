@@ -14,6 +14,7 @@ import Control.Applicative hiding (empty)
 import Control.Arrow
 import Control.DeepSeq
 import Control.Lens hiding (Context)
+import Control.Lens.Misc
 import Control.Monad
 import Control.Parallel.Strategies
 import Control.Precondition
@@ -27,22 +28,19 @@ import Data.Serialize.Builder (Builder)
 import qualified Data.ByteString.Lazy as Lazy
 import           Data.Either.Combinators
 import           Data.Either.Validation
-import           Data.Map.Class as M 
-        ( insert 
-        , fromList, toList
-        , empty, mapKeys )
-import qualified Data.Map.Class as M 
+import qualified Data.HashMap.Strict as H
+import           Data.Map as M 
+        ( mapKeys )
+import qualified Data.Map as M 
 import           Data.Serialize as Ser ( Serialize(..), encodeLazy, decodeLazy ) 
+-- import           Data.Serialize.Instances
 import           Data.Serialize.Put 
 import           Data.Tuple
-import qualified Data.HashMap.Strict as H
 
-import GHC.Generics (Generic)
+import GHC.Generics.Instances
 
 import System.Directory
 import System.IO.FileFormat
-
-import Utilities.Table
 
 type AbsIntMap a b = (a,[(b,Maybe Bool)])
 
@@ -59,9 +57,9 @@ traverseKeys = seqs._1
 traverseSeqIs :: Traversal (AbsFileStruct a b c) (AbsFileStruct a b' c) b b'
 traverseSeqIs = seqs._2.traverse._1
 
-{-# INLINABLE traverseExprTable #-}
-traverseExprTable :: Traversal (AbsFileStruct a b c) (AbsFileStruct a b c') c c'
-traverseExprTable = exprs
+{-# INLINABLE traverseExprMap #-}
+traverseExprMap :: Traversal (AbsFileStruct a b c) (AbsFileStruct a b c') c c'
+traverseExprMap = exprs
 
 {-# INLINABLE traverseFileStruct #-}
 traverseFileStruct :: Applicative f
@@ -80,7 +78,7 @@ traverseFileStruct fA fB fC (FileStruct (a,b) c) =
 {-# INLINE encodedFileStructPrism #-}
 encodedFileStructPrism :: Prism' FileStructBin FileStruct
 encodedFileStructPrism = prism 
-        ( (traverseExprTable %~ par' . encodeLazy) 
+        ( (traverseExprMap %~ par' . encodeLazy) 
         . (traverseKeys %~ par' . encodeLazy) 
         . (traverseSeqIs %~ par' . encodeLazy)) 
         (\x -> mapLeft (const x) . validationToEither $
@@ -99,7 +97,7 @@ decodeLazy' :: Serialize a
 decodeLazy' = eitherToValidation . mapLeft (const ()) . decodeLazy
 
 {-# INLINABLE seqFileFormat #-}
-seqFileFormat :: FileFormat SeqTable
+seqFileFormat :: FileFormat SeqMap
 seqFileFormat = 
           failOnException 
         . compressedSequents
@@ -110,7 +108,7 @@ seqFileFormat =
 
 
 {-# INLINABLE systemFileFormat #-}
-systemFileFormat :: FileFormat (SeqTable,RawSystem)
+systemFileFormat :: FileFormat (SeqMap,RawSystem)
 systemFileFormat = 
           failOnException
         . prismFormat compressedSystemIso
@@ -121,7 +119,7 @@ systemFileFormat =
 type CompressedSystemPO = (M.Map Key (Maybe Bool),CompressedSystem)
 
 {-# INLINABLE compressedSystemIso #-}
-compressedSystemIso :: Prism' CompressedSystemPO (SeqTable, RawSystem)
+compressedSystemIso :: Prism' CompressedSystemPO (SeqMap, RawSystem)
 compressedSystemIso = below compressingSystem
                     . iso (makePO &&& snd) (_1 %~ fmap snd)
     where
@@ -132,12 +130,12 @@ compressedSystemIso = below compressingSystem
 {-# INLINABLE compressedSequents' #-}
 compressedSequents' :: err
                     -> FileFormat' err FileStruct
-                    -> FileFormat' err (Table Key (Seq,Maybe Bool))
+                    -> FileFormat' err (M.Map Key (Seq,Maybe Bool))
 compressedSequents' err = prismFormat' (const err) intSequentIso
 
 {-# INLINABLE compressedSequents #-}
 compressedSequents :: FileFormat FileStruct
-                   -> FileFormat (Table Key (Seq,Maybe Bool))
+                   -> FileFormat (M.Map Key (Seq,Maybe Bool))
 compressedSequents = prismFormat intSequentIso
 
 {-# INLINABLE compressedFileFormat #-}
@@ -152,17 +150,17 @@ compressedFileFormat' :: err
 compressedFileFormat' err = prismFormat' (const err) encodedFileStructPrism
 
 {-# INLINABLE intSequentIso #-}
-intSequentIso :: Iso' FileStruct (Table Key (Seq,Maybe Bool))
+intSequentIso :: Iso' FileStruct (M.Map Key (Seq,Maybe Bool))
 intSequentIso = iso iseq_to_seq seq_to_iseq
 
 expr_number :: Expr -> ExprStore Int
 expr_number expr = do
-    n <- gets $ M.lookup expr
+    n <- gets $ H.lookup expr
     case n of
         Just n  -> return n
         Nothing -> do
-            n <- gets M.size
-            modify $ insert expr n
+            n <- gets H.size
+            modify $ H.insert expr n
             return n
 
 decompress_seq :: SeqI -> ExprIndex Seq
@@ -171,16 +169,16 @@ decompress_seq = traverse (gets . flip (!))
 compress_seq :: Seq -> ExprStore SeqI
 compress_seq = traverse expr_number
 
-decompress_map :: IntMap -> ExprIndex (Table Key (Seq,Maybe Bool))
+decompress_map :: IntMap -> ExprIndex (M.Map Key (Seq,Maybe Bool))
 decompress_map ms = do
         xs <- forM (uncurry zip ms) $ \(x,(j,z)) -> do
             y <- decompress_seq j
             return (x,(y,z))
-        return $ fromList xs
+        return $ M.fromList xs
 
-compress_map :: Table Key (Seq,Maybe Bool) -> ExprStore IntMap    
+compress_map :: M.Map Key (Seq,Maybe Bool) -> ExprStore IntMap    
 compress_map m = do
-        xs <- forM (toList m) $ \(x,(y,z)) -> do
+        xs <- forM (M.toList m) $ \(x,(y,z)) -> do
             j <- compress_seq y
             return (x,(j,z))
         return $ unzip xs
@@ -191,13 +189,13 @@ type SeqI   = GenSequent Name Type HOQuantifier Int
 type IntMap = AbsIntMap [Key] SeqI
 type IntMapBin = AbsIntMap Lazy.ByteString Lazy.ByteString
 type ExprStore = State (H.HashMap Expr Int)
-type ExprIndex = State (Table Int Expr)
+type ExprIndex = State (M.Map Int Expr)
 type FileStruct = AbsFileStruct [Key] SeqI (H.HashMap Expr Int) 
 type FileStructBin = AbsFileStruct Lazy.ByteString Lazy.ByteString Lazy.ByteString
 
 load_pos :: FilePath 
-         -> Table Key (Seq,Maybe Bool)
-         -> IO (Table Key (Seq,Maybe Bool))
+         -> M.Map Key (Seq,Maybe Bool)
+         -> IO (M.Map Key (Seq,Maybe Bool))
 load_pos file pos = do
         let fname = file ++ ".state"
         b <- doesFileExist fname
@@ -269,18 +267,18 @@ builderOfList :: Serialize a => [a] -> [Builder]
 builderOfList xs = execPut (putWord64be (fromIntegral (length xs))) : map (execPut . Ser.put) xs
 
 iseq_to_seq :: FileStruct
-            -> Table Key (Seq,Maybe Bool)
+            -> M.Map Key (Seq,Maybe Bool)
 iseq_to_seq (FileStruct x y) = evalState (decompress_map x) inv
     where
-        inv = fromList $ map swap $ toList $ y
+        inv = M.fromList $ map swap $ H.toList y
         
-seq_to_iseq :: Table Key (Seq,Maybe Bool)
+seq_to_iseq :: M.Map Key (Seq,Maybe Bool)
             -> FileStruct 
 seq_to_iseq pos = FileStruct a b
     where
-        (a,b) = runState (compress_map pos) empty
+        (a,b) = runState (compress_map pos) H.empty
         
-dump_pos :: FilePath -> Table Key (Seq,Maybe Bool) -> IO ()
+dump_pos :: FilePath -> M.Map Key (Seq,Maybe Bool) -> IO ()
 dump_pos file pos = do 
         let fn     = file ++ ".state"
         writeFormat seqFileFormat fn pos
@@ -288,7 +286,7 @@ dump_pos file pos = do
 data DumpCmd = Only Label | All | AllFailed
     deriving (Eq,Show)
 
-dump_z3 :: DumpCmd -> FilePath -> Table Key (Seq,Maybe Bool) -> IO ()
+dump_z3 :: DumpCmd -> FilePath -> M.Map Key (Seq,Maybe Bool) -> IO ()
 dump_z3 pat file pos = dump file (M.map fst 
         $ M.filterWithKey matches
         $ mapKeys snd pos)

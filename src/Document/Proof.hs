@@ -31,8 +31,8 @@ import qualified Control.Monad.Trans.Either as E
 import           Control.Monad.Trans.Writer
 
 import           Data.Char
-import           Data.Map.Class hiding ( map )
-import qualified Data.Map.Class as M
+import           Data.Map hiding ( map )
+import qualified Data.Map as M
 import           Data.Maybe
 import qualified Data.Set as S
 import qualified Data.Traversable as T 
@@ -41,12 +41,11 @@ import Text.Printf.TH
 
 import           Utilities.Error
 import           Utilities.Syntactic hiding (line)
-import           Utilities.Table
 
 data ProofStep = Step 
-       { assertions  :: Table Label (Tactic Expr)    -- assertions
-       , subproofs   :: Table Label (Tactic Proof)   -- proofs of assertions
-       , assumptions :: Table Label (Tactic Expr)    -- assumptions
+       { assertions  :: Map Label (Tactic Expr)    -- assertions
+       , subproofs   :: Map Label (Tactic Proof)   -- proofs of assertions
+       , assumptions :: Map Label (Tactic Expr)    -- assumptions
        , definition  :: [(Name, Tactic Expr)] 
        , theorem_ref :: [Tactic (TheoremRef, LineInfo)]
        , new_goal    :: Maybe (Tactic Expr)        -- new_goal

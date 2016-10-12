@@ -31,7 +31,7 @@ import           Test.QuickCheck.ZoomEq
 import           Text.Printf.TH
 
 import           Utilities.Functor
-import           Utilities.Table
+import           Utilities.Map
 
 data GenericType = 
         Gen !Sort ![GenericType] 
@@ -44,7 +44,7 @@ data FOType      = FOT !Sort ![FOType]
 
 data Sort =
         BoolSort | IntSort | RealSort 
-        | RecordSort !(Table Field ())
+        | RecordSort !(Map Field ())
         | DefSort 
             !Name            -- Latex name
             !InternalName    -- Type name
@@ -190,7 +190,7 @@ instance PrettyPrintable GenericType where
     pretty (Gen s []) = render $ s^.name
     pretty (Gen s ts) = [printf|%s %s|] (render $ s^.name) (show $ map Pretty ts)
 
-recordName :: Table Field a -> Name
+recordName :: Map Field a -> Name
 recordName m = makeZ3Name $ "Record-" ++ intercalate "-" (map fieldName $ M.keys m)
 
 accessor :: Field -> String
@@ -284,10 +284,10 @@ set_sort = make DefSort "\\set" "set" [[smt|a|]] (array gA bool)
 set_type :: TypeSystem t => t -> t
 set_type t = make_type set_sort [t]
 
-record_sort :: Table Field t -> Sort
+record_sort :: Map Field t -> Sort
 record_sort fields = RecordSort $ () <$ fields
 
-record_type :: TypeSystem t => Table Field t -> t
+record_type :: TypeSystem t => Map Field t -> t
 record_type fields = make_type (record_sort fields) (M.elems fields)
 
 _ElementType :: TypeSystem t => Prism' t t

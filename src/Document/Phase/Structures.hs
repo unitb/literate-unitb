@@ -32,15 +32,14 @@ import           Control.Monad.Reader.Class
 
 import qualified Data.Graph.Bipartite as G
 import           Data.List as L hiding ( union, insert, inits )
-import           Data.Map.Class   as M hiding ( map, (\\) )
-import qualified Data.Map.Class   as M
+import           Data.Map   as M hiding ( map, (\\) )
+import qualified Data.Map   as M
 
 import Text.Printf.TH
 
-import Utilities.Table
 import Utilities.Syntactic
 
-run_phase0_blocks :: Pipeline MM () (MTable MachineP0)
+run_phase0_blocks :: Pipeline MM () (MMap MachineP0)
 run_phase0_blocks = withInput $ proc doc -> do
                 let mch = M.map (const ()) $ getMachineInput doc
                     _ctx = M.map (const ()) $ getContextInput doc
@@ -48,7 +47,7 @@ run_phase0_blocks = withInput $ proc doc -> do
                     _c0 = M.map (const $ TheoryP0 ()) _ctx    
                 returnA -< m0
 
-run_phase1_types :: Pipeline MM (MTable MachineP0) SystemP1
+run_phase1_types :: Pipeline MM (MMap MachineP0) SystemP1
 run_phase1_types = proc p0 -> do
     ts <- set_decl      -< p0
     e <- arr (fmap $ unionsWith (++)) <<< run_phase 
@@ -60,7 +59,7 @@ run_phase1_types = proc p0 -> do
     it <- import_theory -< p0
     refs <- triggerP <<< liftP' (make_all_tables refClash) -< r
     verifSet' <- triggerP <<< liftP' (make_all_tables verifClash) -< verifSet
-    let _ = refs :: MTable (Table () (MachineId,LineInfo))
+    let _ = refs :: MMap (Map () (MachineId,LineInfo))
     r_ord <- topological_order -< mapMaybe (M.lookup ()) refs
     let t = M.map fst <$> ts
         s = M.map snd <$> ts
@@ -76,9 +75,9 @@ run_phase1_types = proc p0 -> do
         edges m = concatMap (\(x,xs) -> L.map (,x) xs) m
         makeGraphs = traverse f 
     evts'   <- triggerP -< evts'   
-    let evts'' :: MTable [(SkipOrEvent, [SkipOrEvent])]
+    let evts'' :: MMap [(SkipOrEvent, [SkipOrEvent])]
         evts'' = addSkip evts'
-        addSkip = M.map (((Left SkipEvent,[Left SkipEvent]):).M.ascElems.M.map ((Right *** ifEmpty).fst))
+        addSkip = M.map (((Left SkipEvent,[Left SkipEvent]):).M.elems.M.map ((Right *** ifEmpty).fst))
         ifEmpty [] = [Left SkipEvent]
         ifEmpty xs = L.map Right xs
     evts'   <- triggerP -< makeGraphs evts''
@@ -90,7 +89,7 @@ run_phase1_types = proc p0 -> do
     --     -- the creation of p1 won't detect clashes between type names, it will merely overshadow
     --     -- some types with (hopefully) the most local types
     --     -- BIG FLAG
-    let _ = evts' :: MTable (G.BiGraph SkipOrEvent () ())
+    let _ = evts' :: MMap (G.BiGraph SkipOrEvent () ())
         f th = M.unions $ map (view AST.types) $ M.elems th
         basic = preludeTheories
         imp_th = M.map (union basic . M.map fst) imp_th'
@@ -109,10 +108,10 @@ run_phase1_types = proc p0 -> do
     verifClash _ = "Multiple verification timeouts"
 
 make_phase1 :: MachineP0
-            -> Table Name Theory
-            -> Table Name Sort
-            -> Table Name Sort
-            -> Table () Float
+            -> Map Name Theory
+            -> Map Name Sort
+            -> Map Name Sort
+            -> Map () Float
             -> [(Name, PostponedDef)]
             -> G.BiGraph SkipOrEvent () () -- Map Label (EventId, [EventId])
             -> MachineP1

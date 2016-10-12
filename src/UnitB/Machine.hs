@@ -33,6 +33,7 @@ import Control.Monad.State
 import Control.Precondition
 
 import           Data.Default
+import           Data.Hashable
 import           Data.Monoid
 import           Data.Foldable as F (all,toList)
 import           Data.Functor.Compose
@@ -45,7 +46,7 @@ import Data.Functor.Classes
 import           Data.Graph.Bipartite as G
 import           Data.List as L hiding ( union, inits )
 import           Data.List.NonEmpty as NE hiding (inits)
-import           Data.Map.Class as M
+import           Data.Map as M
 import           Data.Maybe as M
 import qualified Data.Set as S
 import           Data.Serialize hiding (label,put)
@@ -59,12 +60,10 @@ import Test.QuickCheck.ZoomEq
 
 import Text.Printf.TH
 
-import Utilities.Table
-
-all_types :: Theory -> Table Name Sort
+all_types :: Theory -> Map Name Sort
 all_types th = unions (_types th : L.map all_types (elems $ _extends th)) 
 
-newtype EventTable expr = EventTable { _table :: 
+newtype EventMap expr = EventMap { _table :: 
         BiGraph' SkipOrEvent (AbstrEvent' expr) 
                  SkipOrEvent (ConcrEvent' expr) 
                  () }
@@ -80,24 +79,24 @@ data MachineBase expr =
     Mch 
         { _machineBaseName :: Name
         , _theory     :: Theory' expr
-        , _variables  :: Table Name Var
-        , _oldDefs    :: Table Name expr
-        , _machineBaseDefs     :: Table Name expr
-        , _machineBaseAbs_vars :: Table Name Var
-        , _del_vars   :: Table Name Var
-        , _init_witness :: Table Name (Witness' expr)
-        , _del_inits  :: Table Label expr
-        , _inits      :: Table Label expr
-        , _event_table :: EventTable expr
+        , _variables  :: Map Name Var
+        , _oldDefs    :: Map Name expr
+        , _machineBaseDefs     :: Map Name expr
+        , _machineBaseAbs_vars :: Map Name Var
+        , _del_vars   :: Map Name Var
+        , _init_witness :: Map Name (Witness' expr)
+        , _del_inits  :: Map Label expr
+        , _inits      :: Map Label expr
+        , _event_table :: EventMap expr
         , _inh_props  :: PropertySet' expr
         , _props      :: PropertySet' expr
-        , _derivation :: Table ProgId ProofTree         
-        , _comments   :: Table DocItem String 
+        , _derivation :: Map ProgId ProofTree         
+        , _comments   :: Map DocItem String 
         , _machineBaseTimeout :: Float }
     deriving (Eq,Show,Typeable,Functor,Foldable,Traversable,Generic)
 
 instance ZoomEq expr => ZoomEq (MachineBase expr) where
-instance ZoomEq expr => ZoomEq (EventTable expr) where
+instance ZoomEq expr => ZoomEq (EventMap expr) where
 
 instance Eq1 MachineBase where
 #if MIN_VERSION_transformers(0,5,0)
@@ -135,16 +134,16 @@ data DocItem =
 
 instance Hashable DocItem where
 
-instance Show expr => Show (EventTable expr) where
-    show (EventTable m) = show m
-instance Functor EventTable where
-    fmap f (EventTable g) = EventTable $ mapBoth (fmap f) (fmap f) g
-instance Foldable EventTable where
-    foldMap f (EventTable m) = 
+instance Show expr => Show (EventMap expr) where
+    show (EventMap m) = show m
+instance Functor EventMap where
+    fmap f (EventMap g) = EventMap $ mapBoth (fmap f) (fmap f) g
+instance Foldable EventMap where
+    foldMap f (EventMap m) = 
                 foldMap (foldMap f) (leftMap m) 
             `mappend` foldMap (foldMap f) (rightMap m)
-instance Traversable EventTable where
-    traverse f (EventTable g) = EventTable <$> acrossBoth 
+instance Traversable EventMap where
+    traverse f (EventMap g) = EventMap <$> acrossBoth 
             (traverse f) (traverse f) 
             pure g 
 
@@ -154,7 +153,7 @@ instance Show DocItem where
     show (DocInv xs) = [printf|%s (invariant)|] $ show xs
     show (DocProg xs) = [printf|%s (progress)|] $ show xs
 
-makeLenses ''EventTable
+makeLenses ''EventMap
 makeClassy ''MachineBase
 makeFields ''MachineBase
 mkCons ''MachineBase
@@ -163,7 +162,7 @@ class (Controls mch (Internal mch expr)
         , HasExpr expr
         , HasMachineBase (Internal mch expr) expr
         , HasName (Internal mch expr) Name 
-        , HasAbs_vars (Internal mch expr) (Table Name Var) ) 
+        , HasAbs_vars (Internal mch expr) (Map Name Var) ) 
         => HasMachine mch expr | mch -> expr where
     type Internal mch expr :: *
     empty_machine :: Name -> mch
@@ -257,11 +256,11 @@ instance (HasExpr expr,ZoomEq expr) => HasScope (MachineBase expr) where
             absVarsNdefs = (m^.abs_vars) `M.union` (m^.oldDefinedSymbols)
 
 definedSymbols :: HasExpr expr 
-               => Getter (MachineBase expr) (Table Name Var)
+               => Getter (MachineBase expr) (Map Name Var)
 definedSymbols = defs.to (M.mapWithKey (\n -> Var n.type_of.getExpr))
 
 oldDefinedSymbols :: HasExpr expr 
-               => Getter (MachineBase expr) (Table Name Var)
+               => Getter (MachineBase expr) (Map Name Var)
 oldDefinedSymbols = oldDefs.to (M.mapWithKey (\n -> Var n.type_of.getExpr))
 
 instance Controls (MachineBase expr) (MachineBase expr) where 
@@ -302,10 +301,10 @@ downward_event m lbl = readGraph (m!.events) $ do
              <*> T.forM es (\e -> (,) <$> rightKey (target e) <*> rightInfo (target e))
 
 new_event_set :: HasExpr expr
-              => Table Name Var
+              => Map Name Var
               -> Map EventId (Event' expr)
-              -> EventTable expr
-new_event_set vs es = EventTable $ fromJust' $ makeGraph $ do
+              -> EventMap expr
+new_event_set vs es = EventMap $ fromJust' $ makeGraph $ do
         skip <- newLeftVertex (Left SkipEvent) skip_abstr
         forM_ (M.toList es) $ \(lbl,e) -> do
             v <- newRightVertex (Right lbl) $ 
@@ -315,8 +314,8 @@ new_event_set vs es = EventTable $ fromJust' $ makeGraph $ do
         newEdge skip =<< newRightVertex (Left SkipEvent) def
 
 makeWitness :: HasExpr expr
-            => Table Name Var 
-            -> Event' expr -> Table Name (Witness' expr)
+            => Map Name Var 
+            -> Event' expr -> Map Name (Witness' expr)
 makeWitness vs = view $ actions.to frame.to f -- .to (traverse._2.namesOf %~ asInternal)
     where 
         wit v = WitEq v $ zword v
@@ -374,10 +373,10 @@ all_downwards m = readGraph (m!.events) $ do
                     return [(Left SkipEvent,EvtS aevt (c :|[])) | c <- NE.toList cevts]
         return $ M.fromList $ concat ms
 
-eventTable :: forall expr. HasExpr expr
+eventMap :: forall expr. HasExpr expr
            => (forall s0 s1. GraphBuilder SkipOrEvent (AbstrEvent' expr) SkipOrEvent (ConcrEvent' expr) () s0 s1 ())
-           -> EventTable expr
-eventTable gr = EventTable $ fromJust $ makeGraph $ do
+           -> EventMap expr
+eventMap gr = EventMap $ fromJust $ makeGraph $ do
     let skip = def 
     a <- newLeftVertex (Left SkipEvent)  $ create $ old .= skip
     c <- newRightVertex (Left SkipEvent) $ create $ new .= skip
@@ -424,8 +423,8 @@ refined_event eid cmd = do
 
 newEvents :: HasExpr expr 
           => [(EventId,Event' expr)]
-          -> EventTable expr
-newEvents xs = eventTable $ mapM_ (uncurry event . over _2 put) xs
+          -> EventMap expr
+newEvents xs = eventMap $ mapM_ (uncurry event . over _2 put) xs
 
 variableSet :: MachineAST -> S.Set Var
 variableSet m = S.fromList $ M.elems $ m!.variables
@@ -447,7 +446,7 @@ all_notation m = flip precede logical_notation
         $ L.foldl' OP.combine empty_notation 
         $ L.map (view Th.notation) th
     where
-        th = (getExpr <$> m!.theory) : ascElems (_extends $ m!.theory)
+        th = (getExpr <$> m!.theory) : elems (_extends $ m!.theory)
 
 instance (HasExpr expr,ZoomEq expr) => Named (MachineAST' expr) where
     type NameOf (MachineAST' expr) = Name
@@ -459,11 +458,11 @@ _name = MId . view' machineBaseName
 
 ba_predicate :: (HasConcrEvent' event RawExpr,Show expr)
              => MachineAST' expr 
-             -> event -> Table Label RawExpr
-ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions :: Table Label RawAction)
+             -> event -> Map Label RawExpr
+ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions :: Map Label RawAction)
                     --`M.union` ba_predicate' (m^.del_vars) (evt^.abs_actions)
-                    `M.union` M.mapKeys (label.render) (convertMap $ witnessDef <$> evt^.witness)
-                    `M.union` M.mapKeys (skipLbl.render) (convertMap $ M.map eqPrime noWitness)
+                    `M.union` M.mapKeys (label.render) (witnessDef <$> evt^.witness)
+                    `M.union` M.mapKeys (skipLbl.render) (M.map eqPrime noWitness)
     where
         skipLbl :: String -> Label
         skipLbl = label . ("SKIP:"++)
@@ -497,5 +496,5 @@ instance NFData expr => NFData (MachineBase expr) where
 
 instance Serialize DocItem where
 instance Serialize MachineId where
-instance Serialize expr => Serialize (EventTable expr) where
+instance Serialize expr => Serialize (EventMap expr) where
 instance Serialize expr => Serialize (MachineBase expr) where

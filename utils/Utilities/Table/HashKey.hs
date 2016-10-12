@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
-module Utilities.Table.HashKey where
+module Utilities.Map.HashKey where
 
 import Control.Arrow
 import Control.DeepSeq

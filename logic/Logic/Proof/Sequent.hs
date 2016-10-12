@@ -36,7 +36,7 @@ import Test.QuickCheck.ZoomEq
 
 import Text.Printf.TH
 
-import Utilities.Table
+import Utilities.Map
 
 type Sequent = AbsSequent GenericType HOQuantifier
 
@@ -49,7 +49,7 @@ type FOSequent = GenSequent InternalName FOType FOQuantifier FOExpr
 type AbsSequent t q = GenSequent Name t q (AbsExpr Name t q)
 
 data SyntacticProp = SyntacticProp  
-        { _associative  :: Table Name ExprP
+        { _associative  :: Map Name ExprP
         , _monotonicity :: Map (Relation,Function) (ArgDep Rel) }
             -- (rel,fun) --> rel
     deriving (Eq,Show,Generic)
@@ -76,7 +76,7 @@ data GenSequent name t q expr = Sequent
         , _genSequentContext  :: GenContext name t q
         , _genSequentSyntacticThm :: SyntacticProp
         , _genSequentNameless :: [expr] 
-        , _genSequentNamed :: Table Label expr
+        , _genSequentNamed :: Map Label expr
         , _genSequentGoal  :: expr }
     deriving (Eq, Generic, Show, Functor, Foldable, Traversable)
 
@@ -127,10 +127,10 @@ instance HasExprs (GenSequent n t q e) e where
                 <*> traverse f hyp1 
                 <*> f g
 
-instance HasSorts (GenSequent n t q e) (Table Name Sort) where
+instance HasSorts (GenSequent n t q e) (Map Name Sort) where
     sorts = context.sorts
 
-instance HasConstants (GenSequent n t q e) (Table n (AbsVar n t)) where
+instance HasConstants (GenSequent n t q e) (Map n (AbsVar n t)) where
     constants = context.constants
 
 predefined :: [InternalName]
@@ -169,7 +169,7 @@ makeSequent :: Pre
             => Context
             -> SyntacticProp
             -> [Expr]
-            -> Table Label Expr
+            -> Map Label Expr
             -> Expr
             -> Sequent
 makeSequent ctx props asms0 asms1 g = checkSequent $ 
@@ -281,7 +281,7 @@ remove_type_vars :: Sequent' -> FOSequent
 remove_type_vars (Sequent tout res ctx m asm hyp goal) = Sequent tout res ctx' m asm' hyp' goal'
     where
         (Context ss _ _ dd _) = ctx
-        _ = dd :: Table InternalName Def'
+        _ = dd :: Map InternalName Def'
         asm_types = MM.catMaybes 
                     $ map type_strip_generics 
                     $ S.elems $ S.unions 
@@ -301,7 +301,7 @@ remove_type_vars (Sequent tout res ctx m asm hyp goal) = Sequent tout res ctx' m
                     (S.toList decl_types ++ const_types)^.partsOf (traverse.foldSorts.filtered (is _RecordSort))
         asm' :: [FOExpr]
         asm' = map snd $ concatMap (gen_to_fol seq_types (label "")) asm
-        hyp' :: Table Label FOExpr
+        hyp' :: Map Label FOExpr
         hyp' = M.fromList $ concat $ M.elems $ M.mapWithKey (gen_to_fol seq_types) hyp
         goal' :: FOExpr
         goal' = vars_to_sorts ss goal

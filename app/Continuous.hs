@@ -20,12 +20,13 @@ import Z3.Version
     -- Libraries
 import Control.Exception
 import Control.Lens
+import Control.Lens.Misc
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans.Either 
 import Control.Precondition
 
-import qualified Data.Map.Class as M
+import qualified Data.Map as M
 import Data.Time
 import Data.Typeable
 
@@ -39,21 +40,20 @@ import System.Environment
 import System.IO.FileFormat
 import System.Timeout
 
-import qualified Utilities.Table as M
 import Utilities.Syntactic
 import Utilities.TimeIt
 
 import Text.Printf
 
-seqFileFormat' :: FileFormat (M.Table Label (M.Table Label (Bool, Seq)))
+seqFileFormat' :: FileFormat (M.Map Label (M.Map Label (Bool, Seq)))
 seqFileFormat' = prismFormat pr $ seqFileFormat
     where 
-        pr :: Iso' (M.Table Key (Seq, Maybe Bool)) 
-                   (M.Table Label (M.Table Label (Bool, Seq))) 
-        pr = pruneUntried.mapping swapped.M.curriedMap
+        pr :: Iso' (M.Map Key (Seq, Maybe Bool)) 
+                   (M.Map Label (M.Map Label (Bool, Seq))) 
+        pr = pruneUntried.mapping swapped.curriedMap
         pruneUntried :: Iso' 
-                            (M.Table Key (Seq, Maybe Bool)) 
-                            (M.Table Key (Seq, Bool))
+                            (M.Map Key (Seq, Maybe Bool)) 
+                            (M.Map Key (Seq, Bool))
         pruneUntried = iso (M.mapMaybe sequence) (traverse._2 %~ Just)
 
 with_po_map :: StateT Params IO a -> Params -> IO ()
@@ -142,7 +142,7 @@ check_file = do
         r <- liftIO $ runEitherT $ do
             s <- EitherT $ parse_system $ path param
             lift $ produce_summaries (path param) s
-            return (M.ascElems $ s!.machines, M.toAscList $ s!.theories)
+            return (M.elems $ s!.machines, M.toAscList $ s!.theories)
         case r of
             Right (ms,ts) -> do
                 if no_verif param then return ()

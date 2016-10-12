@@ -50,7 +50,7 @@ import Data.Existential
 import Data.Graph.Bipartite as G
 import Data.List as L
 import Data.List.NonEmpty as NE
-import Data.Map.Class  as M
+import Data.Map  as M
 import Data.Maybe
 import Data.Semigroup
 
@@ -59,21 +59,20 @@ import Test.QuickCheck.Report
 
 import Utilities.MapSyntax
 import Utilities.Syntactic
-import Utilities.Table
 
-mkMap :: (Arbitrary a,M.IsKey Table k) => Hierarchy k -> Gen (Table k [a])
+mkMap :: (Arbitrary a,Ord k) => Hierarchy k -> Gen (Map k [a])
 mkMap (Hierarchy xs _) = M.fromList.L.zip xs <$> replicateM (L.length xs) arbitrary
 
 prop_inherit_equiv :: Hierarchy Int
                    -> Property
 prop_inherit_equiv h = forAll (mkMap h) $ \m -> 
-    inheritWith' id (L.map.(+)) (++) h m === inheritWithAlt id (L.map.(+)) (++) h (m :: Table Int [Int])
+    inheritWith' id (L.map.(+)) (++) h m === inheritWithAlt id (L.map.(+)) (++) h (m :: Map Int [Int])
 
 return []
 
-runMap :: (M.IsKey Table k, Scope a, Pre) 
+runMap :: (Ord k, Scope a, Pre) 
        => MapSyntax k a b 
-       -> Table k a
+       -> Map k a
 runMap = runMapWith merge_scopes
 
 test_case :: TestCase
@@ -88,7 +87,7 @@ name0 = testName "test 0, phase 1 (structure), create object"
 mId :: String -> MachineId
 mId = MId . makeName
 
-case0 :: IO (MTable MachineP1)
+case0 :: IO (MMap MachineP1)
 case0 = do
     let ms = M.fromList [(mId "m0",()),(mId "m1",())]
         p0 = mapWithKey (const . MachineP0 ms) ms
@@ -145,7 +144,7 @@ case0 = do
                          <.> pdef 
                          <.> evts
 
-result0 :: MTable MachineP1
+result0 :: MMap MachineP1
 result0 = M.fromList 
         [ (mId "m0",m0) 
         , (mId "m1",m1) ]
@@ -236,26 +235,26 @@ name2 :: TestName
 name2 = testName "test 2, phase 2 (variables), creating state"
 
 -- {-# SPECIALIZE lnZip' :: (Ord k) => Map k (a -> b) -> Traversal (Map k a) (Map k c) b c #-}
--- {-# INLINE lnZip' :: forall a k b c. (Ord k) => Table k (a -> b) -> Traversal (Table k a) (Table k c) b c #-}
+-- {-# INLINE lnZip' :: forall a k b c. (Ord k) => Map k (a -> b) -> Traversal (Map k a) (Map k c) b c #-}
 {-# INLINE lnZip' #-}
-lnZip' :: (IsMap map,IsKey map k,Traversable (map k)) => map k (a -> b) -> Traversal (map k a) (map k c) b c
+lnZip' :: (Ord k) => Map k (a -> b) -> Traversal (Map k a) (Map k c) b c
 lnZip' m f m' = traverse f $ M.intersectionWith (flip id) m' m
 
 -- {-# SPECIALIZE lnZip :: (Ord k) => Map k b -> Traversal (Map k a) (Map k c) (a,b) c #-}
--- {-# SPECIALIZE lnZip :: (Ord k) => Table k b -> Traversal (Table k a) (Table k c) (a,b) c #-}
+-- {-# SPECIALIZE lnZip :: (Ord k) => Map k b -> Traversal (Map k a) (Map k c) (a,b) c #-}
 {-# INLINE lnZip #-}
-lnZip :: (IsMap map,IsKey map k,Traversable (map k)) 
-      => map k b -> Traversal (map k a) (map k c) (a,b) c
+lnZip :: (Ord k) 
+      => Map k b -> Traversal (Map k a) (Map k c) (a,b) c
 lnZip m = lnZip' $ flip (,) <$> m
 
 -- {-# SPECIALIZE lnZip5 :: (Ord k) => Map k b0 -> Map k b1 -> Map k b2 -> Map k b3 -> Map k b4
 --                       -> Traversal (Map k a) (Map k z) (a,b0,b1,b2,b3,b4) z #-}
--- {-# SPECIALIZE lnZip5 :: (Ord k) => Table k b0 -> Table k b1 -> Table k b2 -> Table k b3 -> Table k b4
---                       -> Traversal (Table k a) (Table k z) (a,b0,b1,b2,b3,b4) z #-}
+-- {-# SPECIALIZE lnZip5 :: (Ord k) => Map k b0 -> Map k b1 -> Map k b2 -> Map k b3 -> Map k b4
+--                       -> Traversal (Map k a) (Map k z) (a,b0,b1,b2,b3,b4) z #-}
 {-# INLINE lnZip5 #-}
-lnZip5 :: (IsMap map,IsKey map k,Traversable (map k))
-       => map k b0 -> map k b1 -> map k b2 -> map k b3 -> map k b4
-       -> Traversal (map k a) (map k z) (a,b0,b1,b2,b3,b4) z
+lnZip5 :: (Ord k)
+       => Map k b0 -> Map k b1 -> Map k b2 -> Map k b3 -> Map k b4
+       -> Traversal (Map k a) (Map k z) (a,b0,b1,b2,b3,b4) z
 lnZip5 m0 m1 m2 m3 m4 = lnZip' $ (f <$> m0) `op` m1 `op` m2 `op` m3 `op` m4
     where
         f x0 x1 x2 x3 x4 y = (y,x0,x1,x2,x3,x4)
@@ -264,7 +263,7 @@ lnZip5 m0 m1 m2 m3 m4 = lnZip' $ (f <$> m0) `op` m1 `op` m2 `op` m3 `op` m4
 case2 :: IO (Either [Error] SystemP2)
 case2 = return $ do
         r <- result1
-        runMM (r & (mchTable.lnZip vs) (uncurry make_phase2)) ()
+        runMM (r & (mchMap.lnZip vs) (uncurry make_phase2)) ()
     where
         li = LI "file.ext" 1 1
         s0 = z3Sort "S0" "S0" 0
@@ -341,7 +340,7 @@ result2 = do
                 | eid == Right "ce1"  = [make' EParams "p" (z3Var "p" bool)]
                 | eid == Right "ce2"  = [make' EIndices "q" (z3Var "q" int)]
                 | otherwise           = []
-        return $ sys & mchTable.withKey.traverse %~ \(mid,m) -> 
+        return $ sys & mchMap.withKey.traverse %~ \(mid,m) -> 
                     layeredUpgradeRec (upTheory mid) (upMachine mid) upEvent upEvent m
         -- (\m -> makeMachineP2' (f m) _ [])
 
@@ -371,7 +370,7 @@ name4 = testName "test 4, phase 3 (expressions), create object"
 case4 :: IO (Either [Error] SystemP3)
 case4 = return $ do
         r <- result2
-        runMM (r & (mchTable.lnZip es) (uncurry make_phase3)) ()
+        runMM (r & (mchMap.lnZip es) (uncurry make_phase3)) ()
     where
         decl x con y = do
             scope <- ask
@@ -428,7 +427,7 @@ decl :: String -> GenericType -> State ParserSetting ()
 decl n t = decls %= insert_symbol (z3Var n t)
 
 result4 :: Either [Error] SystemP3
-result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
+result4 = (mchMap.withKey.traverse %~ uncurry upgradeAll) <$> result3
     where
         upgradeAll mid = upgrade newThy (newMch mid) (newEvt mid) (newEvt mid)
         xvar = Var [tex|x|] int
@@ -519,7 +518,7 @@ name6 = testName "test 6, phase 4 (proofs), create object"
 case6 :: IO (Either [Error] SystemP4)
 case6 = return $ do
         r <- result4
-        return $ r & (mchTable.lnZip5 cSchRef fSchRef liveProof comment proof) %~ 
+        return $ r & (mchMap.lnZip5 cSchRef fSchRef liveProof comment proof) %~ 
                     uncurry6 make_phase4
     where
         li = LI "file.ext" 1 1
@@ -547,7 +546,7 @@ case6 = return $ do
         uncurry6 f (x0,x1,x2,x3,x4,x5) = f x0 x1 x2 x3 x4 x5
 
 result6 :: Either [Error] SystemP4
-result6 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result5
+result6 = (mchMap.withKey.traverse %~ uncurry upgradeAll) <$> result5
     where
         upgradeAll :: MachineId -> MachineP3 -> MachineP4
         upgradeAll mid = upgrade id (newMch mid) (newEvt mid) (const $ const id)
@@ -594,7 +593,7 @@ name8 = testName "test 8, make machine"
 case8 :: IO (Either [Error] (SystemP Machine))
 case8 = return $ do
     r <- result7 
-    runMM (r & mchTable (M.traverseWithKey make_machine)) ()
+    runMM (r & mchMap (M.traverseWithKey make_machine)) ()
 
 result8 :: Either [Error] (SystemP Machine)
 result8 = Right $ SystemP h $ fromSyntax <$> ms

@@ -27,7 +27,7 @@ import Data.Functor.Classes
 #endif
 import Data.Functor.Compose
 import Data.Graph.Bipartite
-import Data.Map.Class as M
+import Data.Map as M hiding ((!))
 import Data.Serialize
 
 import GHC.Generics.Instances
@@ -36,16 +36,14 @@ import Test.QuickCheck.ZoomEq
 
 import Text.Printf
 
-import Utilities.Table
-
 type SystemAST = System' MachineAST
 type System' = Compose Checked SystemBase
 
 data SystemBase mch = Sys 
         {  _proof_struct :: [(Label,Label)]
-        ,  _ref_struct   :: Table MachineId (Maybe MachineId)
-        ,  _machines     :: Table MachineId mch
-        ,  _theories     :: Table String Theory
+        ,  _ref_struct   :: Map MachineId (Maybe MachineId)
+        ,  _machines     :: Map MachineId mch
+        ,  _theories     :: Map String Theory
         }
     deriving (Eq,Generic,Show,Functor,Foldable,Traversable)
 

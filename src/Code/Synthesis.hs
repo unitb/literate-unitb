@@ -28,12 +28,9 @@ import Control.Precondition
 
 import Data.List as L hiding (inits)
 import Data.List.Ordered as OL
-import Data.Map.Class  as M
+import Data.Map  as M hiding ((!))
 
 import Text.Printf.TH
-
-import Utilities.Table
-
 
 data Program = 
         Event [Expr] Expr Expr EventId
@@ -101,9 +98,9 @@ make_multiprogram m (Partition xs) = MultiProgram $ L.map prog xs
 data Termination = Infinite | Variant Variant EventId
     deriving (Show)
 
-data Concurrency = Concurrent (Table Name ()) | Sequential
+data Concurrency = Concurrent (Map Name ()) | Sequential
 
-shared_vars :: Concurrency -> Table Name ()
+shared_vars :: Concurrency -> Map Name ()
 shared_vars (Concurrent s) = s
 shared_vars Sequential     = M.empty
 
@@ -177,7 +174,7 @@ certainly (Sequence xs)     = concatMap certainly xs
 certainly (Conditional _ lb rb) = L.foldl' isect (nubSort $ certainly rb) $ L.map nubSort (L.map (certainly . snd) lb)
 certainly (Loop _ _ _ _)    = []
 
-safety :: RawMachineAST -> [EventId] -> [Expr] -> Program -> Either [String] (Table Label Sequent)
+safety :: RawMachineAST -> [EventId] -> [Expr] -> Program -> Either [String] (Map Label Sequent)
 safety m others post cfg 
         | L.null es = Right r
         | otherwise = Left es
@@ -224,7 +221,7 @@ safety_aux (Event pre wait cond evt_lbl) ps = do
     hoare_triple ("postcondition" </> as_label evt_lbl) 
         (cond:wait:pre) evt_lbl ps 
     entails "skip" (znot cond : wait : pre) ps
-    entails "forced" (pre ++ M.ascElems sch) [cond]
+    entails "forced" (pre ++ M.elems sch) [cond]
     forM_ local $ disabled (znot wait : pre)
 safety_aux (NotEvent pre evts) ps = do
     mapM_ (disabled pre) evts
@@ -346,7 +343,7 @@ type_code t =
                         return $ [printf|M.Map (%s) (%s)|] c0 c1
                 _ -> Left $ [printf|unrecognized type: %s|] (pretty t)
                     
-binops_code :: Table Name (String -> String -> String)
+binops_code :: Map Name (String -> String -> String)
 binops_code = M.fromList 
     [ (z3Name "=", [printf|(%s == %s)|])
     , (z3Name "+", [printf|(%s + %s)|])
@@ -355,11 +352,11 @@ binops_code = M.fromList
     , (z3Name "mk-fun", [printf|(M.singleton %s %s)|])
     ]
 
-unops_code :: Table Name (String -> String)
+unops_code :: Map Name (String -> String)
 unops_code = M.fromList
     [ (z3Name "not", [printf|(not %s)|])]
 
-nullops_code :: Table Name String
+nullops_code :: Map Name String
 nullops_code = M.fromList
     [ (z3Name "empty-fun", "M.empty") 
     , (z3Name "empty-set", "S.empty")]
@@ -374,7 +371,7 @@ instance Evaluator (Either String) where
     read_var _ = return ()
     is_shared _ = return False
 
-type ConcurrentEval = RWST (Table Name ()) [Name] () (Either String)
+type ConcurrentEval = RWST (Map Name ()) [Name] () (Either String)
 
 instance Evaluator ConcurrentEval where
     is_shared v = do
@@ -420,7 +417,7 @@ eval_expr m e =
 struct :: RawMachineAST -> M ()
 struct m = do
         sv <- asks (shared_vars . snd)
-        let attr :: (Table Name Var -> Table Name () -> Table Name Var)
+        let attr :: (Map Name Var -> Map Name () -> Map Name Var)
                  -> String -> (String -> String)
                  -> Either String String
             attr comb pre typef = do 
@@ -477,7 +474,7 @@ runEval cmd = do
 
 event_body_code :: RawMachineAST -> RawEvent -> M String
 event_body_code m e = do
-        acts <- runEval $ mapM (assign_code m) $ M.ascElems $ e^.actions
+        acts <- runEval $ mapM (assign_code m) $ M.elems $ e^.actions
         -- evaluate_all 
         let (g_acts,l_acts) = (L.map snd *** L.map snd) $ L.partition fst acts
         emit "let s' = s"
@@ -516,14 +513,14 @@ report = lift . Left
 conc_init_code :: RawMachineAST -> M ()
 conc_init_code m = do
         acts' <- runEval $ liftM concat 
-            $ mapM (init_value_code m) $ M.ascElems $ m!.inits
+            $ mapM (init_value_code m) $ M.elems $ m!.inits
         let acts = L.map snd $ L.filter fst acts' 
         emitAll $ L.map (\(v,e) -> [printf|s_%s <- newTVarIO %s|] (pretty v) e) acts
 
 init_code :: RawMachineAST -> M ()
 init_code m = do
         acts' <- runEval $ liftM concat 
-            $ mapM (init_value_code m) $ M.ascElems $ m!.inits
+            $ mapM (init_value_code m) $ M.elems $ m!.inits
         let acts = L.map snd $ L.filter (not . fst) acts' 
         emit "s' = State"
         indent 5 $ do

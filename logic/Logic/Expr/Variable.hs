@@ -23,7 +23,7 @@ import Test.QuickCheck
 import Test.QuickCheck.ZoomEq
 
 import Utilities.Functor
-import Utilities.Table
+import Utilities.Map
 
 type UntypedVar = AbsVar Name ()
 
@@ -71,7 +71,7 @@ instance Traversable1 AbsVar where
 prime :: IsName n => AbsVar n t -> AbsVar n t
 prime (Var n t) = Var (addPrime n) t
 
-primeAll :: IsName n => Table n (AbsVar n t) -> Table n (AbsVar n t)
+primeAll :: IsName n => Map n (AbsVar n t) -> Map n (AbsVar n t)
 primeAll m = M.mapKeys addPrime $ M.map prime m
 
 z3Var :: Pre

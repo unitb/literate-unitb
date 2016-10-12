@@ -36,12 +36,12 @@ import           Data.Foldable as F
 import           Data.List as L
 import           Data.Map.Class as M 
 
-import Utilities.Table
+import Utilities.Map
 
 all_theories :: Theory -> [Theory]
 all_theories th = th : M.ascElems (all_theories' th)
 
-all_theories' :: Theory -> Table Name Theory
+all_theories' :: Theory -> Map Name Theory
 all_theories' th = M.unions $ view extends th : M.ascElems (M.map all_theories' $ view extends th)
 
 basic_theory :: Theory
@@ -107,7 +107,7 @@ theory_ctx th =
         new_fun = fun
 
     -- todo: prefix name of theorems of a z3_decoration
-theory_facts :: Theory -> Table Label Expr
+theory_facts :: Theory -> Map Label Expr
 theory_facts th = 
         merge_all (new_fact : L.map theory_facts (M.ascElems d))
     where

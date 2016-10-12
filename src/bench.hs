@@ -26,7 +26,7 @@ import Test.UnitTest
 import Text.Printf
 
 import Logic.Names
-import Utilities.Table
+import Utilities.Map
 
 test_case :: TestCase
 test_case = test_cases 

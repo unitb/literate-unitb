@@ -22,20 +22,19 @@ import Control.Monad.RWS
 import Control.Monad.Trans.Maybe
 import Control.Monad.Writer
 
-import Data.DList (DList)
+import           Data.DList (DList)
 import qualified Data.DList as D
-import Data.Hashable
-import Data.List as L
-import qualified Data.Map.Class as M
-import Data.String
-import Data.Tuple.Generics
+import           Data.Hashable
+import           Data.List as L
+import qualified Data.Map as M
+import           Data.String
+import           Data.Tuple.Generics
 
 import GHC.Generics.Instances
 
 import Text.Printf.TH
 
 import Utilities.Syntactic
-import Utilities.Table
 
 newtype MM' a b = MM (MaybeT (RWS a [Error] ()) b)
     deriving ( Functor,Applicative,MonadPlus
@@ -57,12 +56,12 @@ data DocSpec = DocSpec
 
 data ArgumentSpec = forall a. IsTuple LatexArg a => ArgumentSpec Int (Proxy a)
 
-type Input = InputRaw InputTable
-type InputBuilder = InputRaw InputTableBuilder
+type Input = InputRaw InputMap
+type InputBuilder = InputRaw InputMapBuilder
 
 data InputRaw f = Input 
-    { getMachineInput :: Table MachineId (DocBlocksRaw f)
-    , getContextInput :: Table ContextId (DocBlocksRaw f)
+    { getMachineInput :: M.Map MachineId (DocBlocksRaw f)
+    , getContextInput :: M.Map ContextId (DocBlocksRaw f)
     } deriving Show
 
 convertInput :: InputBuilder -> Input
@@ -131,31 +130,31 @@ data Cmd = BlockCmd
     , cmdLI :: LineInfo }
     deriving (Show)
 
-type DocBlocks = DocBlocksRaw InputTable
-type DocBlocksBuilder = DocBlocksRaw InputTableBuilder
+type DocBlocks = DocBlocksRaw InputMap
+type DocBlocksBuilder = DocBlocksRaw InputMapBuilder
 
-newtype InputTable a = InputTable { getInputTable :: Table String [a] }
-newtype InputTableBuilder a = InputTableBuilder { getInputTableBuilder :: DList (String,DList a) }
+newtype InputMap a = InputMap { getInputMap :: M.Map String [a] }
+newtype InputMapBuilder a = InputMapBuilder { getInputMapBuilder :: DList (String,DList a) }
 
 data DocBlocksRaw f = DocBlocks 
     { getEnv :: OnFunctor f Env
     , getCmd :: OnFunctor f Cmd
     } deriving (Show)
 
-instance Monoid1 InputTableBuilder where
-    mempty1  = InputTableBuilder mempty
-    mconcat1 = InputTableBuilder . mconcat1 . L.map getInputTableBuilder
-    mappend1 (InputTableBuilder x) (InputTableBuilder y) = 
-        InputTableBuilder $ x `mappend` y
+instance Monoid1 InputMapBuilder where
+    mempty1  = InputMapBuilder mempty
+    mconcat1 = InputMapBuilder . mconcat1 . L.map getInputMapBuilder
+    mappend1 (InputMapBuilder x) (InputMapBuilder y) = 
+        InputMapBuilder $ x `mappend` y
 
-buildInputTable :: InputTableBuilder a -> InputTable a
-buildInputTable (InputTableBuilder xs) = InputTable
+buildInputMap :: InputMapBuilder a -> InputMap a
+buildInputMap (InputMapBuilder xs) = InputMap
         $ M.map D.toList $ M.fromListWith (<>) $ D.toList xs
 
 convertBlocks :: DocBlocksBuilder -> DocBlocks
 convertBlocks (DocBlocks env cmd) = DocBlocks
-    (env & _Wrapped %~ buildInputTable)
-    (cmd & _Wrapped %~ buildInputTable)
+    (env & _Wrapped %~ buildInputMap)
+    (cmd & _Wrapped %~ buildInputMap)
 
 instance Monoid1 f => Monoid (DocBlocksRaw f) where
     mempty = DocBlocks mempty mempty
@@ -171,8 +170,8 @@ context_spec :: Pipeline m a b -> DocSpec
 context_spec (Pipeline _ c _) = c
 
 item :: String -> a
-     -> OnFunctor InputTableBuilder a
-item n x = OnFunctor $ InputTableBuilder $ pure (n,pure x)
+     -> OnFunctor InputMapBuilder a
+item n x = OnFunctor $ InputMapBuilder $ pure (n,pure x)
 
 getLatexBlocks :: DocSpec
                -> LatexDoc
@@ -228,8 +227,8 @@ isBlank (Blank _ _) = True
 isBlank _ = False 
 
 {-# INLINE runPipeline' #-}
-runPipeline' :: Table Name [LatexDoc]
-             -> Table String [LatexDoc]
+runPipeline' :: M.Map Name [LatexDoc]
+             -> M.Map String [LatexDoc]
              -> a
              -> Pipeline MM a b 
              -> Either [Error] b

@@ -22,9 +22,9 @@ import Data.Default
 import Data.List as L ( intercalate )
 import qualified Data.List as L
 import           Data.List.NonEmpty as NE hiding ((!!))
-import Data.Map.Class as M hiding (map)
-import Data.Maybe as MM
-import qualified Data.Map.Class as M
+import           Data.Map as M hiding (map)
+import qualified Data.Map as M
+import           Data.Maybe as MM
 
 import System.FilePath
 import System.IO.FileSystem
@@ -117,7 +117,7 @@ produce_summaries :: FilePath -> System -> FS ()
 produce_summaries path sys = do
         createDirectoryIfMissing True path'
         runDoc (do
-            forM_ (M.ascElems ms) $ \m -> do
+            forM_ (M.elems ms) $ \m -> do
                 machine_summary sys m
                 properties_summary m
                 forM_ (M.toAscList $ nonSkipUpwards m) $ \(lbl,evt) -> do
@@ -519,7 +519,7 @@ index_sum lbl e = tell ["\\noindent \\ref{" ++ pretty lbl ++ "} " ++ ind ++ " \\
         ind 
             | M.null $ e^.indices = ""
             | otherwise           = "$[" ++ inds ++ "]$"
-        inds = intercalate "," (L.map (render . view name) $ M.ascElems $ e^.indices)
+        inds = intercalate "," (L.map (render . view name) $ M.elems $ e^.indices)
 
 refines_sum :: EventMerging' -> M ()
 refines_sum e = do
@@ -561,7 +561,7 @@ param_sum e
     | M.null $ e^.params  = return ()
     | otherwise           = do
         tell [[printf|\\textbf{any} $%s$|] $ 
-                intercalate "," (L.map (render . view name) $ M.ascElems $ e^.params)]
+                intercalate "," (L.map (render . view name) $ M.elems $ e^.params)]
 
 guard_sum :: EventId -> EventMerging' -> M ()
 guard_sum lbl e = section kw $ do

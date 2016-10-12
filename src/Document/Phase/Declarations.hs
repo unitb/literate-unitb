@@ -42,8 +42,8 @@ import           Data.List.NonEmpty as NE (toList)
 import           Data.Either
 import           Data.Either.Validation
 import           Data.Existential
-import Data.Map.Class as M hiding ( map, (\\) )
-import qualified Data.Map.Class as M
+import           Data.Map as M hiding ( map, (\\) )
+import qualified Data.Map as M
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Traversable as T
 
@@ -52,14 +52,13 @@ import Test.QuickCheck hiding (Result(..),label)
 import Text.Printf.TH
 
 import Utilities.Syntactic
-import Utilities.Table
   
 run_phase2_vars :: Pipeline MM SystemP1 SystemP2
 run_phase2_vars = C.id &&& symbols >>> liftP wrapup
     where
         err_msg = [printf|Multiple symbols with the name %s|] . render
         wrap = L.map (second $ makeCell . uncurry3 TheoryDef)
-        symbols = arr (view mchTable) >>> run_phase
+        symbols = arr (view mchMap) >>> run_phase
             [ variable_decl
             , definition
             , constant_decl
@@ -75,7 +74,7 @@ run_phase2_vars = C.id &&& symbols >>> liftP wrapup
             vars <- triggerM
                 =<< make_all_tables' err_msg 
                 =<< triggerM vs'
-            let _  = vars :: MTable (Table Name VarScope)
+            let _  = vars :: MMap (Map Name VarScope)
             SystemP r_ord <$> T.sequence (make_phase2 <$> p1 <.> vars)
 
 newMch :: [(Name,VarScope)] 
@@ -109,7 +108,7 @@ unfail :: MM' c a -> MM' c (Maybe a)
 unfail (MM (MaybeT cmd)) = MM $ lift cmd
 
 make_phase2 :: MachineP1
-            -> Table Name VarScope
+            -> Map Name VarScope
             -> MM' c MachineP2 
 make_phase2 p1 vars = join $
         layeredUpgradeRecM newThy (newMch vars')
@@ -130,7 +129,7 @@ make_phase2 p1 vars = join $
                             -> SkipOrEvent -> EventP1 -> EventP2 -> MM' c EventP2)
         liftEvent f = do
             table <- M.fromListWith (++) <$> liftField f vars'
-            let _ = table :: Table EventId [EventP2Field] 
+            let _ = table :: Map EventId [EventP2Field] 
             return $ \m eid -> do
                 let _pSchSynt ::  EventP2 -> ParserSetting
                     _pSchSynt e = parser $ e^.eIndices
@@ -138,7 +137,7 @@ make_phase2 p1 vars = join $
                     _pEvtSynt :: EventP2 -> ParserSetting
                     _pEvtSynt e = parser $ e^.eIndParams
 
-                    parser :: Table Name Var
+                    parser :: Map Name Var
                            -> ParserSetting
                     parser table    = m^.pMchSynt & decls %~ union table
                 case eid of 
@@ -282,7 +281,7 @@ instance IsVarScope EvtDecls where
     toOldEventDecl = toEventDecl Old
     toNewEventDecl = toEventDecl New
     toMchDecl _ _  = []
-    toThyDecl n (Evt m) = L.map (Right . PDummyVars n . fromJust' . view varDecl) $ M.ascElems 
+    toThyDecl n (Evt m) = L.map (Right . PDummyVars n . fromJust' . view varDecl) $ M.elems 
                                 $ M.filterWithKey (const.isLeft) m
 
 event_var_decl :: (Var -> EvtScope Var)

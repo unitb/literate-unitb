@@ -40,7 +40,7 @@ import GHC.Generics.Instances
 
 import Text.Printf.TH
 
-import Utilities.Table
+import Utilities.Map
 import Utilities.Trace
 
 data POParam = POP 
@@ -48,7 +48,7 @@ data POParam = POP
     , tag :: DList Label
     , _pOParamTimeout  :: Maybe Float
     , _pOParamNameless :: DList Expr
-    , _pOParamNamed :: Table Label Expr
+    , _pOParamNamed :: Map Label Expr
     , _pOParamSynProp  :: SyntacticProp
     } deriving (Generic)
 
@@ -136,11 +136,11 @@ _context :: Context -> POCtx ()
 _context new_ctx = POCtx $ do
     S.context %= (new_ctx `merge_ctx`)
 
-functions :: Table Name Fun -> POCtx ()
+functions :: Map Name Fun -> POCtx ()
 functions new_funs = do
     _context $ Context M.empty M.empty new_funs M.empty M.empty
 
-definitions :: Table Name Def -> POCtx ()
+definitions :: Map Name Def -> POCtx ()
 definitions new_defs = POCtx $ do
     S.context.E.definitions .= new_defs
 
@@ -155,7 +155,7 @@ prefix_label lbl = POCtx $ do
 prefix :: String -> POCtx ()
 prefix lbl = prefix_label $ label lbl
 
-named_hyps :: HasExpr expr => Table Label expr -> POCtx ()
+named_hyps :: HasExpr expr => Map Label expr -> POCtx ()
 named_hyps hyps = POCtx $ do
         named %= M.union (M.map getExpr hyps)
 
@@ -163,11 +163,11 @@ nameless_hyps :: HasExpr expr => [expr] -> POCtx ()
 nameless_hyps hyps = POCtx $ do
         nameless <>= D.fromList (L.map getExpr hyps)
 
-variables :: Table Name Var -> POCtx ()
+variables :: Map Name Var -> POCtx ()
 variables vars = POCtx $ do
         S.context.constants %= (vars `merge`)
 
-eval_generator :: POGen () -> Table Label Sequent
+eval_generator :: POGen () -> Map Label Sequent
 eval_generator cmd = runIdentity $ eval_generatorT cmd
 
 tracePOG :: Monad m => POGenT m () -> POGenT m ()
@@ -175,7 +175,7 @@ tracePOG (POGen cmd) = POGen $ do
     xs <- snd <$> listen cmd
     traceM $ unlines $ L.map (show . second (view goal)) (D.toList xs)
 
-eval_generatorT :: Monad m => POGenT m () -> m (Table Label Sequent)
+eval_generatorT :: Monad m => POGenT m () -> m (Map Label Sequent)
 eval_generatorT cmd = 
             liftM (fromListWithKey combine . D.toList . snd) 
                 $ evalRWST (runPOGen cmd) empty_param ()

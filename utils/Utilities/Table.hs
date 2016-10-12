@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies, ScopedTypeVariables
     , BangPatterns, CPP #-}
-module Utilities.Table 
-    ( Table
+module Utilities.Map 
+    ( Map
     , Hashable
     , tableToList
     , tableElems
@@ -23,41 +23,41 @@ import Data.Map.Class
 
 #ifdef __HASHED_KEYS__
 
-import Utilities.Table.HashKey as Table
+import Utilities.Map.HashKey as Map
 
-type Table = MapWithHash
+type Map = MapWithHash
 #else
 #ifdef __BUCKET_TABLE__ 
 
-import Utilities.Table.BucketTable as Table
+import Utilities.Map.BucketMap as Map
 
-type Table = HashTable
+type Map = HashMap
 #else
 #ifdef __HASH_MAP__ 
 
-type Table = HashMap
+type Map = HashMap
 #else
 import qualified Data.Map as M
-type Table = M.Map
+type Map = M.Map
 
 #endif
 #endif
 #endif
 
 tableType :: String
-tableType = tyConModule $ fst $ splitTyConApp $ typeRep (Proxy :: Proxy (Table Int Int))
+tableType = tyConModule $ fst $ splitTyConApp $ typeRep (Proxy :: Proxy (Map Int Int))
 
-uncurryMap :: (IsKey Table a,IsKey Table b)
-           => Table a (Table b c)
-           -> Table (a,b) c
+uncurryMap :: (IsKey Map a,IsKey Map b)
+           => Map a (Map b c)
+           -> Map (a,b) c
 uncurryMap m = fromList [ ((x,y),k) | (x,xs) <- toList m, (y,k) <- toList xs ]
 
-curryMap :: (IsKey Table a,IsKey Table b)
-         => Table (a,b) c
-         -> Table a (Table b c)
+curryMap :: (IsKey Map a,IsKey Map b)
+         => Map (a,b) c
+         -> Map a (Map b c)
 curryMap m = fromList <$> fromListWith (++) [ (x,[(y,k)]) | ((x,y),k) <- toList m ]
 
-curriedMap :: (IsKey Table a,IsKey Table b,IsKey Table x,IsKey Table y)
-           => Iso (Table (a,b) c) (Table (x,y) z) 
-                  (Table a (Table b c)) (Table x (Table y z))
+curriedMap :: (IsKey Map a,IsKey Map b,IsKey Map x,IsKey Map y)
+           => Iso (Map (a,b) c) (Map (x,y) z) 
+                  (Map a (Map b c)) (Map x (Map y z))
 curriedMap = iso curryMap uncurryMap

@@ -23,10 +23,10 @@ packages:
 - script/
 - location:
     git: https://github.com/literate-unitb/literate-unitb-utils.git
-    commit: 741dc56364d8abd97972314718b939a5a0b52728
+    commit: cdb6ae0c50687e02b96507b47b62f62bcc9c371b
 - location:
     git: https://github.com/literate-unitb/literate-unitb-logic.git
-    commit: 97fbe9e2b32b36ead48896cfbbd460d00c35e332
+    commit: 0e7ddf21a97926cabe70fb27e733502e338c27be
 - location:
     git: https://github.com/literate-unitb/literate-unitb-latex.git
     commit: 047e276093d8310574261048eaf42d780938db69
@@ -38,14 +38,13 @@ packages:
     commit: 8dc15076a4c6c3efdb2c6680e6c5944633a25ae7
 - location:
     git: https://github.com/literate-unitb/partial-order.git
-    commit: a742c8c1668054161841f00b8f048ad55dd6ee0b
+    commit: 0f1629aa99c0a74bccd4e98e63960361175d16c6
 - location:
     git: https://github.com/literate-unitb/printf-th.git
     commit: e7c85fc6f210516e9c66e1e7f6bf52996653629c
-# - ../unitb-testing
 - location:
     git: https://github.com/literate-unitb/unitb-testing.git
-    commit: 1bba52534a65c3b4df131532802719d5162cc0f9
+    commit: f2f34ac7b216b0e412b8cdcabefd7091be4c69dc
 - location:
     git: https://github.com/literate-unitb/typelist-functor.git
     commit: 5e97b991f81714941f93436905f14c1bda90d89b
@@ -66,22 +65,19 @@ packages:
     commit: fab4912ab0811d784c841509dbfbb208864403d2
 - location:
     git: https://github.com/literate-unitb/invariants.git
-    commit: 02e679fa1ccf72d4fa50d36b8218c149c72de917
+    commit: 4e406aa7bb9f144f78c85e753a2f41c2b291e59e
 - location:
     git: https://github.com/literate-unitb/classy-lens-hierarchy.git
-    commit: 33764edf18159e5eac4059371e66efffc6d03fd5
+    commit: 6c4edc765a66f10d4a6cd2f1a7490e91a2673704
 - location:
     git: https://github.com/literate-unitb/serialize-instances.git
-    commit: b79b6cfc7c7828225d25969814977d25192a1aba
+    commit: 9495695c87852e8dd75241644f3201722e334161
 - location:
     git: https://github.com/literate-unitb/generic-instances.git
     commit: 8d67a6479d3b5a38c69efd114c1d59d2b81c813c
 - location:
-    git: https://github.com/literate-unitb/data-map-class.git
-    commit: 507c80af3aa4ab396ebc47a4bed1f50a88627cbf
-- location:
     git: https://github.com/literate-unitb/lens-extra.git
-    commit: 2a54572aa21db03adb8c161e5755892803a1808b
+    commit: 16029e2eb4fd94d73bd96120aa59c3586bf5e109
 - location:
     git: https://github.com/literate-unitb/co-applicative.git
     commit: 6ccc3764141bc014426ee9109315afa8d6e7d353
@@ -90,7 +86,7 @@ packages:
     commit: f9a2603fc732b1ee9877393cad7e89c9f5d90b5a
 - location:
     git: https://github.com/literate-unitb/bipartite-graph.git
-    commit: 15ae5699c24d3741c3f36b9ad2057d5f69afc119
+    commit: 7ab97d0f1c5bc1e62a835438fd5e6e1171eb31cd
 - location:
     git: https://github.com/literate-unitb/data-compressed.git
     commit: 3caa409b9cd5afe7c5bc0b36acc10adde9c44c4f
@@ -99,7 +95,7 @@ packages:
     commit: 742ac9f6e4f369881b4354906c19e65ea75d97b1
 - location:
     git: https://github.com/literate-unitb/data-packaged.git
-    commit: 85ec95cacaf57663f194e7f0d8bf204ef3f942ad
+    commit: 25bb09dcdd5220d457b6801fd9c6a2c376343a9f
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps: 
 - assert-0.0.1.2

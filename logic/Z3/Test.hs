@@ -26,7 +26,7 @@ import Test.UnitTest
 import Utilities.Functor
 import qualified Data.Map.Class as M
 import Utilities.Syntactic
-import Utilities.Table
+import Utilities.Map
 
 test_case :: TestCase
 test_case = test
@@ -253,7 +253,7 @@ case6b = do
 case7 :: IO (Maybe (GenContext InternalName FOType HOQuantifier))
 case7 = return $ Just $ to_fol_ctx S.empty ctx
     where
-        fun :: Table Name Fun
+        fun :: Map Name Fun
         fun = M.map (instantiate m . substitute_type_vars m) $ set_theory^.funs
         ctx = Context M.empty M.empty fun M.empty M.empty
         t = Gen (Sort (fromString'' "G0") (fromString'' "G0") 0) []
@@ -263,7 +263,7 @@ result7 :: Maybe (GenContext InternalName FOType HOQuantifier)
 result7 = ctx_strip_generics $ Context M.empty M.empty fun' M.empty M.empty
     where 
         fun' = fun & traverse.namesOf %~ asInternal
-        fun :: Table InternalName Fun
+        fun :: Map InternalName Fun
         fun = decorated_table $ M.elems $ M.map f $ set_theory^.funs
         f :: AbsFun n Type -> AbsFun n Type
         f = instantiate m . substitute_type_vars m

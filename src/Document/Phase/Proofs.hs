@@ -61,8 +61,8 @@ import qualified Data.Graph.Bipartite as G
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import           Data.List.NonEmpty hiding ((<|),map,length,fromList)
-import           Data.Map.Class   as M hiding ( map, (\\) )
-import qualified Data.Map.Class   as M
+import           Data.Map   as M hiding ( map, (\\), (!) )
+import qualified Data.Map   as M
 import           Data.Proxy.TH
 import           Data.Relation (type(<->),(|>),(<|))
 import qualified Data.Relation as R
@@ -77,7 +77,6 @@ import Prelude hiding (id,(.))
 import Text.Printf.TH
 
 import Utilities.Syntactic
-import Utilities.Table
 
 type LiveEvtId = Either EventId ProgId
 
@@ -90,11 +89,11 @@ run_phase4_proofs = proc (SystemP r_ord p3) -> do
                 >>> arr (uncurry $ liftA2 (unionWith (++))) -< p3
         comm   <- all_comments -< p3
         prfs   <- all_proofs   -< p3
-        let c_evt_refs :: Maybe (MTable (Table EventId [((Label,ScheduleChange),LineInfo)]))
+        let c_evt_refs :: Maybe (MMap (Map EventId [((Label,ScheduleChange),LineInfo)]))
             c_evt_refs = M.map (M.fromListWith (++)) 
                      <$> M.unionsWith (++) 
                      <$> L.map (M.map coarseRef) <$> refs 
-            f_evt_refs' :: Maybe (MTable (Table EventId [((ProgId,ProgressProp),LineInfo)]))
+            f_evt_refs' :: Maybe (MMap (Map EventId [((ProgId,ProgressProp),LineInfo)]))
             f_evt_refs' = M.map (M.fromListWith (++)) 
                      <$> M.unionsWith (++)
                      <$> L.map (M.map fineRef) <$> refs
@@ -108,21 +107,21 @@ run_phase4_proofs = proc (SystemP r_ord p3) -> do
         prog_ref   <- triggerP -< prog_ref
         proofs     <- triggerP -< proofs
         comments   <- triggerP -< comments
-        let _ = c_evt_refs :: MTable (Table EventId [((Label,ScheduleChange),LineInfo)])
-            _ = f_evt_refs :: MTable (Table EventId (Maybe ((ProgId,ProgressProp),LineInfo)))
-            _ = prog_ref :: MTable (Table ProgId ((Rule,[(ProgId,ProgId)]),LineInfo))
-            evt_ref_props :: MTable (Table EventId [(ProgId,LineInfo)])
+        let _ = c_evt_refs :: MMap (Map EventId [((Label,ScheduleChange),LineInfo)])
+            _ = f_evt_refs :: MMap (Map EventId (Maybe ((ProgId,ProgressProp),LineInfo)))
+            _ = prog_ref :: MMap (Map ProgId ((Rule,[(ProgId,ProgId)]),LineInfo))
+            evt_ref_props :: MMap (Map EventId [(ProgId,LineInfo)])
             evt_ref_props = M.unionWith (M.unionWith (++)) 
                         (M.map (M.map $ L.map $ first $ hyps_label . snd) c_evt_refs) 
                         (M.map (M.map $ L.map (first fst) . MM.maybeToList) f_evt_refs)
-            evt_live :: MTable (EventId <-> ProgId)
+            evt_live :: MMap (EventId <-> ProgId)
             evt_live  = M.map R.fromListMap $ M.map (M.map $ L.map fst) evt_ref_props
-            live_evt :: MTable (ProgId <-> EventId)
+            live_evt :: MMap (ProgId <-> EventId)
             live_evt  = M.map (R.fromListMap . M.map (supporting_evts . fst . fst)) prog_ref
                 -- 
-            evt_evt :: MTable (Table EventId EventId)
+            evt_evt :: MMap (Map EventId EventId)
             evt_evt   = M.map (view $ pOldEvents . to (M.mapWithKey const)) p3 -- evt_refs 
-            live_live :: MTable (LiveEvtId <-> LiveEvtId)
+            live_live :: MMap (LiveEvtId <-> LiveEvtId)
             live_live = M.map (R.bimap Right Right) $
                         M.map (R.fromListMap . M.map (L.map snd . snd . fst)) prog_ref
             uncurryMap m = M.fromList [((eid,p),li) | (eid,xs) <- M.toList m, (p,li) <- xs ]
@@ -159,11 +158,11 @@ run_phase4_proofs = proc (SystemP r_ord p3) -> do
                                     $ first (pretty . fst) <$> (x:|xs)] >> return Nothing
 
 make_phase4 :: MachineP3 
-            -> Table EventId [((Label, ScheduleChange), LineInfo)]
-            -> Table EventId (Maybe ((ProgId,ProgressProp),LineInfo))
-            -> Table ProgId ((Rule,[(ProgId,ProgId)]),LineInfo) 
-            -> Table DocItem (String,LineInfo)
-            -> Table Label (Tactic Proof, LineInfo) 
+            -> Map EventId [((Label, ScheduleChange), LineInfo)]
+            -> Map EventId (Maybe ((ProgId,ProgressProp),LineInfo))
+            -> Map ProgId ((Rule,[(ProgId,ProgId)]),LineInfo) 
+            -> Map DocItem (String,LineInfo)
+            -> Map Label (Tactic Proof, LineInfo) 
             -> MachineP4
 make_phase4 p3 coarse_refs fine_refs prog_ref comments proofs 
         = -- makeMachineP4' p3 _ 
@@ -206,9 +205,9 @@ data LiveStruct = LiveStruct
     , evt_live  :: EventId <-> ProgId
     , live_live :: LiveEvtId  <-> LiveEvtId
     , live_evt  :: ProgId  <-> EventId
-    , evt_evt   :: Table EventId EventId
-    , live_info :: Table ProgId (MachineId,LineInfo)
-    , evt_info  :: Table (EventId,ProgId) (MachineId,LineInfo)
+    , evt_evt   :: Map EventId EventId
+    , live_info :: Map ProgId (MachineId,LineInfo)
+    , evt_info  :: Map (EventId,ProgId) (MachineId,LineInfo)
     } 
 
 mergeLiveness :: Conc LiveStruct -> Abs LiveStruct -> Conc LiveStruct
@@ -420,7 +419,7 @@ parse_naked_rule rule = do
         Just x -> return x
         Nothing -> raise $ Error ([printf|invalid refinement rule: %s|] rule) li
 
-ruleProxies :: Table String RuleProxy
+ruleProxies :: Map String RuleProxy
 ruleProxies = fromList $ execWriter $ do
         "discharge"    `with` [pr|Discharge|]
         "disjunction"  `with` [pr|Disjunction|]

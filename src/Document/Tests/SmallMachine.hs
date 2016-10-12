@@ -14,11 +14,9 @@ import Control.Lens
 import Control.Lens.Misc
 
 import qualified Data.List.NonEmpty as NE
-import Data.Map.Class as M hiding ( map )
+import           Data.Map as M hiding ( map )
 
 import Test.UnitTest
-
-import Utilities.Table
 
 test_case :: TestCase
 test_case = test
@@ -87,7 +85,7 @@ result2 = unlines
 path2 :: FilePath
 path2 = [path|Tests/small_machine_t2.tex|]
 
-case2 :: IO (String, Table Label Sequent)
+case2 :: IO (String, Map Label Sequent)
 case2 =  verify path2 0
 
 result3 :: String
@@ -106,7 +104,7 @@ result3 = unlines
 path3 :: FilePath
 path3 = [path|Tests/small_machine.tex|]
 
-case3 :: IO (String, Table Label Sequent)
+case3 :: IO (String, Map Label Sequent)
 case3 = verify path3 0
 
 result4 :: String
@@ -197,7 +195,7 @@ result6 = unlines
 path6 :: FilePath
 path6 = [path|Tests/small_machine_t3.tex|]
 
-case6 :: IO (String, Table Label Sequent)
+case6 :: IO (String, Map Label Sequent)
 case6 = verify path6 0
 
 result7 :: String
@@ -376,13 +374,13 @@ c = ctx $ do
         decls %= insert_symbol var_x
         decls %= insert_symbol var_y
 
-vars :: Table Name Var
+vars :: Map Name Var
 vars = symbol_table [var_x,var_y]
 
 inc_event_m0 :: Event
 inc_event_m0 = empty_event { 
     _actions = fromList [
-                ("a0",BcmSuchThat (M.ascElems vars) 
+                ("a0",BcmSuchThat (M.elems vars) 
                     $ c $ [expr| x' = x+2 |] . (is_step .~ True)) ] }
 
 inc_event_m1 :: Event
@@ -390,9 +388,9 @@ inc_event_m1 = create $ do
         coarse_sched .= singleton "c0" (c [expr| x = y |])
         fine_sched .= singleton "f0" (c [expr| x = y |])
         actions .= fromList [
-                    ("a0",BcmSuchThat (M.ascElems vars) $ 
+                    ("a0",BcmSuchThat (M.elems vars) $ 
                             c $ [expr| x' = x + 2 |] . (is_step .~ True)),
-                    ("a1",BcmSuchThat (M.ascElems vars) $ 
+                    ("a1",BcmSuchThat (M.elems vars) $ 
                             c $ [expr| y' = y + 1 |] . (is_step .~ True)) ] 
 
 m0_machine :: Machine

@@ -25,7 +25,7 @@ import Data.Hashable
 import Data.List as L
 import Data.List.NonEmpty as NE hiding (take)
 import Data.MakeTable
-import Data.Map.Class  as M
+import Data.Map  as M hiding (fold)
 import Data.Semigroup
 import Data.Serialize hiding (label)
 import Data.String
@@ -39,8 +39,6 @@ import Text.Printf
 import Test.QuickCheck as QC hiding (label)
 import Test.QuickCheck.ZoomEq
 
-import Utilities.Table
-
 type Constraint = Constraint' Expr
 type RawConstraint = Constraint' RawExpr
 
@@ -51,7 +49,7 @@ data Constraint' expr =
 type TrHint = TrHint' Expr
 type RawTrHint = TrHint' RawExpr
 
-data TrHint' expr = TrHint (Table Name (Type,expr)) (Maybe ProgId)
+data TrHint' expr = TrHint (Map Name (Type,expr)) (Maybe ProgId)
     deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
 
 
@@ -63,7 +61,7 @@ type RawTransient = Transient' RawExpr
 
 data Transient' expr = 
         Tr 
-            (Table Name Var)     -- Free variables
+            (Map Name Var)     -- Free variables
             expr                 -- Predicate
             (NonEmpty EventId)   -- Event, Schedule 
             (TrHint' expr)       -- Hints for instantiation
@@ -113,12 +111,12 @@ type PropertySet = PropertySet' Expr
 type RawPropertySet = PropertySet' RawExpr
 
 data PropertySet' expr = PS
-        { _transient    :: Table Label (Transient' expr)
-        , _constraint   :: Table Label (Constraint' expr)
-        , _inv          :: Table Label expr       -- inv
-        , _inv_thm      :: Table Label expr       -- inv thm
-        , _progress     :: Table ProgId (ProgressProp' expr)
-        , _safety       :: Table Label (SafetyProp' expr)
+        { _transient    :: Map Label (Transient' expr)
+        , _constraint   :: Map Label (Constraint' expr)
+        , _inv          :: Map Label expr       -- inv
+        , _inv_thm      :: Map Label expr       -- inv thm
+        , _progress     :: Map ProgId (ProgressProp' expr)
+        , _safety       :: Map Label (SafetyProp' expr)
         }
     deriving (Eq,Functor,Foldable,Traversable,Generic,Show)
 
@@ -197,7 +195,7 @@ hasClashes :: PropertySet' expr -> PropertySet' expr -> PropertySet' expr
 hasClashes x y = getIntersection $ Intersection x <> Intersection y
 
 noClashes :: (Show expr) => PropertySet' expr -> PropertySet' expr -> Invariant
-noClashes p0 p1 = allTables inv (hasClashes p0 p1) >> return ()
+noClashes p0 p1 = allMaps inv (hasClashes p0 p1) >> return ()
     where
         inv msg m = withPrefix msg $ do
             (show $ keys m) ## M.null m

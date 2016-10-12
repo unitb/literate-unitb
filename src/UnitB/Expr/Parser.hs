@@ -6,8 +6,8 @@ import Logic.Expr.Parser.Internal.Setting
 import UnitB.UnitB
 
 import           Control.Lens hiding ( indices )
-import           Data.Map.Class hiding ( map )
-import qualified Data.Map.Class as M
+import           Data.Map hiding ( map )
+import qualified Data.Map as M
 
 machine_setting :: Machine -> ParserSetting
 machine_setting m = setting

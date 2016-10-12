@@ -46,7 +46,7 @@ import Text.Pretty
 import Text.Printf.TH
 
 import Utilities.Language  as Lang
-import Utilities.Table
+import Utilities.Map
 
 type NEString = NonEmpty Char
 
@@ -158,7 +158,7 @@ instance IsName InternalName where
     fromInternal = id
     fromName = asInternal
 
-fresh :: IsBaseName n => n -> Table n b -> n
+fresh :: IsBaseName n => n -> Map n b -> n
 fresh name xs = L.head $ ys `Ord.minus` M.ascKeys xs
     where
         ys = generateNames name

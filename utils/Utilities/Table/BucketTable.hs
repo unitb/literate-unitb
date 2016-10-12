@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies, ScopedTypeVariables #-}
-module Utilities.Table.BucketTable where
+module Utilities.Map.BucketMap where
 
 import Control.Arrow
 import Control.DeepSeq
@@ -30,7 +30,7 @@ import Test.QuickCheck.Report
 
 type Bucket = M.Map
 
-newtype HashTable a b = HashTable { _hashTable :: M.Map Int (Bucket a b) }
+newtype HashMap a b = HashMap { _hashMap :: M.Map Int (Bucket a b) }
     deriving (Eq,Ord,Generic,Functor,Foldable,Traversable,Default,Monoid)
 
 newtype OrderedBucket a b = OrderedBucket { _orderedBucket :: [(a,b)] }
@@ -39,15 +39,15 @@ newtype OrderedBucket a b = OrderedBucket { _orderedBucket :: [(a,b)] }
 newtype UnorderedBucket a b = UnorderedBucket { _unorderedBucket :: [(a,b)] }
     deriving (Eq,Ord,Generic,Functor,Foldable,Traversable,Default,Monoid)
 
-type instance Index (HashTable a b) = a
-type instance IxValue (HashTable a b) = b
+type instance Index (HashMap a b) = a
+type instance IxValue (HashMap a b) = b
 type instance Index (OrderedBucket a b) = a
 type instance IxValue (OrderedBucket a b) = b
 type instance Index (UnorderedBucket a b) = a
 type instance IxValue (UnorderedBucket a b) = b
 
---makeLenses ''Table
-makeLenses ''HashTable
+--makeLenses ''Map
+makeLenses ''HashMap
 makeLenses ''OrderedBucket
 makeLenses ''UnorderedBucket
 
@@ -59,10 +59,10 @@ makeLenses ''UnorderedBucket
 --unbucket :: Ord k0 => Iso [(k0,a0)] [(k1,a1)] (Bucket k0 a0) (Bucket k1 a1)
 --unbucket = from bucket
 
-instance (Ord a,Hashable a) => At (HashTable a b) where
-    at i = hashTable.at (hash i).notNull'.at i
+instance (Ord a,Hashable a) => At (HashMap a b) where
+    at i = hashMap.at (hash i).notNull'.at i
 
-instance (Ord a,Hashable a) => Ixed (HashTable a b) where
+instance (Ord a,Hashable a) => Ixed (HashMap a b) where
     ix i = at i.traverse
 
 instance (Ord a) => At (OrderedBucket a b) where
@@ -80,62 +80,62 @@ instance (Ord a) => At (UnorderedBucket a b) where
 instance (Ord a) => Ixed (UnorderedBucket a b) where
     ix i = at i.traverse
 
-instance (Show a,Show b,Ord a) => Show (HashTable a b) where
+instance (Show a,Show b,Ord a) => Show (HashMap a b) where
     show m = "fromList " ++ show (toList m)
 
-instance (NFData a,NFData b) => NFData (HashTable a b) where
+instance (NFData a,NFData b) => NFData (HashMap a b) where
 instance (NFData a,NFData b) => NFData (OrderedBucket a b) where
 instance (NFData a,NFData b) => NFData (UnorderedBucket a b) where
 
-instance (Serialize a,Serialize b,Ord a) => Serialize (HashTable a b) where
+instance (Serialize a,Serialize b,Ord a) => Serialize (HashMap a b) where
 instance (Serialize a,Serialize b,Ord a) => Serialize (OrderedBucket a b) where
 instance (Serialize a,Serialize b,Ord a) => Serialize (UnorderedBucket a b) where
 
 {-# SPECIALIZE notNull' :: Lens' (Maybe (Bucket k a)) (Bucket k a) #-}
-{-# SPECIALIZE notNull' :: Lens' (Maybe (HashTable k a)) (HashTable k a) #-}
+{-# SPECIALIZE notNull' :: Lens' (Maybe (HashMap k a)) (HashMap k a) #-}
 notNull' :: IsMap map => Lens' (Maybe (map k a)) (map k a)
 notNull' = lens (My.fromMaybe empty) (const notNull)
 
 {-# SPECIALIZE notNull :: Bucket a b -> Maybe (Bucket a b) #-}
-{-# SPECIALIZE notNull :: HashTable a b -> Maybe (HashTable a b) #-}
+{-# SPECIALIZE notNull :: HashMap a b -> Maybe (HashMap a b) #-}
 notNull :: IsMap map => map a b -> Maybe (map a b)
 notNull m | null m    = Nothing
           | otherwise = Just m
 
-instance IsMap HashTable where
-    type IsKey HashTable k = (Ord k,Hashable k)
+instance IsMap HashMap where
+    type IsKey HashMap k = (Ord k,Hashable k)
     {-# INLINE null #-}
-    null  = IM.null . view hashTable
+    null  = IM.null . view hashMap
     {-# INLINE empty #-}
-    empty = HashTable IM.empty
+    empty = HashMap IM.empty
     {-# INLINE singleton #-}
-    singleton k x = HashTable $ IM.singleton (hash k) (singleton k x)
+    singleton k x = HashMap $ IM.singleton (hash k) (singleton k x)
     -- {-# INLINE size #-}
-    size = sum . IM.map size . view hashTable
+    size = sum . IM.map size . view hashMap
     -- {-# INLINE isSubmapOf #-}
     isSubmapOf = isSubmapOfBy (==)
     -- {-# INLINE isSubmapOfBy #-}
-    isSubmapOfBy f x y = IM.isSubmapOfBy (isSubmapOfBy f) (x^.hashTable) (y^.hashTable)
+    isSubmapOfBy f x y = IM.isSubmapOfBy (isSubmapOfBy f) (x^.hashMap) (y^.hashMap)
     -- {-# INLINE isProperSubmapOf #-}
-    isProperSubmapOf x y = IM.isProperSubmapOfBy isProperSubmapOf (x^.hashTable) (y^.hashTable)
+    isProperSubmapOf x y = IM.isProperSubmapOfBy isProperSubmapOf (x^.hashMap) (y^.hashMap)
         -- Map
     -- {-# INLINE map #-}
-    map f = hashTable %~ IM.map (map f)
+    map f = hashMap %~ IM.map (map f)
     -- {-# INLINE mapMaybe #-}
-    mapMaybe f = hashTable %~ IM.mapMaybe (notNull . mapMaybe f)
-    mapMaybeWithKey f = hashTable %~ IM.mapMaybe (notNull . mapMaybeWithKey f)
+    mapMaybe f = hashMap %~ IM.mapMaybe (notNull . mapMaybe f)
+    mapMaybeWithKey f = hashMap %~ IM.mapMaybe (notNull . mapMaybeWithKey f)
     -- {-# INLINE mapEither #-}
     mapEither f = mapEitherWithKey (const f)
     -- {-# INLINE mapEitherWithKey #-}
-    mapEitherWithKey f = (     HashTable . IM.mapMaybe (notNull . fst) 
-                           &&& HashTable . IM.mapMaybe (notNull . snd)) 
-                . IM.map (mapEitherWithKey f) . view hashTable
+    mapEitherWithKey f = (     HashMap . IM.mapMaybe (notNull . fst) 
+                           &&& HashMap . IM.mapMaybe (notNull . snd)) 
+                . IM.map (mapEitherWithKey f) . view hashMap
     -- {-# INLINE mapWithKey #-}
-    mapWithKey f = hashTable %~ IM.map (mapWithKey f)
+    mapWithKey f = hashMap %~ IM.map (mapWithKey f)
     -- {-# INLINE traverseWithKey #-}
-    traverseWithKey f = hashTable $ traverse $ traverseWithKey f
+    traverseWithKey f = hashMap $ traverse $ traverseWithKey f
     -- {-# INLINE foldMapWithKey #-}
-    foldMapWithKey f = foldMap (foldMapWithKey f) . view hashTable
+    foldMapWithKey f = foldMap (foldMapWithKey f) . view hashMap
     -- {-# INLINE mapKeys #-}
     mapKeys f = asList.traverse._1 %~ f
     -- {-# INLINE mapKeysWith #-}
@@ -144,22 +144,22 @@ instance IsMap HashTable where
     mapKeysMonotonic = mapKeys
         -- change by one
     -- {-# INLINE insert #-}
-    insert k x = hashTable %~ IM.insertWith union (hash k) (singleton k x)
+    insert k x = hashMap %~ IM.insertWith union (hash k) (singleton k x)
     -- {-# INLINE delete #-}
-    delete k = hashTable %~ IM.update (notNull . delete k) (hash k)
+    delete k = hashMap %~ IM.update (notNull . delete k) (hash k)
     -- {-# INLINE adjustWithKey #-}
-    adjustWithKey f k = hashTable %~ IM.adjust (adjustWithKey f k) (hash k)
+    adjustWithKey f k = hashMap %~ IM.adjust (adjustWithKey f k) (hash k)
         -- lookup
     -- {-# INLINE elemAt #-}
     elemAt i = (!i) . toAscList
     -- {-# INLINE lookup #-}
-    lookup k = lookup k <=< IM.lookup (hash k) . view hashTable
-    member k = maybe False (member k) . IM.lookup (hash k) . view hashTable
+    lookup k = lookup k <=< IM.lookup (hash k) . view hashMap
+    member k = maybe False (member k) . IM.lookup (hash k) . view hashMap
     -- {-# INLINE findWithDefault #-}
     findWithDefault x k = My.fromMaybe x . lookup k
         -- filtering
-    filter f = hashTable %~ IM.mapMaybe (notNull . filter f)
-    filterWithKey f = hashTable %~ IM.mapMaybe (notNull . filterWithKey f)
+    filter f = hashMap %~ IM.mapMaybe (notNull . filter f)
+    filterWithKey f = hashMap %~ IM.mapMaybe (notNull . filterWithKey f)
     partition = partitionWithKey . const
     partitionWithKey f = mapEitherWithKey f'
         where f' k x | f k x     = Left x
@@ -168,29 +168,29 @@ instance IsMap HashTable where
         -- Combination
     union = unionWith const
     unionWith f = unionWithKey (const f)
-    unionWithKey f (HashTable m0) (HashTable m1) = HashTable $ IM.unionWith (unionWithKey f) m0 m1
+    unionWithKey f (HashMap m0) (HashMap m1) = HashMap $ IM.unionWith (unionWithKey f) m0 m1
     unions = unionsWith const
-    unionsWith f = HashTable . IM.unionsWith (unionWith f) . L.map (view hashTable)
+    unionsWith f = HashMap . IM.unionsWith (unionWith f) . L.map (view hashMap)
     intersection = intersectionWith const
     intersectionWith f = intersectionWithKey (const f)
-    intersectionWithKey f (HashTable m0) (HashTable m1) = HashTable $ IM.intersectionWith (intersectionWithKey f) m0 m1
+    intersectionWithKey f (HashMap m0) (HashMap m1) = HashMap $ IM.intersectionWith (intersectionWithKey f) m0 m1
     difference = differenceWith (\ _ _ -> Nothing)
-    differenceWith f (HashTable m0) (HashTable m1) = 
-            HashTable $ IM.differenceWith (fmap notNull <$> differenceWith f) m0 m1
+    differenceWith f (HashMap m0) (HashMap m1) = 
+            HashMap $ IM.differenceWith (fmap notNull <$> differenceWith f) m0 m1
         -- lists
-    keys  = concat . IM.elems . IM.map keys . view hashTable
-    keysSet  = S.unions . IM.elems . IM.map keysSet . view hashTable
+    keys  = concat . IM.elems . IM.map keys . view hashMap
+    keysSet  = S.unions . IM.elems . IM.map keysSet . view hashMap
     elems = ascElems
     ascElems = L.map snd . toAscList
     toList = toAscList
-    --toList = concat . IM.elems . IM.map toList . view hashTable
-    toAscList = toAscList . unions . IM.elems . view hashTable
+    --toList = concat . IM.elems . IM.map toList . view hashMap
+    toAscList = toAscList . unions . IM.elems . view hashMap
     toListIntl = (Unordered,) . tableToList'
     fromSet f = fromList . L.map (id &&& f) . S.toList
     fromList = fromListWith const
     fromListIntl (_,xs) = fromList xs
     fromListWith f    = fromListWithKey (const f)
-    fromListWithKey f xs = HashTable $ IM.map (fromListWithKey f) 
+    fromListWithKey f xs = HashMap $ IM.map (fromListWithKey f) 
                                      $ IM.fromListWith (flip (++)) (L.map g xs)
                 where g (k,x) = (hash k,[(k,x)])
     tableToList = tableToList'
@@ -202,20 +202,20 @@ prop_unionsWith_consistent :: forall k a. (Ord k,Eq a,Show k,Show a,Hashable k)
 prop_unionsWith_consistent f' xs = 
         M.toList (unionsWith f $ L.map fromList xs)
         === 
-        toList (unionsWith f $ L.map fromList xs :: HashTable k a)
+        toList (unionsWith f $ L.map fromList xs :: HashMap k a)
     where
         f = apply . apply f'
 
-tableToList' :: HashTable k a -> [(k,a)]
-tableToList' = concat . IM.elems . IM.map M.toList . view hashTable
+tableToList' :: HashMap k a -> [(k,a)]
+tableToList' = concat . IM.elems . IM.map M.toList . view hashMap
 
-tableElems' :: HashTable k a -> [a]
-tableElems' = concat . IM.elems . IM.map M.elems . view hashTable
+tableElems' :: HashMap k a -> [a]
+tableElems' = concat . IM.elems . IM.map M.elems . view hashMap
 
-_foo :: HashTable k a -> [a]
+_foo :: HashMap k a -> [a]
 _foo = tableElems'
 
-instance (Hashable k,Ord k) => Semigroup (Intersection (HashTable k a)) where
+instance (Hashable k,Ord k) => Semigroup (Intersection (HashMap k a)) where
     Intersection x <> Intersection y = Intersection $ x `intersection` y
 
 

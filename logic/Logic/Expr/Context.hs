@@ -33,7 +33,7 @@ import Test.QuickCheck.ZoomEq
 import Text.Pretty
 
 import Utilities.Functor
-import Utilities.Table
+import Utilities.Map
 
 type Context = AbsContext GenericType HOQuantifier
 
@@ -46,11 +46,11 @@ type FOContext = GenContext InternalName FOType FOQuantifier
 type AbsContext = GenContext Name
 
 data GenContext name t q = Context
-        { _genContextSorts :: Table Name Sort
-        , _genContextConstants :: Table name (AbsVar name t)
-        , _functions :: Table name (AbsFun name t)
-        , _definitions :: Table name (AbsDef name t q)
-        , _genContextDummies :: Table name (AbsVar name t)
+        { _genContextSorts :: Map Name Sort
+        , _genContextConstants :: Map name (AbsVar name t)
+        , _functions :: Map name (AbsFun name t)
+        , _definitions :: Map name (AbsDef name t q)
+        , _genContextDummies :: Map name (AbsVar name t)
         }
     deriving (Show,Eq,Generic,Typeable,Functor,Foldable,Traversable)
 
@@ -67,7 +67,7 @@ defsAsVars = execState $ do
         constants %= M.union defs
 
 class HasSymbols a b n | a -> b n where
-    symbols :: a -> Table n b
+    symbols :: a -> Map n b
 
 instance (PrettyPrintable n,PrettyPrintable t,PrettyPrintable q
          , IsName n, IsQuantifier q, TypeSystem t) 
@@ -163,7 +163,7 @@ empty_ctx = def
 --    where
 --        ctx' = mconcat $ CtxWith def <$> cs
 
-free_vars :: Context -> Expr -> Table Name Var
+free_vars :: Context -> Expr -> Map Name Var
 free_vars (Context _ _ _ _ dum) e = M.fromList $ runReader (f e) dum
     where
         f (Word v) = do

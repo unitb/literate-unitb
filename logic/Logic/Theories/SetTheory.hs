@@ -23,7 +23,7 @@ import Data.Map.Class as M
 import Text.Printf.TH
 
 import Utilities.MapSyntax
-import Utilities.Table
+import Utilities.Map
 
 as_array :: TypeSystem t => t -> Name -> AbsExpr Name t q
 as_array t x = funApp (mk_lifted_fun [] x [] t) []
@@ -43,7 +43,7 @@ finite_fun = mk_fun [gA] (z3Name "finite") [set_type gA] bool
 zfinite :: Expr -> Expr
 zfinite e = ($typeCheck) (mzfinite $ Right e)
 
-set_theory' :: Table Name Theory
+set_theory' :: Map Name Theory
 set_theory' = singleton (makeName "sets") set_theory
 
 set_theory :: Theory 
@@ -103,7 +103,7 @@ set_theory = Theory { .. }
                 , mk_fun [gT] (z3Name "mk-set") [gT] $ set_type gT 
                 , mk_fun [gT] (z3Name "finite") [set_type gT] $ bool
                 ]
-        _fact :: Table Label Expr
+        _fact :: Map Label Expr
         _fact = "set" `axioms` do
                 -- elem and mk-set
             $axiom $  (x `zelem` zmk_set y) .==.  x .=. y

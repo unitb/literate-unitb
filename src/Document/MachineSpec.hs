@@ -24,7 +24,7 @@ import Control.Monad.Reader
 import Control.Precondition
 
 import qualified Data.List as L
-import qualified Data.Map.Class as M
+import qualified Data.Map as M
 import qualified Data.Set as S
 
 import GHC.Generics
@@ -38,7 +38,6 @@ import Text.Printf.TH
 
 import qualified Utilities.Graph as G 
 import           Utilities.Syntactic
-import           Utilities.Table
 
 prop_parseOk :: Property
 prop_parseOk = forAll correct_machine $ f_prop_parseOk
@@ -78,7 +77,7 @@ instance Arbitrary ExprNotation where
         (vars,e) <- fix (\retry n -> do
             when (n == 0) $ fail "failed to generate ExprNotation"
             vars  <- var_set
-            t     <- elements $ bool : (map var_type $ M.ascElems vars)
+            t     <- elements $ bool : (map var_type $ M.elems vars)
             e     <- expr_type False vars t
             case e of
                 Just e  -> return (vars,e)
@@ -163,7 +162,7 @@ showExpr notation e = show_e e
                             (show $ map Pretty $ M.keys m_ops)
         show_e (Lit n _) = pretty n
         show_e _ = "<unknown expression>"
-        m_ops :: Table Name Operator
+        m_ops :: M.Map Name Operator
         m_ops = M.fromList $ zip (map functionName xs) xs
             where
                 xs = notation^.new_ops
@@ -186,7 +185,7 @@ latex_of m = do
                            (Doc li [ Text (TextBlock (show $ _name m) li) ] li)
                            li
             show_t t = M.findWithDefault "<unknown>" t type_map
-            type_map :: Table Type String
+            type_map :: M.Map Type String
             type_map = M.fromList 
                         [ (int, "\\Int")
                         , (bool, "\\Bool")
@@ -213,14 +212,14 @@ latex_of m = do
         blank = Text (Blank "\n" li)
 
 expressions :: IsExpr expr => Machine' expr -> [expr]
-expressions m = M.ascElems $ m!.props.inv
+expressions m = M.elems $ m!.props.inv
 
 with_type_error :: Gen RawMachine
 with_type_error = do
         suchThat (gen_machine True)
              (\m -> not $ L.null $ range m)
     where
-        range m = M.ascElems vars `L.intersect` S.elems fv
+        range m = M.elems vars `L.intersect` S.elems fv
             where
                 vars  = m!.variables
                 fv    = S.unions $ map (used_var.getExpr) $ expressions m
@@ -247,7 +246,7 @@ instance Show Tex where
             [ "" -- show m
             , flatten' tex]
 
-var_set :: Gen (Table Name Var)
+var_set :: Gen (M.Map Name Var)
 var_set = do
     nvar  <- choose (0,5)
     types <- L.sort `liftM` vectorOf nvar choose_type
@@ -312,13 +311,13 @@ mk_errors True n = do
     xs <- liftGen $ replicateM (n-1) arbitrary
     permute $ True : xs
 
-expr_type :: Bool -> Table Name Var -> Type -> Gen (Maybe RawExpr)
+expr_type :: Bool -> M.Map Name Var -> Type -> Gen (Maybe RawExpr)
 expr_type b vars t = runReaderT (runRec $ expr_type' b t) t_map
     where
         t_map = M.fromListWith (++) $ map f $ M.elems vars
         f v@(Var _ t) = (t,[v])
 
-type EGen = RecT (ReaderT (Table Type [Var]) Gen)
+type EGen = RecT (ReaderT (M.Map Type [Var]) Gen)
 
 
 
@@ -339,7 +338,7 @@ choose_var b t = do
         ((Word `liftM`) . elements)
         $ M.lookup t' t_map
 
-fun_map :: Table Type [([RawExpr] -> RawExpr, [Type])]
+fun_map :: M.Map Type [([RawExpr] -> RawExpr, [Type])]
 fun_map = M.fromList
         [ (int, 
             [ (from_list (zplus :: RawExpr -> RawExpr -> RawExpr), [int,int])])

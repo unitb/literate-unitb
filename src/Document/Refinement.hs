@@ -26,26 +26,25 @@ import Control.Monad.Reader
 import Control.Monad.RWS as RWS
 import Control.Monad.Trans.Either as E
 
-import Data.Char
-import Data.Default
-import Data.Either
-import Data.Existential
-import Data.List as L
+import           Data.Char
+import           Data.Default
+import           Data.Either
+import           Data.Existential
+import           Data.List as L
 import qualified Data.List.NonEmpty as NE
-import Data.Map.Class as M hiding ( map, (\\) )
+import           Data.Map as M hiding ( map, (\\), (!) )
 
 import Text.Printf.TH
 
 import Utilities.Error hiding (MonadError)
 import Utilities.Syntactic
-import Utilities.Table
 
 data RuleParserParameter = 
     RuleParserDecl 
         { getMachine :: MachineP3
-        --, getProgress :: Table Label ProgressProp
-        --, getSafety :: Table Label SafetyProp
-        --, getTransient :: Table Label Transient
+        --, getProgress :: Map Label ProgressProp
+        --, getSafety :: Map Label SafetyProp
+        --, getTransient :: Map Label Transient
         , getGoal :: Label
         , getHypotheses :: [Label]
         , getHint :: LatexDoc
@@ -65,16 +64,16 @@ getMachineId = view pMachineId . getMachine
 getParser :: RuleParserParameter -> ParserSetting
 getParser = view pMchSynt . getMachine
 
-getTransient :: RuleParserParameter -> Table Label Transient
+getTransient :: RuleParserParameter -> Map Label Transient
 getTransient = view pTransient . getMachine
 
-getProgress :: RuleParserParameter -> Table Label ProgressProp
+getProgress :: RuleParserParameter -> Map Label ProgressProp
 getProgress = mapKeysMonotonic as_label . view pProgress . getMachine
 
-getNewProgress :: RuleParserParameter -> Table Label ProgressProp
+getNewProgress :: RuleParserParameter -> Map Label ProgressProp
 getNewProgress = mapKeysMonotonic as_label . view (pNewPropSet.progress) . getMachine
 
-getSafety :: RuleParserParameter -> Table Label SafetyProp
+getSafety :: RuleParserParameter -> Map Label SafetyProp
 getSafety = view pSafety . getMachine
 
 getGoalProp :: RuleParserParameter -> M ProgressProp

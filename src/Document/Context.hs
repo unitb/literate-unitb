@@ -41,8 +41,8 @@ import Utilities.Error
 import Utilities.Syntactic
 
 run_phase1_types :: Pipeline MM 
-                        (CTable TheoryP0)
-                        (CTable TheoryP1)
+                        (CMap TheoryP0)
+                        (CMap TheoryP1)
 run_phase1_types = proc p0 -> do
         ts <- set_decl   -< p0
         it <- imp_theory -< p0
@@ -61,7 +61,7 @@ run_phase1_types = proc p0 -> do
                                <.> imp_th'
                                <.> sets
 
-type CPipeline ph a = Pipeline MM (CTable ph) (Maybe (CTable a))
+type CPipeline ph a = Pipeline MM (CMap ph) (Maybe (CMap a))
 
 make_phase1 :: Map Name Sort
             -> Map Name Sort

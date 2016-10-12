@@ -18,6 +18,7 @@ import Control.Monad.Reader
 
 import Data.Existential
 import Data.Hashable
+import Data.Map
 import Data.Maybe as M
 import Data.Typeable
 import Data.TypeList
@@ -30,7 +31,6 @@ import Test.QuickCheck.Report
 import Test.QuickCheck.ZoomEq
 
 import Utilities.Syntactic
-import Utilities.Table
 
 data CoarseSchedule = CoarseSchedule 
         { _coarseScheduleInhStatus :: EventInhStatus Expr
@@ -164,7 +164,7 @@ type InitOrEvent = Either InitEventId EventId
 data InitEventId = InitEvent
     deriving (Show,Ord,Eq,Generic)
 
-data EventExpr = EventExpr { _eventExprs :: Table InitOrEvent EvtExprScope }
+data EventExpr = EventExpr { _eventExprs :: Map InitOrEvent EvtExprScope }
     deriving (Eq,Ord,Typeable,Show,Generic)
 
 makeLenses ''EventExpr

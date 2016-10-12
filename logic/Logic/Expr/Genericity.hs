@@ -52,7 +52,7 @@ import Prelude as L
 
 import Text.Printf.TH
 
-import Utilities.Table
+import Utilities.Map
 
 suffix_generics :: String -> GenericType -> GenericType
 suffix_generics _  v@(VARIABLE _)      = v
@@ -678,7 +678,7 @@ names :: Pre
       => String -> [Name]
 names n = map (makeName . (n ++) . show) [0 :: Int ..]
 
-vars_to_sorts :: Table Name Sort -> AbsExpr n Type q -> AbsExpr n FOType q
+vars_to_sorts :: Map Name Sort -> AbsExpr n Type q -> AbsExpr n FOType q
 vars_to_sorts sorts e = evalState (vars_to_sorts_aux e) (new_sorts, empty)
     where
         new_sorts = map as_type $ names "G" `minus` keys sorts

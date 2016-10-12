@@ -18,12 +18,10 @@ import Control.Precondition ((!))
 
 import Data.Graph.Bipartite
 import Data.List as L
-import Data.Map.Class as M
+import Data.Map as M hiding ((!))
 import Data.Set  as S
 
 import Test.UnitTest hiding (name)
-
-import Utilities.Table
 
 test_case :: TestCase
 test_case = test
@@ -175,13 +173,13 @@ path11 = [path|Tests/lock-free deque/main6-err1.tex|]
 path12 :: FilePath
 path12 = [path|Tests/lock-free deque/main7-err0.tex|]
 
-case12 :: IO (String, Table Label Sequent)
+case12 :: IO (String, Map Label Sequent)
 case12 = verify path12 0
 
 path13 :: FilePath
 path13 = [path|Tests/lock-free deque/main7.tex|]
 
-case13 :: IO (String, Table Label Sequent)
+case13 :: IO (String, Map Label Sequent)
 case13 = verify path13 0
 
 case14 :: IO (Either String ([SkipOrEvent],[SkipOrEvent],[SkipOrEvent]))
@@ -217,7 +215,7 @@ case16 = runEitherT $ do
     let m0 = ms ! "m0"
         m1 = ms ! "m1"
         m2 = ms ! "m2"
-        decls e = L.map as_label $ M.ascKeys (view indices e)
+        decls e = L.map as_label $ M.keys (view indices e)
     return $ (m0,m1,m2) & each %~ (M.toAscList . M.map decls . rightMap . view' events)
 
 result16 :: Either String (ExprSet,ExprSet,ExprSet)
@@ -249,14 +247,14 @@ path20 = [path|Tests/lock-free deque/main9.tex|]
 case20 :: IO POResult
 case20 = verify path20 0
 
-result21 :: Either [Error] (Table Name Witness)
+result21 :: Either [Error] (Map Name Witness)
 result21 = Right $ symbol_table' witVar [(WitSuch b $ c [expr| b = ch |])]
     where
         b = z3Var "b" bool
         c = ctx $ do
             [var| b,ch : \Bool |]
 
-case21 :: IO (Either [Error] (Table Name Witness))
+case21 :: IO (Either [Error] (Map Name Witness))
 case21 = runEitherT $ do
     m <- parse_machine' path20 1
     view ind_witness <$> S.lookup "handle" (m!.events.to leftMap)
@@ -331,17 +329,17 @@ case35 = verifyOnly path35 "m1/hdl:popL:more/C_SCH/delay/0/prog/m1:prog0/rhs/m1:
 path36 :: FilePath
 path36 = [path|Tests/pop-left-t2.tex|]
 
-case36 :: IO (Either [Error] [[Table Name Var]])
+case36 :: IO (Either [Error] [[Map Name Var]])
 case36 = runEitherT $ do 
     rs <- parse' path36
     let getIndices :: (HasEvent' event Expr)
                    => Machine 
                    -> (BiGraph' SkipOrEvent AbstrEvent SkipOrEvent ConcrEvent () -> Map SkipOrEvent event)
-                   -> [Table Name Var]
+                   -> [Map Name Var]
         getIndices r get = r!.partsOf (events.to get.ix (Right "hdl:popL:one").event'.indices)
     return $ concat [ [getIndices r leftMap,getIndices r rightMap] | r <- rs ]
 
-result36 :: Either [Error] [[Table Name Var]]
+result36 :: Either [Error] [[Map Name Var]]
 result36 = Right [[],[v],[v],[M.empty]]
     where
         v = symbol_table [Var [smt|v|] int]

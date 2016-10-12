@@ -27,7 +27,7 @@ import Test.QuickCheck.ZoomEq
 import Text.Printf.TH
 
 import Utilities.Syntactic
-import Utilities.Table
+import Utilities.Map
 
 data Ignore = Ignore LineInfo
     deriving (Eq,Typeable)
@@ -40,13 +40,13 @@ type Proof = ProofBase Expr
 data ProofBase expr =  FreeGoal Name Name Type (ProofBase expr) LineInfo
             | ByCases   [(Label, expr, (ProofBase expr))] LineInfo
             | Easy (Maybe Double) LineInfo
-            | Assume (Table Label expr) expr (ProofBase expr) LineInfo
+            | Assume (Map Label expr) expr (ProofBase expr) LineInfo
             | ByParts [(expr,(ProofBase expr))]           LineInfo
                 -- Too complex
-            | Assertion (Table Label (expr,(ProofBase expr))) [(Label,Label)] (ProofBase expr) LineInfo
-            | Definition (Table Var expr) (ProofBase expr) LineInfo
-            | InstantiateHyp expr (Table Var expr) (ProofBase expr) LineInfo
-            | Keep Context [expr] (Table Label expr) (ProofBase expr) LineInfo
+            | Assertion (Map Label (expr,(ProofBase expr))) [(Label,Label)] (ProofBase expr) LineInfo
+            | Definition (Map Var expr) (ProofBase expr) LineInfo
+            | InstantiateHyp expr (Map Var expr) (ProofBase expr) LineInfo
+            | Keep Context [expr] (Map Label expr) (ProofBase expr) LineInfo
             | ByCalc (CalculationBase expr)
     deriving (Eq,Typeable, Generic, Show,Functor,Foldable,Traversable)
 
@@ -189,7 +189,7 @@ instance (Eq expr,IsExpr expr) => ProofRule (ProofBase expr) where
                   & nameless  %~ (defs' ++)
     proof_po (Assertion lemma dep p _) lbl po = do
             let depend = M.map M.fromList $ M.fromListWith (++) $ L.map f dep
-                depend :: Table Label (Table Label ())
+                depend :: Map Label (Map Label ())
                 f (x,y) = (x,[(y,())])
             pos1 <- proof_po p ( composite_label [lbl,label "main goal"] )
                 $ po & nameless %~ (++ L.map fst (M.ascElems lemma))

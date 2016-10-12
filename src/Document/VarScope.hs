@@ -22,8 +22,9 @@ import Control.Lens
 import Control.Precondition
 
 import           Data.Existential
+import           Data.Hashable
 import qualified Data.List.NonEmpty as NE
-import           Data.Map.Class as M
+import           Data.Map as M
 import           Data.Typeable
 
 import GHC.Generics.Instances
@@ -36,7 +37,6 @@ import Test.QuickCheck.ZoomEq
 import Text.Printf.TH
 
 import Utilities.Syntactic
-import Utilities.Table
 
 class (Typeable a,Scope a,PrettyPrintable a) => IsVarScope a where
     toOldEventDecl :: Name -> a -> [Either Error (EventId,[EventP2Field])]
@@ -103,7 +103,7 @@ data MachineDef = MchDef
             , _machineDefLineInfo :: LineInfo }
     deriving (Eq,Ord,Show,Typeable,Generic)
 
-data EvtDecls = Evt (Table EventOrDummy EventDecl)
+data EvtDecls = Evt (Map EventOrDummy EventDecl)
     deriving (Eq,Ord,Show,Typeable,Generic)
     --         -- in Evt, 'Nothing' stands for a dummy
 
@@ -243,7 +243,7 @@ instance Scope EvtDecls where
         where
             f m | M.null m  = Nothing
                 | otherwise = Just m
-    error_item (Evt m) = fromJust' $ NE.nonEmpty $ ascElems $ mapWithKey msg m
+    error_item (Evt m) = fromJust' $ NE.nonEmpty $ elems $ mapWithKey msg m
         where
             msg (Right k) x = ([printf|%s (event '%s')|] (kind x) (pretty k), x^.lineInfo)
             msg (Left DummyDecl) x  = ("dummy", x^.lineInfo)

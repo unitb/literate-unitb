@@ -1,7 +1,14 @@
 #!/bin/bash
 
+
+# 
+# This script is taken from:
+# 
 # https://docs.haskellstack.org/en/stable/travis_ci/
 # https://github.com/futurice/fum2github/blob/master/travis_long
+
+# The following explains the 50min hard timeout on macs
+# https://github.com/travis-ci/travis-ci/issues/3810
 
 $* &
 pidA=$!

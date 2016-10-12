@@ -26,12 +26,12 @@ import PseudoMacros
 
 import Text.Printf.TH
 
-import Utilities.Table
+import Utilities.Map
 
 data VisibleVars = VisibleVars
-        { _visibleVarsConstants :: Table Name Var
-        , _visibleVarsAbs_vars  :: Table Name Var
-        , _vars      :: Table Name Var
+        { _visibleVarsConstants :: Map Name Var
+        , _visibleVarsAbs_vars  :: Map Name Var
+        , _vars      :: Map Name Var
         , _prefix    :: [String]
         } deriving (Generic,Show)
 
@@ -61,7 +61,7 @@ withVars :: (Foldable f)
 withVars = withVars' constants
 
 withVars' :: (Foldable f) 
-          => Lens' VisibleVars (Table Name Var) -> f Var 
+          => Lens' VisibleVars (Map Name Var) -> f Var 
           -> ScopeCorrectnessM a
           -> ScopeCorrectnessM a
 withVars' ln vs = local (ln %~ M.union (symbol_table vs))
@@ -84,7 +84,7 @@ withPrimes cmd = do
     withVars' vars (primeAll $ x^.vars) $ withVars' abs_vars (primeAll $ x^.abs_vars) cmd
 
 areVisible :: (PrettyPrintable e,Foldable f,Pre) 
-           => [Getting (Table Name Var) VisibleVars (Table Name Var)]
+           => [Getting (Map Name Var) VisibleVars (Map Name Var)]
            -> f Var -> e -> ScopeCorrectness
 areVisible ln vars' e = do
     vs <- foldMap view ln 

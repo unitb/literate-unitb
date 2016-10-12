@@ -48,7 +48,7 @@ import Test.QuickCheck.ZoomEq
 import Text.Printf.TH
 
 import Utilities.Functor
-import Utilities.Table
+import Utilities.Map
 
 type Expr = AbsExpr Name GenericType HOQuantifier
 
@@ -74,7 +74,7 @@ data GenExpr n t a q =
         | Cast !CastType !(GenExpr n t a q) !a
         | Lift !(GenExpr n t a q) !a
     deriving (Eq,Ord,Typeable,Data,Generic,Show,Functor,Foldable,Traversable)
-type RecFields expr = Table Field expr
+type RecFields expr = Map Field expr
 
 data RecordExpr expr =
         RecLit !(RecFields expr)
@@ -232,7 +232,7 @@ instance (IsName n) => Translatable
 
 make_unique :: (IsGenExpr expr, Name ~ NameT expr,Pre)
             => String               -- suffix to be added to the name of variables
-            -> Table Name var       -- set of variables that must renamed
+            -> Map Name var       -- set of variables that must renamed
             -> expr                 -- expression to rewrite
             -> expr
 make_unique suf vs = freeVarsOf.namesOf %~ newName
@@ -365,12 +365,12 @@ typeOfRecord (RecUpdate x m) = recordTypeOfFields $
               M.map type_of m `M.union` fromJust' (type_of x^?fieldTypes) 
 typeOfRecord (FieldLookup x field) = fromJust' (type_of x^?fieldTypes.ix field)
 
-fieldTypes :: TypeSystem t => Prism' t (Table Field t)
+fieldTypes :: TypeSystem t => Prism' t (Map Field t)
 fieldTypes =  _FromSort.swapped.below _RecordSort
             . iso (\(ts,m) -> m & unsafePartsOf traverse .~ ts) 
                   (\m -> (M.elems m,() <$ m))
 
-recordTypeOfFields :: (Typed e, t ~ TypeOf e,TypeSystem t) => Table Field e -> t
+recordTypeOfFields :: (Typed e, t ~ TypeOf e,TypeSystem t) => Map Field e -> t
 recordTypeOfFields m = make_type (RecordSort $ () <$ m) $ type_of <$> M.elems m
 
 ztuple_type :: TypeSystem t => [t] -> t
@@ -400,8 +400,8 @@ freeVarsOf :: IsGenExpr expr
 freeVarsOf f = freeVarsOf'' (const f) M.empty
 
 freeVarsOf'' :: (IsGenExpr expr, n ~ NameT expr,Applicative f) 
-             => (Table n (VarT expr) -> VarT expr -> f (VarT expr))
-             -> Table n (VarT expr)
+             => (Map n (VarT expr) -> VarT expr -> f (VarT expr))
+             -> Map n (VarT expr)
              -> expr -> f expr
 freeVarsOf'' f vs (Word v) | (v^.name) `M.member` vs = pure (Word v)
                            | otherwise       = Word <$> f vs v
@@ -492,7 +492,7 @@ z3Def ts n = makeDef ts (z3Name n)
 lookupFields :: ( IsName n,TypeSystem t,TypeSystem a
                 , Pre
                 , TypeAnnotationPair t a,IsQuantifier q) 
-             => GenExpr n t a q -> Table Field (GenExpr n t a q)
+             => GenExpr n t a q -> Map Field (GenExpr n t a q)
 lookupFields e = fromJust' $ type_of e^?fieldTypes >>= fieldLookupMap
     where
       fieldLookupMap = itraverse $ \f _ -> mkRecord $ FieldLookup e f
@@ -655,7 +655,7 @@ instance HasScope Expr where
         areVisible [vars,constants] free e
 
 {-# SPECIALIZE merge :: (Ord k,Eq a,Show k,Show a) => M.Map k a -> M.Map k a -> M.Map k a #-}
-{-# SPECIALIZE merge :: (M.IsKey Table k,Eq a,Show k,Show a) => Table k a -> Table k a -> Table k a #-}
+{-# SPECIALIZE merge :: (M.IsKey Map k,Eq a,Show k,Show a) => Map k a -> Map k a -> Map k a #-}
 merge :: (M.IsKey map k, Eq a, Show k, Show a,M.IsMap map)
           => map k a -> map k a -> map k a
 merge m0 m1 = M.unionWithKey f m0 m1
@@ -675,7 +675,7 @@ merge_all ms = foldl' (M.unionWithKey f) M.empty ms
                             (show k) (show x) (show y)
 
 substitute :: (TypeSystem t, IsQuantifier q, IsName n)
-           => Table n (AbsExpr n t q) 
+           => Map n (AbsExpr n t q) 
            -> (AbsExpr n t q) -> (AbsExpr n t q)
 substitute m e = f e
     where
@@ -685,7 +685,7 @@ substitute m e = f e
         subst vs = m M.\\ symbol_table vs
 
 substitute' :: (TypeSystem t, TypeSystem a, IsQuantifier q, IsName n, TypeAnnotationPair t a)
-           => Table n (GenExpr n t a q)
+           => Map n (GenExpr n t a q)
            -> (GenExpr n t a q) -> (GenExpr n t a q)
 substitute' m e = f e
     where
@@ -702,7 +702,7 @@ used_var (Word v) = S.singleton v
 used_var (Binder _ vs r expr _) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
 
-used_var' :: HasGenExpr expr => expr -> Table (NameT (ExprT expr)) (VarT (ExprT expr))
+used_var' :: HasGenExpr expr => expr -> Map (NameT (ExprT expr)) (VarT (ExprT expr))
 used_var' = symbol_table . S.toList . used_var . asExpr
 
 used_fun :: (TypeSystem t, IsQuantifier q, IsName n) 
@@ -715,7 +715,7 @@ used_fun e = visit f s e
                 _          -> S.empty
 
 free_vars' :: HasExpr expr
-           => Table Name Var -> expr -> Table Name Var
+           => Map Name Var -> expr -> Map Name Var
 free_vars' ds e = vs `M.intersection` ds
     where
         vs = used_var' (getExpr e)
@@ -752,7 +752,7 @@ rename x y e@(Binder q vs r xp t)
         | otherwise             = Binder q vs (rename x y r) (rename x y xp) t
 rename x y e = rewrite (rename x y) e 
 
-primeOnly :: Table Name var -> Expr -> Expr
+primeOnly :: Map Name var -> Expr -> Expr
 primeOnly vs = freeVarsOf %~ pr
     where
         pr v | (v^.name) `M.member` vs = prime v

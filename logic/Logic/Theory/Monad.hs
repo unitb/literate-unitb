@@ -34,7 +34,7 @@ import Language.Haskell.TH hiding (Type,Name)
 import Text.Printf.TH
 
 import Utilities.Error
-import Utilities.Table
+import Utilities.Map
 import Utilities.Tuple
 
 class Signature s where
@@ -355,7 +355,7 @@ withForall mx = do
 axiom :: ExpQ
 axiom = withLoc 'declAxiom
 
-axioms :: String -> Writer [ExprP] () -> Table Label Expr
+axioms :: String -> Writer [ExprP] () -> Map Label Expr
 axioms name cmd
         | L.null ls = fromList $ L.map (first $ label . [printf|@%s@@_%s|] name) $ zip ns rs
         | otherwise = error $ unlines $ concat ls

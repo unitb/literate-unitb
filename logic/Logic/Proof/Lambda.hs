@@ -26,7 +26,7 @@ import Data.Typeable
 
 import GHC.Generics
 
-import Utilities.Table
+import Utilities.Map
 
 data CanonicalLambda = CL 
         [Var'] [Var'] -- free vars, bound vars
@@ -58,7 +58,7 @@ can_local_vars _ = L.map (reserved "lv") [0..]
 data CanonicalRewriter = CR 
         {  local_gen :: [InternalName]            -- locals
         ,  free_gen  :: [InternalName]            -- bound var names
-        ,  renaming :: Table InternalName InternalName      -- rewrites
+        ,  renaming :: Map InternalName InternalName      -- rewrites
         ,  exprs  :: [(Expr', Var')]
         }
 
@@ -201,7 +201,7 @@ delambdify po = -- (Sequent ctx asm hyps goal) =
                  `merge_ctx` decl :: Context') 
                 (po^.syntacticThm)
                 (asm' ++ defs :: [Expr'])
-                (hyps' :: Table Label Expr')
+                (hyps' :: Map Label Expr')
                 (goal' :: Expr')
             ) empty
 

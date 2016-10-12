@@ -46,8 +46,8 @@ import           Data.Existential
 import           Data.Functor.Compose
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
-import           Data.Map.Class   as M hiding ( map, (\\) )
-import qualified Data.Map.Class   as M
+import           Data.Map   as M hiding ( map, (\\), (!) )
+import qualified Data.Map   as M
 import           Data.Semigroup
 import qualified Data.Traversable   as T
 
@@ -59,9 +59,8 @@ import Text.Printf.TH
 import Text.Show.With
 
 import Utilities.Syntactic
-import Utilities.Table
 
-withHierarchy :: Pipeline MM (Hierarchy MachineId,MTable a) (MTable b)
+withHierarchy :: Pipeline MM (Hierarchy MachineId,MMap a) (MMap b)
               -> Pipeline MM (SystemP a) (SystemP b)
 withHierarchy cmd = proc (SystemP ref tab) -> do
     tab' <- cmd -< (ref,tab)
@@ -77,16 +76,16 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
         err_msg :: Label -> String
         err_msg = [printf|Multiple expressions with the label %s|] . pretty
         wrapup :: Hierarchy MachineId
-               -> MTable MachineP2 
-               -> Maybe [Table MachineId [(Label, ExprScope)]]
-               -> MM' Input (MTable MachineP3)
+               -> MMap MachineP2 
+               -> Maybe [Map MachineId [(Label, ExprScope)]]
+               -> MM' Input (MMap MachineP3)
         wrapup r_ord p2 es = do
-            let es' :: Maybe (MTable [(Label, ExprScope)])
+            let es' :: Maybe (MMap [(Label, ExprScope)])
                 es' = inherit2 p2 r_ord . unionsWith (++) <$> es
             exprs <- triggerM
                 =<< make_all_tables' err_msg
                 =<< triggerM es'
-            let _ = exprs :: MTable (Table Label ExprScope)
+            let _ = exprs :: MMap (Map Label ExprScope)
             T.sequence $ make_phase3 <$> p2 <.> exprs
         expressions = run_phase 
             [ assignment
@@ -116,7 +115,7 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
             , init_witness_decl
             , witness_decl ]
 
-make_phase3 :: MachineP2 -> Table Label ExprScope -> MM' c MachineP3
+make_phase3 :: MachineP2 -> Map Label ExprScope -> MM' c MachineP3
 make_phase3 p2 exprs' = triggerLenient $ do
         m <- join $ upgradeM
             newThy newMch
@@ -141,7 +140,7 @@ make_phase3 p2 exprs' = triggerLenient $ do
         liftEvent2 f g = do
             m <- fromListWith (++).L.map (first Right) <$> liftFieldMLenient f p2 exprs
             m' <- fromListWith (++).L.map (first Right) <$> liftFieldMLenient g p2 exprs
-            let _ = m :: Table SkipOrEvent [EventP3Field]
+            let _ = m :: Map SkipOrEvent [EventP3Field]
             let ms = M.unionsWith (++) [m', m, M.singleton (Left SkipEvent) [ECoarseSched "default" zfalse]]
             return $ \_ eid e -> return $ makeEventP3 e (findWithDefault [] eid ms)
         liftEvent :: (   Label 
@@ -167,7 +166,7 @@ assignment = machineCmd "\\evassignment" $ \(Conc evt, NewLabel lbl, Expr xs) _m
             pred <- parse_expr''
                 (event_parser p2 ev & is_step .~ True) 
                 xs
-            let frame = M.ascElems $ (p2^.pStateVars) `M.difference` (p2^.pAbstractVars)
+            let frame = M.elems $ (p2^.pStateVars) `M.difference` (p2^.pAbstractVars)
                 act = BcmSuchThat frame pred
             li <- ask
             return [(lbl,evtScope ev (Action (InhAdd (pure (ev,li),act)) Local $ pure li))]
@@ -228,7 +227,7 @@ instance IsExprScope Initially where
                 | L.null lis' -> [Right $ PInit lbl x]
                 | otherwise   -> [Left $ MLError msg $ ([printf|predicate %s|] $ pretty lbl,li) :| lis']
                 where
-                    lis = L.map (first $ view name) $ M.ascElems $ vs `M.intersection` used_var' x
+                    lis = L.map (first $ view name) $ M.elems $ vs `M.intersection` used_var' x
                     lis' = L.map (first ([printf|deleted variable %s|] . render)) lis
                     msg  = [printf|In '%s', initialization predicate '%s' refers to deleted symbols|] 
                                     (pretty mid) (pretty lbl)
@@ -282,7 +281,7 @@ instance Scope EventExpr where
         where
             f x = set declSource Inherited x
     error_item (EventExpr m) = setToNeList
-            $ sconcat $ NE.fromList $ map sequenceA $ ascElems $ mapWithKey msg m
+            $ sconcat $ NE.fromList $ map sequenceA $ elems $ mapWithKey msg m
         where
             msg (Right k) sc 
                 | inheritedFrom sc `elem` [[],[k]]
@@ -301,7 +300,7 @@ instance Scope EventExpr where
 checkLocalExpr' :: ( HasInhStatus decl (InhStatus expr)
                   , PrettyPrintable decl
                   , HasLineInfo decl (NonEmptyListSet LineInfo) )
-                => String -> (expr -> Table Name Var)
+                => String -> (expr -> Map Name Var)
                 -> EventId -> Label -> decl
                 -> Reader MachineP2 [Either Error a]
 checkLocalExpr' expKind free eid lbl sch = do
@@ -318,7 +317,7 @@ checkLocalExpr' expKind free eid lbl sch = do
                         fvars  = free expr
                         errs   = fv (vs `M.intersection` fvars) `M.union` fi (is `M.intersection` fvars)
                         schLI  = ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
-                        varsLI = M.ascElems errs
+                        varsLI = M.elems errs
                         app (x :| xs) ys = x :| (xs ++ ys)
                     in if M.null errs 
                        then []
@@ -348,7 +347,7 @@ parseEvtExpr' :: ( HasInhStatus decl (EventInhStatus expr)
                  , PrettyPrintable decl
                  , HasDeclSource decl DeclSource)
               => String 
-              -> (expr -> Table Name Var)
+              -> (expr -> Map Name Var)
               -> (Label -> expr -> field)
               -> RefScope
               -> EventId -> Label -> decl
@@ -360,7 +359,7 @@ parseEvtExpr'' :: ( HasInhStatus decl (EventInhStatus expr)
                   , PrettyPrintable decl
                   , HasDeclSource decl DeclSource)
                => String 
-               -> (expr -> Table Name Var)
+               -> (expr -> Map Name Var)
                -> (Label -> NonEmptyListSet LineInfo -> expr -> field)
                -> RefScope
                -> EventId -> Label -> decl
@@ -447,8 +446,8 @@ fine_sch_decl = machineCmd "\\fschedule" $ \(Conc evt, NewLabel lbl, Expr xs) _m
         --  Theory Properties  --
         -------------------------
 
-parseExpr' :: (HasMchExpr b a, IsKey Table label)
-           => Lens' MachineP3 (Table label a) 
+parseExpr' :: (HasMchExpr b a, Ord label)
+           => Lens' MachineP3 (Map label a) 
            -> [(label,b)] 
            -> RWS () [Error] MachineP3 ()
 parseExpr' ln xs = modify $ ln %~ M.union (M.fromList $ map (second $ view mchExpr) xs)
@@ -484,8 +483,8 @@ makeEvtCell :: IsEvtExpr a => InitOrEvent -> a -> ExprScope
 makeEvtCell evt exp = makeCell $ EventExpr $ singleton evt $ makeCell exp
 
 default_schedule_decl :: Pipeline MM
-                   (MTable MachineP2, Maybe (MTable [(Label, ExprScope)]))
-                   (Maybe (MTable [(Label, ExprScope)]))
+                   (MMap MachineP2, Maybe (MMap [(Label, ExprScope)]))
+                   (Maybe (MMap [(Label, ExprScope)]))
 default_schedule_decl = arr $ \(p2,csch) -> 
         Just $ addDefSch <$> p2 <.> evtsWith csch  -- .traverse._CoarseSchedule._)
     where
@@ -625,7 +624,7 @@ constraint_prop = machineCmd "\\constraint" $ \(NewLabel lbl,Expr xs) _m p2 -> d
                         & free_dummies .~ True
                         & is_step .~ True)
                     xs
-            let vars = ascElems $ free_vars' ds pre
+            let vars = elems $ free_vars' ds pre
                 ds = p2^.pDummyVars
                 prop = Co vars pre
             return [(lbl,makeCell $ ConstraintProp prop Local li)]
@@ -700,14 +699,14 @@ transientProp p2 p = Tr dum p
 
 unlessProp :: (HasTheoryP2 p,HasExpr expr)
            => p -> expr -> expr -> SafetyProp' expr
-unlessProp p2 p q = Unless (M.ascElems dum) p q
+unlessProp p2 p q = Unless (M.elems dum) p q
     where
         ds  = p2^.pDummyVars
         dum = free_vars' ds p `union` free_vars' ds q
 
 leadsTo :: (HasTheoryP2 p,HasExpr expr)
         => p -> expr -> expr -> ProgressProp' expr
-leadsTo p2 p q = LeadsTo (M.ascElems dum) p q
+leadsTo p2 p q = LeadsTo (M.elems dum) p q
     where
         ds  = p2^.pDummyVars
         dum = free_vars' ds p `union` free_vars' ds q
@@ -768,7 +767,7 @@ instance IsEvtExpr ActionDecl where
         (InhDelete (Just (_,act)),Local) -> do
             vs <- view pDelVars
             return [Right $ (ev,[EWitness (v^.name) (witnessOf v act) 
-                                         | v <- M.ascElems $ frame' act `M.intersection` vs ])]
+                                         | v <- M.elems $ frame' act `M.intersection` vs ])]
         _ -> return []
     toMchScopeExpr _ _  = return []
     toEvtScopeExpr scope eid lbl decl = do
@@ -787,18 +786,18 @@ instance (Applicative f,Applicative g,Applicative h) => Applicative (Compose3 f 
             comp = Compose . Compose
             uncomp = getCompose . getCompose
 
-_EventExpr' :: Prism' ExprScope (Table InitOrEvent EvtExprScope)
+_EventExpr' :: Prism' ExprScope (Map InitOrEvent EvtExprScope)
 _EventExpr' = _ExprScope._Cell._EventExpr
 
 
 instance IsExprScope EventExpr where
     toNewEvtExprDefault _ (EventExpr m) = 
-          fmap (concat.M.ascElems) 
+          fmap (concat.M.elems) 
         $ M.traverseWithKey defaultEvtWitness 
         $ M.mapKeysMonotonic fromRight' 
         $ M.filterWithKey (const.isRight) m
     toMchExpr lbl (EventExpr m) = 
-            fmap concat $ mapM (toMchScopeExpr lbl) $ M.ascElems 
+            fmap concat $ mapM (toMchScopeExpr lbl) $ M.elems 
                 $ M.filterWithKey (const.isLeft) m
     toThyExpr _ _  = return []
     toNewPropSet _ _ = return []
@@ -829,7 +828,7 @@ event_parser p2 ev = (p2 ^. pEvtSynt) ! ev
 schedule_parser :: HasMachineP2 phase => phase -> EventId -> ParserSetting
 schedule_parser p2 ev = (p2 ^. pSchSynt) ! ev
 
-machine_events :: HasMachineP1 phase => phase -> Table Label EventId
+machine_events :: HasMachineP1 phase => phase -> Map Label EventId
 machine_events p2 = L.view pEventIds p2
 
 evtScope :: IsEvtExpr a => EventId -> a -> ExprScope
@@ -852,7 +851,7 @@ defaultInitWitness p2 xs = concatMap f xs ++ xs
     where
         vs = p2^.pDelVars
         f (PDelInits _lbl expr) = [PInitWitness (v^.name) (WitSuch v expr)
-                                    | v <- M.ascElems $ used_var' expr `M.intersection` vs ]
+                                    | v <- M.elems $ used_var' expr `M.intersection` vs ]
         f _ = []
 
 return []

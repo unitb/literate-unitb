@@ -15,9 +15,7 @@ import UnitB.Expr
 import Control.Lens -- ((.=))
 
 import Data.List hiding (inits)
-import Data.Map.Class hiding ( map )
-
-import Utilities.Table
+import Data.Map hiding ( map )
 
 test_case :: TestCase
 test_case = test
@@ -150,7 +148,7 @@ result7 = unlines
     , "passed 31 / 31"
     ]
 
-case7 :: IO (String, Table Label Sequent)
+case7 :: IO (String, Map Label Sequent)
 case7 = do
     verify path6 0
 

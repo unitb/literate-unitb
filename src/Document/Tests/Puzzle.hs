@@ -15,12 +15,10 @@ import Control.Monad
 import Control.Precondition ((!))
 
 import Data.List as L
-import Data.Map.Class
+import Data.Map hiding ((!))
 import Data.Set  as S (Set,fromList)
 
 import Test.UnitTest
-
-import Utilities.Table
 
 test_case :: TestCase
 test_case = test_cases 
@@ -60,7 +58,7 @@ test_case = test_cases
 path0 :: FilePath
 path0 = [path|Tests/puzzle/puzzle.tex|]
 
-case0 :: IO (String, Table Label Sequent)
+case0 :: IO (String, Map Label Sequent)
 case0 = verify path0 0
 
 result0 :: String
@@ -69,7 +67,7 @@ result0 = unlines
     , "passed 1 / 1"
     ]
 
-case1 :: IO (String, Table Label Sequent)
+case1 :: IO (String, Map Label Sequent)
 case1 = verify path0 1
 
 result1 :: String
@@ -468,7 +466,7 @@ result5 = unlines
     -- , "; m1/visit/SCH/0/REF/weaken"
     -- ]
 
-case7 :: IO (String, Table Label Sequent)
+case7 :: IO (String, Map Label Sequent)
 case7 = verify path0 2
 
 result7 :: String
@@ -533,7 +531,7 @@ result7 = unlines
     , "passed 57 / 57"
     ]
 
-case8 :: IO (String, Table Label Sequent)
+case8 :: IO (String, Map Label Sequent)
 case8 = verify path0 3
 
 result8 :: String
@@ -971,7 +969,7 @@ result10 = unlines
     , "; m3/INIT/INV/m3:inv1"
     ]
 
-case11 :: IO (String, Table Label Sequent)
+case11 :: IO (String, Map Label Sequent)
 case11 = verify path0 4
 
 result11 :: String

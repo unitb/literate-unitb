@@ -39,14 +39,13 @@ import qualified Control.Monad.Writer as W
 import           Data.Either.Combinators
 import           Data.List.Ordered (sortOn)
 import qualified Data.List.NonEmpty as NE
-import           Data.Map.Class   as M hiding ( map, (\\) )
-import qualified Data.Map.Class   as M
+import           Data.Map   as M hiding ( map, (\\) )
+import qualified Data.Map   as M
 import           Data.Semigroup
 
 import Prelude hiding ((.),id)
 
 import Utilities.Syntactic as Syn
-import Utilities.Table
 
 read_document :: LatexDoc -> Either [Error] System
 read_document = parseWith system
@@ -69,10 +68,10 @@ system =     run_phase0_blocks
 
 wrap_machine :: Pipeline MM SystemP4 System
 wrap_machine = proc m4 -> do
-                sys <- liftP id -< m4 & mchTable (M.traverseWithKey make_machine)
+                sys <- liftP id -< m4 & mchMap (M.traverseWithKey make_machine)
                 returnA -< create' $ do
-                    machines   .= sys^.mchTable
-                    ref_struct .= (Nothing <$ sys^.mchTable)
+                    machines   .= sys^.mchMap
+                    ref_struct .= (Nothing <$ sys^.mchMap)
                     ref_struct %= M.union (sys^.refineStruct.to (M.map Just .edges))
 
 all_machines :: LatexDoc -> Either [Error] System
@@ -87,13 +86,13 @@ list_machines fn = do
         return $ map snd $ toAscList $ ms!.machines
 
 list_proof_obligations :: FilePath
-                       -> EitherT [Error] IO [(Machine, Table Label Sequent)]
+                       -> EitherT [Error] IO [(Machine, Map Label Sequent)]
 list_proof_obligations fn = do
         xs <- list_machines fn
         return [ (m,proof_obligation m) | m <- xs ]
 
 list_file_obligations :: FilePath
-                       -> IO (Either [Error] [(Machine, Table Label Sequent)])
+                       -> IO (Either [Error] [(Machine, Map Label Sequent)])
 list_file_obligations fn = do
         runEitherT $ list_proof_obligations fn
 
@@ -116,7 +115,7 @@ parse_machine fn = runEitherT $ do
         return $ map snd $ toAscList $ ms!.machines
 
 get_components :: LatexDoc -> LineInfo 
-               -> Either [Error] (Table Name [LatexDoc],Table String [LatexDoc])
+               -> Either [Error] (Map Name [LatexDoc],Map String [LatexDoc])
 get_components xs li = 
         liftM g
             $ R.runReader (runEitherT $ W.execWriterT 

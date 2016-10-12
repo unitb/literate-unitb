@@ -34,7 +34,7 @@ import Data.Either.Combinators
 import Data.List as L hiding (lookup)
 import qualified Data.List.NonEmpty as NE
 import Data.List.Utils as L
-import Data.Map.Class as M hiding (lookup)
+import Data.Map as M hiding (lookup,(!))
 import Data.Time
 
 import Prelude hiding (lookup)
@@ -47,10 +47,9 @@ import System.Process
 import Text.Printf.TH
 
 import Utilities.Syntactic
-import Utilities.Table
 
-type POResult = (String,Table Label Sequent)
-type POS sid a = Either [Error] (Table sid (a, Table Label Sequent))
+type POResult = (String,Map Label Sequent)
+type POS sid a = Either [Error] (Map sid (a, Map Label Sequent))
 
 hide_error_path :: Bool
 hide_error_path = True
@@ -131,18 +130,18 @@ verifyFilesOnlyWith opt keep files i = makeReport' empty $ do
         let fs = L.map snd $ NE.filter (not.fst) $ NE.zip b files
         return ([printf|The following files do not exist: %s|] $ intercalate "," fs,empty)
 
-all_proof_obligations' :: FilePath -> EitherT String IO [Table Label String]
+all_proof_obligations' :: FilePath -> EitherT String IO [Map Label String]
 all_proof_obligations' path = do
     exists <- liftIO $ doesFileExist path
     if exists then do
         xs <- bimapEitherT show id
             $ EitherT $ fst <$> list_file_obligations' path
-        let pos = M.ascElems $ M.map snd xs
+        let pos = M.elems $ M.map snd xs
             cmd = L.map (M.map z3_code) pos
         return cmd
     else left $ [printf|file does not exist: %s|] path
 
-all_proof_obligations :: FilePath -> IO (Either String [Table Label String])
+all_proof_obligations :: FilePath -> IO (Either String [Map Label String])
 all_proof_obligations = runEitherT . all_proof_obligations'
 
 withLI :: Pre => Either String a -> Either [Error] a
@@ -177,7 +176,7 @@ proof_obligation_stripped = proof_obligation_with stripAnnotation
 proof_obligation :: FilePath -> String -> Int -> IO String
 proof_obligation = proof_obligation_with id
 
-lookupSequent :: Label -> Table Label Sequent -> Either String Sequent
+lookupSequent :: Label -> Map Label Sequent -> Either String Sequent
 lookupSequent lbl pos = case pos^?ix lbl of
                 Just po -> 
                     Right po
@@ -186,7 +185,7 @@ lookupSequent lbl pos = case pos^?ix lbl of
                         unlines $ L.map pretty $ keys pos
 
 lookupSequent' :: Monad m 
-               => Label -> Table Label Sequent 
+               => Label -> Map Label Sequent 
                -> EitherT String m Sequent
 lookupSequent' lbl m = hoistEither $ lookupSequent lbl m
 
@@ -242,7 +241,7 @@ parse path = do
     p <- getCurrentDirectory
     exists <- doesFileExist path
     let mapError = traverse.traverseLineInfo.filename %~ drop (length p)
-        f = ascElems . M.map fst
+        f = elems . M.map fst
     if exists then
         (mapBoth mapError f . fst) <$> list_file_obligations' path
     else 

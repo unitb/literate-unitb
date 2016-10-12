@@ -25,7 +25,6 @@ import System.Exit
 import Test.UnitTest
 import Test.QuickCheck.Lens ()
 
-import Utilities.Table
 import Utilities.TimeIt
 
 test_case :: TestCase
@@ -56,7 +55,6 @@ main = timeIt $ do
     -- b <- run_quickCheck_suite_with Main.test_case $ argMaxSuccess .= 1000
     -- b <- run_poTestSuite Main.test_case
     b <- run_test_cases Main.test_case
-    putStrLn tableType
     if b 
     then do
         putStrLn "\n***************"
