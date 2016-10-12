@@ -151,10 +151,6 @@ before_install:
 - export PATH="$HOME/z3:$PATH"
 - z3 -h
 # 
-- ls "/Users/travis/build/literate-unitb" 
-- ls "/Users/travis/build/literate-unitb/literate-unitb" 
-- ls "/Users/travis/build/literate-unitb/literate-unitb/.stack-work" 
-# 
 - Z3_CONFIG="$HOME/Literate Unit-B"
 - mkdir "$Z3_CONFIG" || echo ""
 - echo [DEFAULT] > "$Z3_CONFIG/z3.config"
@@ -219,6 +215,10 @@ script:
     stack)
       # stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
       # travis_wait 40 stack --no-terminal $ARGS test --bench --no-run-benchmarks 
+      # 
+      ls "/Users/travis/build/literate-unitb" 
+      ls "/Users/travis/build/literate-unitb/literate-unitb" 
+      ls "/Users/travis/build/literate-unitb/literate-unitb/.stack-work" 
       travis_long stack --no-terminal $ARGS build --bench --no-run-benchmarks 
       # echo $HOME
       # echo not calling stack
