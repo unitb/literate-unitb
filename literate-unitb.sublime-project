@@ -40,44 +40,44 @@
 		{
 			"file_include_patterns":
 			[
-				"*.cabal"
+				"*.cabal", "stack.yaml"
 			],
 			"path": "."
 		},
-		{
-			"file_include_patterns":
-			[
-				"*hs",
-				"*.md"
-			],
-			"path": "logic"
-		},
-		{
-			"folder_exclude_patterns":
-			[	"dist",".stack-work" ],
-			"file_include_patterns":
-			[
-				"*hs",
-				"*.md"
-			],
-			"path": "libs"
-		},
-		{
-			"file_include_patterns":
-			[
-				"*hs",
-				"*.md"
-			],
-			"path": "latex"
-		},
-		{
-			"file_include_patterns":
-			[
-				"*hs",
-				"*.md"
-			],
-			"path": "utils"
-		},
+		// {
+		// 	"file_include_patterns":
+		// 	[
+		// 		"*hs",
+		// 		"*.md"
+		// 	],
+		// 	"path": "logic"
+		// },
+		// {
+		// 	"folder_exclude_patterns":
+		// 	[	"dist",".stack-work" ],
+		// 	"file_include_patterns":
+		// 	[
+		// 		"*hs",
+		// 		"*.md"
+		// 	],
+		// 	"path": "libs"
+		// },
+		// {
+		// 	"file_include_patterns":
+		// 	[
+		// 		"*hs",
+		// 		"*.md"
+		// 	],
+		// 	"path": "latex"
+		// },
+		// {
+		// 	"file_include_patterns":
+		// 	[
+		// 		"*hs",
+		// 		"*.md"
+		// 	],
+		// 	"path": "utils"
+		// },
 		{
 			"file_include_patterns":
 			[

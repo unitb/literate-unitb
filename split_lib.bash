@@ -1,5 +1,5 @@
-export LIB_NAME=literate-unitb-logic
-git subtree split -P logic -b simon/separate-$LIB_NAME
+export LIB_NAME=literate-unitb-scripts
+git subtree split -P script -b simon/separate-$LIB_NAME
 cd ..
 mkdir $LIB_NAME
 cd $LIB_NAME

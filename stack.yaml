@@ -20,10 +20,12 @@ compiler: ghc-7.10.3
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
-- script/
 - location:
     git: https://github.com/literate-unitb/literate-unitb-utils.git
     commit: fa8bd0de5c59a27210f82073d4ed47c71eb2cd8e
+- location:
+    git: https://github.com/literate-unitb/literate-unitb-scripts.git
+    commit: 571c8230b4c6a7dc1c0c45ed8f4dd492fedd0489
 - location:
     git: https://github.com/literate-unitb/literate-unitb-logic.git
     commit: aaff824d46f9be748caf9eafd5238c0d34209744
@@ -109,7 +111,7 @@ extra-deps:
 - reactive-banana-1.1.0.1
 - shelly-1.6.8.1
 - time-1.5.0.1
-- unfoldable-0.1.0.0
+- pseudomacros-0.0.2
 
 # Override default flag values for local packages and extra-deps
 flags: {}
