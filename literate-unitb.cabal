@@ -165,7 +165,7 @@ executable unitb
   main-is:  Continuous.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.2.0, either, invariants, lens, literate-unitb, literate-unitb-logic, literate-unitb-utils, mtl, pseudomacros, time, file-system-mockup, literate-unitb-latex, containers, lens-extra
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.2.0, either, invariants, lens, literate-unitb, literate-unitb-logic, literate-unitb-utils, mtl, pseudomacros, time, file-system-mockup, literate-unitb-latex, containers, lens-extra, literate-unitb-config
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

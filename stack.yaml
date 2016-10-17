@@ -27,8 +27,11 @@ packages:
     git: https://github.com/literate-unitb/literate-unitb-scripts.git
     commit: 571c8230b4c6a7dc1c0c45ed8f4dd492fedd0489
 - location:
+    git: https://github.com/literate-unitb/literate-unitb-config.git
+    commit: 6da867389a3bfbba8adeca194fbae7da7e9745ef
+- location:
     git: https://github.com/literate-unitb/literate-unitb-logic.git
-    commit: aaff824d46f9be748caf9eafd5238c0d34209744
+    commit: bfdbc24fb92fb8370dda7a8c061de9674f0f3f22
 - location:
     git: https://github.com/literate-unitb/literate-unitb-latex.git
     commit: 45e3be4a3026f7e72dd8a088dd5483cb13a53409
