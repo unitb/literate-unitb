@@ -21,20 +21,20 @@ compiler: ghc-7.10.3
 packages:
 - '.'
 - location:
-    git: https://github.com/literate-unitb/literate-unitb-utils.git
-    commit: fa8bd0de5c59a27210f82073d4ed47c71eb2cd8e
-- location:
-    git: https://github.com/literate-unitb/literate-unitb-scripts.git
-    commit: 571c8230b4c6a7dc1c0c45ed8f4dd492fedd0489
+    git: https://github.com/literate-unitb/syntax-error.git
+    commit: 22db4476408a2e6daa193a8e4a0887eb4f3dc7c4
 - location:
     git: https://github.com/literate-unitb/literate-unitb-config.git
-    commit: 6da867389a3bfbba8adeca194fbae7da7e9745ef
+    commit: 946dcefbac6e8d88cedb863660441020da5c2eac
 - location:
-    git: https://github.com/literate-unitb/literate-unitb-logic.git
-    commit: bfdbc24fb92fb8370dda7a8c061de9674f0f3f22
+    git: https://github.com/literate-unitb/literate-unitb-utils.git
+    commit: 6ae4b72367ff56cdb47b60d5e920c5a48c6dc431
 - location:
     git: https://github.com/literate-unitb/literate-unitb-latex.git
-    commit: 45e3be4a3026f7e72dd8a088dd5483cb13a53409
+    commit: ef8421d12094d69a5e8e3bc219ba5515c2d7672a
+- location:
+    git: https://github.com/literate-unitb/literate-unitb-logic.git
+    commit: 17ae3b8aad16b247f91d88dbc340867a6955a15f
 - location:
     git: https://github.com/literate-unitb/existential.git
     commit: 9f90a2b17286c64e731a121ba3f02ddaf45883ae

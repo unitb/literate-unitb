@@ -147,7 +147,7 @@ library
 
   default-language:    Haskell2010
 
-  build-depends:       ansi-terminal, array, async, axiomatic-classes, base >=4.8 && < 5, bipartite-graph, bytestring, cereal < 5, classy-lens-hierarchy, co-applicative, containers, data-compressed, data-default, data-ordlist, deepseq, directory >= 1.2.2.0, dlist, either, existential, existential, file-system-mockup, filepath, generic-instances, hashable, invariants, lens, lens-extra, literate-unitb-latex, literate-unitb-logic, literate-unitb-utils, map-syntax, MissingH, monoid-transformer, mtl, parallel, partial-order, printf-th, process, pseudomacros, QuickCheck, semigroupoids, semigroups, show-with, stm, string-lenses, tagged, template-haskell, time, transformer-lenses, transformers >=0.3, unfoldable, unitb-testing, unordered-containers, witherable, typelist-functor, constraints, pretty-printable, prelude-extras, hscolour, unordered-containers, serialize-instances
+  build-depends:       ansi-terminal, array, async, axiomatic-classes, base >=4.8 && < 5, bipartite-graph, bytestring, cereal < 5, classy-lens-hierarchy, co-applicative, containers, data-compressed, data-default, data-ordlist, deepseq, directory >= 1.2.2.0, dlist, either, existential, existential, file-system-mockup, filepath, generic-instances, hashable, invariants, lens, lens-extra, literate-unitb-latex, literate-unitb-logic, literate-unitb-utils, map-syntax, MissingH, monoid-transformer, mtl, parallel, partial-order, printf-th, process, pseudomacros, QuickCheck, semigroupoids, semigroups, show-with, stm, string-lenses, tagged, template-haskell, time, transformer-lenses, transformers >=0.3, unfoldable, unitb-testing, unordered-containers, witherable, typelist-functor, constraints, pretty-printable, prelude-extras, hscolour, unordered-containers, serialize-instances, literate-unitb-config, syntax-error
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -165,7 +165,7 @@ executable unitb
   main-is:  Continuous.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.2.0, either, invariants, lens, literate-unitb, literate-unitb-logic, literate-unitb-utils, mtl, pseudomacros, time, file-system-mockup, literate-unitb-latex, containers, lens-extra, literate-unitb-config
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.2.0, either, invariants, lens, literate-unitb, literate-unitb-logic, literate-unitb-utils, mtl, pseudomacros, time, file-system-mockup, literate-unitb-latex, containers, lens-extra, literate-unitb-config, syntax-error
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
