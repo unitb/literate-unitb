@@ -1,20 +1,29 @@
 # Disabled cache in hope of improving reliability of AppVeyor builds
 cache:
-- "c:\\sr" # stack root, short paths == fewer problems
-
-build: off
-
-# before_test:
+# - "c:\\sr" # stack root, short paths == fewer problems
+- "c:\\sr\\build-plan"
+- "c:\\sr\\build-plan-cache"
+- "c:\\sr\\config.yaml"
+- "c:\\sr\\global-project"
+- "c:\\sr\\indices"
+- "c:\\sr\\precompiled"
+- "c:\\sr\\programs"
+- "c:\\sr\\setup-exe-cache"
+- "c:\\sr\\snapshots"
+- "c:\\sr\\templates"
+- "C:\\stack\\.stack-work\\downloaded"
+- "C:\\stack\\.stack-work\\install"
+- "C:\\stack\\.stack-work\\logs"
 
 install:
   # 
   # z3
   # 
 - mkdir $HOME/z3 || echo exists
-- wget -O z3.zip https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x64-win.zip
+- wget -O z3.zip https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-%platform%-win.zip
   # https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x86-win.zip
 - unzip z3.zip
-- cp z3-4.4.1-x64-win-10.11/bin/z3.exe $HOME/z3.exe
+- cp z3-4.4.1-%platform%-win-10.11/bin/z3.exe $HOME/z3.exe
 - export PATH="$HOME/z3:$PATH"
 - z3 -h
   # 
@@ -29,7 +38,7 @@ environment:
     STACK_ROOT: "c:\\sr"
   matrix: 
     - lts: --resolver lts-3
-    - lts: --resolver lts-6
+    # - lts: --resolver lts-6
     - lts: --resolver lts-7
     - lts: ""
 
@@ -37,9 +46,14 @@ platform:
   - x86
   - x64
 
+build:
+  parallel: true
+
+build_script:
+- stack setup %lts% > nul
+- cmd: echo "" | stack --no-terminal build %lts% --test
+
 test_script:
-- pwd
-- stack setup > nul
 # The ugly echo "" hack is to avoid complaints about 0 being an invalid file
 # descriptor
-- echo "" | stack --no-terminal test $(lts)
+- cmd: echo "" | stack --no-terminal test %lts%
