@@ -1,16 +1,16 @@
 # Disabled cache in hope of improving reliability of AppVeyor builds
 cache:
 # - "c:\\sr" # stack root, short paths == fewer problems
-- "c:\\sr\\build-plan"
-- "c:\\sr\\build-plan-cache"
-- "c:\\sr\\config.yaml"
-- "c:\\sr\\global-project"
-- "c:\\sr\\indices"
-- "c:\\sr\\precompiled"
-- "c:\\sr\\programs"
-- "c:\\sr\\setup-exe-cache"
-- "c:\\sr\\snapshots"
-- "c:\\sr\\templates"
+# - "c:\\sr\\build-plan"
+# - "c:\\sr\\build-plan-cache"
+# - "c:\\sr\\config.yaml"
+# - "c:\\sr\\global-project"
+# - "c:\\sr\\indices"
+# - "c:\\sr\\precompiled"
+# - "c:\\sr\\programs"
+# - "c:\\sr\\setup-exe-cache"
+# - "c:\\sr\\snapshots"
+# - "c:\\sr\\templates"
 - "C:\\stack\\.stack-work\\downloaded"
 - "C:\\stack\\.stack-work\\install"
 - "C:\\stack\\.stack-work\\logs"
@@ -19,13 +19,14 @@ install:
   # 
   # z3
   # 
-- mkdir c:/z3 || echo exists
-- wget -O z3.zip https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-%platform%-win.zip
+- mkdir c:\\z3 || echo exists
+- curl -sS -oz3.zip -L --insecure https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-%platform%-win.zip
   # https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x86-win.zip
 - unzip z3.zip
-- cp z3-4.4.1-%platform%-win-10.11/bin/z3.exe c:/z3/
-- set PATH="c:/z3:$PATH"
-- z3 -h
+- cp z3-4.4.1-%platform%-win\\bin\\z3.exe c:\\z3\\
+- cp z3-4.4.1-%platform%-win\\bin\\z3.exe c:\\stack\\
+# - set PATH="c:\\z3;%PATH%"
+- z3 -h || echo ""
   # 
   # Stack
   # 
