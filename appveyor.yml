@@ -19,12 +19,12 @@ install:
   # 
   # z3
   # 
-- mkdir $HOME/z3 || echo exists
+- mkdir c:/z3 || echo exists
 - wget -O z3.zip https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-%platform%-win.zip
   # https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/z3-4.4.1-x86-win.zip
 - unzip z3.zip
-- cp z3-4.4.1-%platform%-win-10.11/bin/z3.exe $HOME/z3.exe
-- export PATH="$HOME/z3:$PATH"
+- cp z3-4.4.1-%platform%-win-10.11/bin/z3.exe c:/z3/
+- set PATH="c:/z3:$PATH"
 - z3 -h
   # 
   # Stack
