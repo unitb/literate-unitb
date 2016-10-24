@@ -22,7 +22,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/literate-unitb/syntax-error.git
-    commit: 22db4476408a2e6daa193a8e4a0887eb4f3dc7c4
+    commit: f61d650613d3cc1a63948210b7f5a134caf96179
 - location:
     git: https://github.com/literate-unitb/literate-unitb-config.git
     commit: 946dcefbac6e8d88cedb863660441020da5c2eac
