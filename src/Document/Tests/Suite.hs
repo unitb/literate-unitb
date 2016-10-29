@@ -85,7 +85,7 @@ many_file_obligations' files = do
             return (m',(ms,ts))
     else do
         let fs = L.map snd $ NE.filter (not.fst) $ NE.zip b files
-            errs = Left [Error ([printf|The following files do not exist: %s|] $ intercalate "," fs) $ LI "" 1 1]
+            errs = Left [Error ([s|The following files do not exist: %s|] $ intercalate "," fs) $ LI "" 1 1]
         return (errs,errs)
 
 verifyFiles :: NonEmpty FilePath 
@@ -125,10 +125,10 @@ verifyFilesOnlyWith opt keep files i = makeReport' empty $ do
             case r of
                 Right (s,_,_) -> return (s, pos)
                 Left e -> return (show (e :: SomeException),pos)
-        else return ([printf|accessing %dth refinement out of %d|] i (size ms),empty)
+        else return ([s|accessing %dth refinement out of %d|] i (size ms),empty)
     else do
         let fs = L.map snd $ NE.filter (not.fst) $ NE.zip b files
-        return ([printf|The following files do not exist: %s|] $ intercalate "," fs,empty)
+        return ([s|The following files do not exist: %s|] $ intercalate "," fs,empty)
 
 all_proof_obligations' :: FilePath -> EitherT String IO [Map Label String]
 all_proof_obligations' path = do
@@ -139,7 +139,7 @@ all_proof_obligations' path = do
         let pos = M.elems $ M.map snd xs
             cmd = L.map (M.map z3_code) pos
         return cmd
-    else left $ [printf|file does not exist: %s|] path
+    else left $ [s|file does not exist: %s|] path
 
 all_proof_obligations :: FilePath -> IO (Either String [Map Label String])
 all_proof_obligations = runEitherT . all_proof_obligations'
@@ -160,8 +160,8 @@ raw_proof_obligation path lbl i = makeReport $ do
                 (label lbl) 
                 (UB.raw_proof_obligation m)
         let cmd = z3_code po
-        return $ [printf|; %s\n%s; %s\n|] lbl cmd lbl
-    else return $ [printf|file does not exist: %s|] path
+        return $ [s|; %s\n%s; %s\n|] lbl cmd lbl
+    else return $ [s|file does not exist: %s|] path
 
 stripAnnotation :: Expr -> Expr
 stripAnnotation e = E.rewrite stripAnnotation $ f e
@@ -181,7 +181,7 @@ lookupSequent lbl pos = case pos^?ix lbl of
                 Just po -> 
                     Right po
                 Nothing ->
-                    Left $ [printf|invalid label: %s\n%s|] (pretty lbl) $ 
+                    Left $ [s|invalid label: %s\n%s|] (pretty lbl) $ 
                         unlines $ L.map pretty $ keys pos
 
 lookupSequent' :: Monad m 
@@ -202,14 +202,14 @@ sequent' path lbl i = do
             let pos = snd $ snd $ i `elemAt` xs
             lookupSequent' (label lbl) pos
         else
-            left $ [printf|accessing %dth refinement out of %d|] i (size xs)   
+            left $ [s|accessing %dth refinement out of %d|] i (size xs)   
 
 proof_obligation_with :: (Expr -> Expr) 
                       -> FilePath -> String 
                       -> Int -> IO String
 proof_obligation_with f path lbl i = either id disp <$> sequent path lbl i
     where
-        disp po = [printf|; %s\n%s; %s\n|] lbl (cmd po) lbl
+        disp po = [s|; %s\n%s; %s\n|] lbl (cmd po) lbl
         cmd po = z3_code 
                   $ po & nameless %~ L.map f
                        & named %~ M.map f
@@ -228,7 +228,7 @@ find_errors path = do
             (hide . intercalate "\n" . L.map ((++ "\n") . report))
             (const $ "no errors")
             m
-    else return $ [printf|file does not exist: %s|] path
+    else return $ [s|file does not exist: %s|] path
 
 parse_machine :: FilePath -> Int -> IO (Either [Error] Machine)
 parse_machine path n = runEitherT $ parse_machine' path n
@@ -245,7 +245,7 @@ parse path = do
     if exists then
         (mapBoth mapError f . fst) <$> list_file_obligations' path
     else 
-        return $ Left [Error ([printf|'%s' does not exist|] path) $ LI "" 1 1]
+        return $ Left [Error ([s|'%s' does not exist|] path) $ LI "" 1 1]
 
 parse' :: FilePath -> EitherT [Error] IO [Machine]
 parse' = EitherT . parse
@@ -260,7 +260,7 @@ verify_thy path name = makeReport' empty $ do
             case res of
                 Right res -> return (unlines $ L.map (\(k,r) -> success r ++ pretty k) $ toAscList res, pos)
                 Left e -> return (show e,pos)
-        else return ([printf|file does not exist: %s|] path,empty)
+        else return ([s|file does not exist: %s|] path,empty)
     where
         success True  = "  o  "
         success False = " xxx "
@@ -271,7 +271,7 @@ get_system path = do
     if exists then do
         EitherT $ either (Left . show_err) Right 
             <$> parse_system path
-    else left $ [printf|file does not exist: %s|] path
+    else left $ [s|file does not exist: %s|] path
 
 get_system' :: FilePath -> EitherT [Error] IO System
 get_system' path = do
@@ -279,7 +279,7 @@ get_system' path = do
     let li = LI "get_system'" 1 1
     if exists then do
         EitherT $ parse_system path
-    else left $ [Error ([printf|file does not exist: %s|] path) li]
+    else left $ [Error ([s|file does not exist: %s|] path) li]
 
 lookup :: (Pre,Monad m,Ixed f,Show (Index f)) => Index f -> f -> EitherT [Error] m (IxValue f)
 lookup k m = maybe (left $ errorTrace [$__FILE__] ?loc (show k)) return $ m^?ix k

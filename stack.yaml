@@ -22,22 +22,19 @@ packages:
 - '.'
 - location:
     git: https://github.com/literate-unitb/syntax-error.git
-    commit: f61d650613d3cc1a63948210b7f5a134caf96179
+    commit: 84af568ffd9427e66dc93abbe40d9c08715ba021
 - location:
     git: https://github.com/literate-unitb/literate-unitb-config.git
-    commit: 946dcefbac6e8d88cedb863660441020da5c2eac
+    commit: 118b906d59cf7586782d292baff5ae65988d0b63
 - location:
     git: https://github.com/literate-unitb/literate-unitb-utils.git
-    commit: 6ae4b72367ff56cdb47b60d5e920c5a48c6dc431
+    commit: 9e62be5a42bc11ecc89bd40284bb73fc2a8407fe
 - location:
     git: https://github.com/literate-unitb/literate-unitb-latex.git
-    commit: ef8421d12094d69a5e8e3bc219ba5515c2d7672a
+    commit: 78529049b88999df3eb76340db166d9892d46bfd
 - location:
     git: https://github.com/literate-unitb/literate-unitb-logic.git
-    commit: 17ae3b8aad16b247f91d88dbc340867a6955a15f
-- location:
-    git: https://github.com/literate-unitb/existential.git
-    commit: 9f90a2b17286c64e731a121ba3f02ddaf45883ae
+    commit: 7f68db17bde27748500f24895bf44f4e4ee7d080
 - location:
     git: https://github.com/literate-unitb/unfoldable.git
     commit: 8dc15076a4c6c3efdb2c6680e6c5944633a25ae7
@@ -45,38 +42,20 @@ packages:
     git: https://github.com/literate-unitb/partial-order.git
     commit: 0f1629aa99c0a74bccd4e98e63960361175d16c6
 - location:
-    git: https://github.com/literate-unitb/printf-th.git
-    commit: e7c85fc6f210516e9c66e1e7f6bf52996653629c
-- location:
     git: https://github.com/literate-unitb/unitb-testing.git
-    commit: f2f34ac7b216b0e412b8cdcabefd7091be4c69dc
+    commit: 6098f62adcb956a5ba924b8cc2f6ac550d4f65f9
 - location:
     git: https://github.com/literate-unitb/typelist-functor.git
-    commit: 5e97b991f81714941f93436905f14c1bda90d89b
+    commit: 58648576c10906df5b3de12ce27715e129e818d0
 - location:
     git: https://github.com/literate-unitb/transformer-lenses.git
     commit: 405f81025293b9f9cd25145644ca86fe88a69388
 - location:
     git: https://github.com/literate-unitb/string-lenses.git
-    commit: 17dc67f1023470af623ee7d1812daf80728204e4
+    commit: 0d616b2f754391ba62581348464f45bcb8561019
 - location:
     git: https://github.com/literate-unitb/show-with.git
     commit: 6be72dbe945cae0945dd18a835f56c7a807937a7
-- location:
-    git: https://github.com/literate-unitb/printf-th.git
-    commit: e7c85fc6f210516e9c66e1e7f6bf52996653629c
-- location:
-    git: https://github.com/literate-unitb/axiomatic-classes.git
-    commit: fab4912ab0811d784c841509dbfbb208864403d2
-- location:
-    git: https://github.com/literate-unitb/invariants.git
-    commit: 4e406aa7bb9f144f78c85e753a2f41c2b291e59e
-- location:
-    git: https://github.com/literate-unitb/classy-lens-hierarchy.git
-    commit: 6c4edc765a66f10d4a6cd2f1a7490e91a2673704
-- location:
-    git: https://github.com/literate-unitb/serialize-instances.git
-    commit: 9495695c87852e8dd75241644f3201722e334161
 - location:
     git: https://github.com/literate-unitb/generic-instances.git
     commit: 8d67a6479d3b5a38c69efd114c1d59d2b81c813c
@@ -88,16 +67,19 @@ packages:
     commit: 6ccc3764141bc014426ee9109315afa8d6e7d353
 - location:
     git: https://github.com/literate-unitb/file-system-mockup.git
-    commit: f9a2603fc732b1ee9877393cad7e89c9f5d90b5a
+    commit: 681bd9905e0b3b0480e023147d788fc5a64e6cbb
 - location:
     git: https://github.com/literate-unitb/bipartite-graph.git
-    commit: 7ab97d0f1c5bc1e62a835438fd5e6e1171eb31cd
+    commit: 0e430c7a0571b31d980bf4141197ec6c19b964b6
 - location:
     git: https://github.com/literate-unitb/data-compressed.git
-    commit: 3caa409b9cd5afe7c5bc0b36acc10adde9c44c4f
+    commit: adc46a9bee9db68a72e09504c410abb5611ecad1
+- location:
+    git: https://github.com/literate-unitb/classy-lens-hierarchy.git
+    commit: a82197c81f2f8cdb4ecce54495ca62a6c10ad3d1
 - location:
     git: https://github.com/literate-unitb/pretty-printable.git
-    commit: 742ac9f6e4f369881b4354906c19e65ea75d97b1
+    commit: 1adc34c9f88a5e9fec25d39cd193aec65c4625e9
 - location:
     git: https://github.com/literate-unitb/data-packaged.git
     commit: 25bb09dcdd5220d457b6801fd9c6a2c376343a9f
@@ -115,6 +97,14 @@ extra-deps:
 - shelly-1.6.8.1
 - time-1.5.0.1
 - pseudomacros-0.0.2
+- packunused-0.1.1.4
+- th-printf-0.3.1
+- quickcheck-report-0.1.0.0
+- portable-template-haskell-lens-0.1.0.0
+- serialize-instances-0.1.0.0
+- control-invariants-0.1.0.0
+- existential-0.2.0.0
+- axiomatic-classes-0.1.0.0
 
 # Override default flag values for local packages and extra-deps
 flags: {}

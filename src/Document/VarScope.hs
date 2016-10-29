@@ -245,7 +245,7 @@ instance Scope EvtDecls where
                 | otherwise = Just m
     error_item (Evt m) = fromJust' $ NE.nonEmpty $ elems $ mapWithKey msg m
         where
-            msg (Right k) x = ([printf|%s (event '%s')|] (kind x) (pretty k), x^.lineInfo)
+            msg (Right k) x = ([s|%s (event '%s')|] (kind x) (pretty k), x^.lineInfo)
             msg (Left DummyDecl) x  = ("dummy", x^.lineInfo)
     merge_scopes' (Evt m0) (Evt m1) = Evt <$> scopeUnion merge_scopes' m0 m1
     rename_events' lookup (Evt vs) = Evt <$> concatMap f (toList vs)

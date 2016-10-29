@@ -58,7 +58,7 @@ tr_hint p2 vs lbls thint = do
     evs <- get_events p2 $ NE.toList lbls
     let vs = L.map (view pIndices p2 !) evs
         err e ind = ( not $ M.null diff
-                    , [printf|A witness is needed for %s in event '%s'|] 
+                    , [s|A witness is needed for %s in event '%s'|] 
                         (intercalate "," $ render <$> keys diff) (pretty e))
             where
                 diff = ind `M.difference` wit
@@ -79,7 +79,7 @@ tr_hint' p2 fv lbls = visit_doc []
                 evs <- _unM $ get_events p2 lbls
                 let inds = p2^.pIndices
                 vs <- _unM $ bind_all evs 
-                    ([printf|'%s' is not an index of '%s'|] (render x) . pretty) 
+                    ([s|'%s' is not an index of '%s'|] (render x) . pretty) 
                     (\e -> x `M.lookup` (inds ! e))
                 let Var _ t = NE.head vs
                     ind = prime $ Var x t
@@ -90,7 +90,7 @@ tr_hint' p2 fv lbls = visit_doc []
                 return $ TrHint (insert x (t, expr) ys) z)
         , ( "\\lt"
           , CmdBlock $ \(Identity prog) (TrHint ys z) -> do
-                let msg = [printf|Only one progress property needed for '%s'|]
+                let msg = [s|Only one progress property needed for '%s'|]
                 _unM $ toEither $ error_list 
                     [ ( not $ MM.isNothing z
                       , msg $ pretty $ NE.toList lbls )

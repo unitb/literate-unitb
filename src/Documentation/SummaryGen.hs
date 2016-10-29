@@ -61,22 +61,22 @@ isDefault p lbl = maybe False (\f -> f lbl "default")
 makeRef :: ExprDispOpt label expr 
         -> EventId -> label -> M String
 makeRef p pre lbl
-    | isDefault p lbl = return $ [printf|(\\ref{%s}/default)|] $ pretty pre
-    | otherwise       = return $ [printf|\\eqref{%s}|] (pretty pre ++ (p^.pretty') lbl)
+    | isDefault p lbl = return $ [s|(\\ref{%s}/default)|] $ pretty pre
+    | otherwise       = return $ [s|\\eqref{%s}|] (pretty pre ++ (p^.pretty') lbl)
 
 combineLblExpr :: ExprDispOpt label expr
                -> EventId -> label -> String -> M String
 combineLblExpr opts pre lbl expr = case opts^.style of 
-                    Untagged   -> [printf|  \\item[ ]%s\n  %%%s|] 
+                    Untagged   -> [s|  \\item[ ]%s\n  %%%s|] 
                                             -- <$> makeRef opts pre lbl
                                             <$> format_formula expr
                                             <*> makeRef opts pre lbl
-                    Tagged     -> [printf|  \\item[ %s ]%s|] 
+                    Tagged     -> [s|  \\item[ %s ]%s|] 
                                             <$> makeRef opts pre lbl
                                             <*> format_formula expr
                     Definition -> fmap ("  \\item[] " ++)
                                     $ format_formula 
-                                    $ [printf|%s \\3\\triangleq %s|] 
+                                    $ [s|%s \\3\\triangleq %s|] 
                                             (opts^.pretty' $ lbl) 
                                             expr
 
@@ -131,12 +131,12 @@ make_file :: FilePath -> M () -> Doc ()
 make_file fn cmd = do
     path <- ask
     let xs = snd $ execRWS cmd False ()
-        root = [printf|%%!TEX root=../%s|] (takeFileName path)
+        root = [s|%%!TEX root=../%s|] (takeFileName path)
     writeFile (dropExtension path </> fn) 
         $ L.unlines $ root : xs
 
 keyword :: String -> String
-keyword kw = [printf|\\textbf{%s}|] kw
+keyword kw = [s|\\textbf{%s}|] kw
 
 machine_summary :: System -> Machine -> Doc ()
 machine_summary sys m = do
@@ -243,7 +243,7 @@ getListing cmd = L.unlines $ snd $ execRWS cmd False ()
 
 input :: FilePath -> String -> M ()
 input path fn = do
-    tell [[printf|\\input{%s/%s}|] (takeBaseName path) $ dropExtension fn]
+    tell [[s|\\input{%s/%s}|] (takeBaseName path) $ dropExtension fn]
 
 kw_end :: M ()
 kw_end = tell ["\\textbf{end} \\\\"]
@@ -259,7 +259,7 @@ comment_of :: Machine -> DocItem -> M ()
 comment_of m key = do
     item $ do
         case key `M.lookup` (m!.comments) of
-            Just cmt -> block $ item $ tell [[printf|%s|] cmt]
+            Just cmt -> block $ item $ tell [[s|%s|] cmt]
             Nothing -> return ()
 
 init_summary :: Machine -> M ()
@@ -307,14 +307,14 @@ set_sum m = section (keyword "sets") $
     unless (M.null $ m!.theory.types) $
     block $ do
         forM_ (keys $ m!.theory.types) $ \v -> do
-            item $ tell [[printf|$%s$|] $ render v]
+            item $ tell [[s|$%s$|] $ render v]
 
 constant_sum :: Machine -> M ()
 constant_sum m = section (keyword "constants") $ 
     unless (M.null $ m!.theory.consts) $
     block $ do
         forM_ (elems $ m!.theory.consts) $ \v -> do
-            item $ tell [[printf|$%s$|] $ varDecl v]
+            item $ tell [[s|$%s$|] $ varDecl v]
 
 variable_sum :: Machine -> M ()
 variable_sum m = section (keyword "variables") $ 
@@ -322,13 +322,13 @@ variable_sum m = section (keyword "variables") $
     block $ do
         when show_removals $ 
             forM_ (elems $ view' abs_vars m `M.difference` view' variables m) $ \v -> do
-                item $ tell [[printf|$%s$\\quad(removed)|] $ varDecl v]
+                item $ tell [[s|$%s$\\quad(removed)|] $ varDecl v]
                 comment_of m (DocVar $ v^.name)
         forM_ (elems $ view' abs_vars m `M.intersection` view' variables m) $ \v -> do
-            item $ tell [[printf|$%s$|] $ varDecl v]
+            item $ tell [[s|$%s$|] $ varDecl v]
             comment_of m (DocVar $ v^.name)
         forM_ (elems $ view' variables m `M.difference` view' abs_vars m) $ \v -> do
-            item $ tell [[printf|$%s$\\quad(new)|] $ varDecl v]
+            item $ tell [[s|$%s$\\quad(new)|] $ varDecl v]
             comment_of m (DocVar $ v^.name)
 
 data Member = Elem | Subset
@@ -337,14 +337,14 @@ varDecl :: Var -> String
 varDecl v = render (v^.name) ++ fromMaybe "" (isMember $ type_of v)
 
 withParenth :: Bool -> String -> String
-withParenth True  = [printf|(%s)|]
+withParenth True  = [s|(%s)|]
 withParenth False = id
 
 isMember :: Type -> Maybe String
 isMember t = join (preview (_FromSort.to f) t) <|> ((" \\in " ++) <$> typeToSet False t)
     where
         f (DefSort n _ _ _,ts) 
-            | n == [tex|\set|] = [printf| \\subseteq %s|] <$> typeToSet False (ts !! 0)
+            | n == [tex|\set|] = [s| \\subseteq %s|] <$> typeToSet False (ts !! 0)
         f _ = Nothing
 
 
@@ -352,16 +352,16 @@ typeToSet :: Bool -> Type -> Maybe String
 typeToSet paren = join . preview (_FromSort.to f)
     where
         f (DefSort n _ _ _,ts) 
-            | n == [tex|\set|] = withParenth paren . [printf|\\pow.%s|] <$> typeToSet True (ts !! 0)
+            | n == [tex|\set|] = withParenth paren . [s|\\pow.%s|] <$> typeToSet True (ts !! 0)
             | n == [tex|\pfun|] = withParenth paren <$> 
-                                    liftM2 [printf|%s \\pfun %s|] 
+                                    liftM2 [s|%s \\pfun %s|] 
                                         (typeToSet True (ts !! 0))
                                         (typeToSet True (ts !! 1))
         f (Sort n _ _,_) 
             | otherwise  = Just (render n)
-        f (IntSort,[]) = Just [printf|\\mathbb{Z}|]
-        f (RealSort,[]) = Just [printf|\\mathbb{R}|]
-        f (BoolSort,[]) = Just [printf|\\textbf{Bool}|]
+        f (IntSort,[]) = Just [s|\\mathbb{Z}|]
+        f (RealSort,[]) = Just [s|\\mathbb{R}|]
+        f (BoolSort,[]) = Just [s|\\textbf{Bool}|]
         f _ = Nothing
 
 
@@ -408,7 +408,7 @@ liveness_sum m = do
     where
         kw = "\\textbf{progress}"
         toString (LeadsTo _ p q) = 
-            [printf|%s \\quad \\mapsto\\quad %s|]
+            [s|%s \\quad \\mapsto\\quad %s|]
                 (prettyPrint p)
                 (prettyPrint q)
 
@@ -420,7 +420,7 @@ safety_sum prop = do
     where
         kw = "\\textbf{safety}"
         toString (Unless _ p q) = 
-                [printf|%s \\textbf{\\quad unless \\quad} %s|] p' q'
+                [s|%s \\textbf{\\quad unless \\quad} %s|] p' q'
             where
                 p' = prettyPrint p
                 q' = prettyPrint q
@@ -434,22 +434,22 @@ transient_sum m = do
     where
         kw = "\\textbf{transient}"
         toString (Tr _ p evts hint) = 
-                [printf|%s \\qquad \\text{(%s$%s$%s)}|] 
+                [s|%s \\qquad \\text{(%s$%s$%s)}|] 
                     p' evts' sub'' lt'
             where
                 TrHint sub lt = hint
                 evts' :: String
-                evts' = intercalate "," $ L.map ([printf|\\ref{%s}|] . pretty) (NE.toList evts)
+                evts' = intercalate "," $ L.map ([s|\\ref{%s}|] . pretty) (NE.toList evts)
                 sub'  = M.toList sub & traverse._2 %~ (prettyPrint . snd)
                 isNotIdent n (getExpr -> Word (Var n' _)) = n /= n'
                 isNotIdent _ _ = True
                 sub'' :: String
                 sub'' 
                     | M.null $ M.filterWithKey isNotIdent $ M.map snd sub = ""
-                    | otherwise  = [printf|: [%s]|] (intercalate ", " $ L.map asgnString sub')
-                asgnString (v,e) = [printf|%s := %s'~|~%s|] (render v) (render v) e
+                    | otherwise  = [s|: [%s]|] (intercalate ", " $ L.map asgnString sub')
+                asgnString (v,e) = [s|%s := %s'~|~%s|] (render v) (render v) e
                 lt' :: String
-                lt' = maybe "" ([printf|, with \\eqref{%s}|] . pretty) lt
+                lt' = maybe "" ([s|, with \\eqref{%s}|] . pretty) lt
                 p' = prettyPrint p
 
 constraint_sum :: Machine -> M ()
@@ -529,7 +529,7 @@ refines_sum e = do
     where
         kw = "\\textbf{refines}"
         disp :: EventId -> String
-        disp = [printf|\\ref{%s}|] . pretty
+        disp = [s|\\ref{%s}|] . pretty
 
 csched_sum :: EventId -> EventMerging' -> M ()
 csched_sum lbl e = do
@@ -560,7 +560,7 @@ param_sum :: EventMerging' -> M ()
 param_sum e
     | M.null $ e^.params  = return ()
     | otherwise           = do
-        tell [[printf|\\textbf{any} $%s$|] $ 
+        tell [[s|\\textbf{any} $%s$|] $ 
                 intercalate "," (L.map (render . view name) $ M.elems $ e^.params)]
 
 guard_sum :: EventId -> EventMerging' -> M ()
@@ -581,15 +581,15 @@ act_sum lbl e = section kw $ do
     where 
         kw = "\\textbf{begin}"
         put_assign (Assign v e) = 
-            [printf|%s \\bcmeq %s|] 
+            [s|%s \\bcmeq %s|] 
                 (render $ v^.name)
                 (prettyPrint e)
         put_assign (BcmSuchThat vs e) = 
-            [printf|%s \\bcmsuch %s|] 
+            [s|%s \\bcmsuch %s|] 
                 (intercalate "," $ L.map (render . view name) vs :: String)
                 (prettyPrint e)
         put_assign (BcmIn v e) = 
-            [printf|%s \\bcmin %s|] 
+            [s|%s \\bcmin %s|] 
                 (render $ v^.name)
                 (prettyPrint e)
 

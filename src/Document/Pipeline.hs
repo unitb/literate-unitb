@@ -249,8 +249,8 @@ machineSyntax (Pipeline mch _ _) =
            M.foldMapWithKey cmd (getCommandSpec mch)
         ++ M.foldMapWithKey env (getEnvSpec mch)
     where
-        argument p = [printf|{%s}|] (argKind p)
+        argument p = [s|{%s}|] (argKind p)
         cmd x (ArgumentSpec _ xs) = [x ++ foldMapTupleType latexArgProxy argument xs]
-        env x (ArgumentSpec _ xs) = [[printf|\\begin{%s}%s .. \\end{%s}|] x
+        env x (ArgumentSpec _ xs) = [[s|\\begin{%s}%s .. \\end{%s}|] x
                     (foldMapTupleType latexArgProxy argument xs :: String) x]
 

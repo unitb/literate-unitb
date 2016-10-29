@@ -220,13 +220,13 @@ instance Readable Int where
         case reads arg of 
             [(n,"")] -> return n
             _ -> lift $ do
-                E.left [Error ([printf|invalid integer: '%s'|] arg) $ line_info ts]
+                E.left [Error ([s|invalid integer: '%s'|] arg) $ line_info ts]
     read_one = do
         (arg,li) <- read_label
         case reads arg of
             [(n,"")] -> return n
             _ -> lift $ do
-                E.left [Error ([printf|invalid integer: '%s'|] arg) li]
+                E.left [Error ([s|invalid integer: '%s'|] arg) li]
 
 instance Readable Double where
     read_args = do
@@ -236,13 +236,13 @@ instance Readable Double where
         case reads arg of 
             [(n,"")] -> return n
             _ -> lift $ do
-                E.left [Error ([printf|invalid number: '%s'|] arg) $ line_info ts]
+                E.left [Error ([s|invalid number: '%s'|] arg) $ line_info ts]
     read_one = do
         (arg,li) <- read_label
         case reads arg of
             [(n,"")] -> return n
             _ -> lift $ do
-                E.left [Error ([printf|invalid number: '%s'|] arg) li]
+                E.left [Error ([s|invalid number: '%s'|] arg) li]
 
 instance Readable (Maybe Label) where
     read_args = do
@@ -297,13 +297,13 @@ instance Readable [[Str]] where
         case reads $ flatten' arg of 
             [(n,"")] -> return n
             _ -> lift $ do
-                throwError [Error ([printf|invalid list of strings: '%s'|] $ show arg) $ line_info arg]
+                throwError [Error ([s|invalid list of strings: '%s'|] $ show arg) $ line_info arg]
     read_one = do
         arg <- get_next
         case reads $ flatten' arg of 
             [(n,"")] -> return n
             _ -> lift $ do
-                throwError [Error ([printf|invalid list of strings: '%s'|] $ show arg) $ line_info arg]
+                throwError [Error ([s|invalid list of strings: '%s'|] $ show arg) $ line_info arg]
 
 instance Read Str where
     readPrec = do
@@ -640,7 +640,7 @@ visitor :: Monad m
 visitor blks cmds = do
         unless (all (\(x,_) -> take 1 x == "\\") cmds) 
             $ error $ "Document.Visitor.visitor: "
-                    ++ [printf|all commands must start with '\\': %s|] (show $ map fst cmds)
+                    ++ [s|all commands must start with '\\': %s|] (show $ map fst cmds)
         xs <- VisitorT $ lift $ asks snd
         runReaderT (do
             forM_ (contents' xs) ff
@@ -657,7 +657,7 @@ visit_doc blks cmds cs x = do
 --        s0 <- RWS.get
         unless (all (\(x,_) -> take 1 x == "\\") cmds) 
             $ error $ "Document.Visitor.visit_doc: "
-                    ++ [printf|all commands must start with '\\': %s|] (show $ map fst cmds)
+                    ++ [s|all commands must start with '\\': %s|] (show $ map fst cmds)
         (err,x) <- flip ST.runStateT x $ 
             runEitherT $ 
             run_visitor (line_info cs) cs $ visitor 

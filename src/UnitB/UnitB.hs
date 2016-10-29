@@ -50,7 +50,7 @@ import GHC.Generics.Instances
 
 import Test.QuickCheck.ZoomEq
 
-import Text.Printf.TH
+import Text.Printf.TH as Printf
 
 import Utilities.Syntactic
 
@@ -217,7 +217,7 @@ withPOs ps m = fmap check' $ do
             let poBox = box $ \() -> raw_machine_pos' m
                 pos = unbox poBox
                 p = intersectionWith (\s (t,li) -> eitherToValidation $ runTactic li s t) pos ps
-                f lbl (_,li) = Error ([printf|proof obligation does not exist: %s\n\n%s|] 
+                f lbl (_,li) = Error ([Printf.s|proof obligation does not exist: %s\n\n%s|] 
                                         (pretty lbl) (unlines $ map pretty $ M.keys pos)) li
                 errs = concat (p^.partsOf (traverse._Failure)) ++ elems (mapWithKey f $ ps `difference` pos)
                 errs' | null errs = sequenceA p

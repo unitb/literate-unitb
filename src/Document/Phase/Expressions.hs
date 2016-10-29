@@ -74,7 +74,7 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
             returnA -< SystemP ref x
     where
         err_msg :: Label -> String
-        err_msg = [printf|Multiple expressions with the label %s|] . pretty
+        err_msg = [s|Multiple expressions with the label %s|] . pretty
         wrapup :: Hierarchy MachineId
                -> MMap MachineP2 
                -> Maybe [Map MachineId [(Label, ExprScope)]]
@@ -177,7 +177,7 @@ bcmeq_assgn = machineCmd "\\evbcmeq" $ \(Conc evt, NewLabel lbl, VarName v, Expr
             let _ = lbl :: Label
             ev <- get_event p2 $ as_label (evt :: EventId)
             var@(Var _ t) <- bind
-                ([printf|variable '%s' undeclared|] $ render v)
+                ([s|variable '%s' undeclared|] $ render v)
                 $ v `M.lookup` (p2^.pStateVars)
             li <- ask
             xp <- parse_expr''
@@ -197,7 +197,7 @@ bcmsuch_assgn = machineCmd "\\evbcmsuch" $ \(Conc evt, NewLabel lbl, vs, Expr xs
                     (event_parser p2 ev & is_step .~ True)
                     xs
             vars <- bind_all (map getVarName vs)
-                ([printf|variable '%s' undeclared|] . render)
+                ([s|variable '%s' undeclared|] . render)
                 $ (`M.lookup` (p2^.pStateVars))
             let act = BcmSuchThat vars xp
             return [(lbl,evtScope ev (Action (InhAdd (pure (ev,li),act)) Local $ pure li))]
@@ -207,7 +207,7 @@ bcmin_assgn :: MPipeline MachineP2
 bcmin_assgn = machineCmd "\\evbcmin" $ \(Conc evt, NewLabel lbl, VarName v, Expr xs) _m p2 -> do
             ev <- get_event p2 $ as_label (evt :: EventId)
             var@(Var _ t) <- bind
-                ([printf|variable '%s' undeclared|] $ render v)
+                ([s|variable '%s' undeclared|] $ render v)
                 $ v `M.lookup` (p2^.pStateVars)
             li  <- ask
             xp <- parse_expr''
@@ -225,17 +225,17 @@ instance IsExprScope Initially where
         return $ case (i^.inhStatus,i^.declSource) of
             (InhAdd x,_)
                 | L.null lis' -> [Right $ PInit lbl x]
-                | otherwise   -> [Left $ MLError msg $ ([printf|predicate %s|] $ pretty lbl,li) :| lis']
+                | otherwise   -> [Left $ MLError msg $ ([s|predicate %s|] $ pretty lbl,li) :| lis']
                 where
                     lis = L.map (first $ view name) $ M.elems $ vs `M.intersection` used_var' x
-                    lis' = L.map (first ([printf|deleted variable %s|] . render)) lis
-                    msg  = [printf|In '%s', initialization predicate '%s' refers to deleted symbols|] 
+                    lis' = L.map (first ([s|deleted variable %s|] . render)) lis
+                    msg  = [s|In '%s', initialization predicate '%s' refers to deleted symbols|] 
                                     (pretty mid) (pretty lbl)
             (InhDelete (Just x),Local) -> [Right $ PDelInits lbl x]
             (InhDelete (Just _),Inherited) -> []
             (InhDelete Nothing,_) -> [Left $ Error msg li]
                 where
-                    msg = [printf|initialization predicate '%s' was deleted but does not exist|] $ pretty lbl
+                    msg = [s|initialization predicate '%s' was deleted but does not exist|] $ pretty lbl
         where
             li = i^.lineInfo
     toThyExpr _ _  = return []
@@ -263,7 +263,7 @@ witness_decl = machineCmd "\\witness" $ \(Conc evt, VarName var, Expr xp) _m p2 
                 newIndices = (AddedIndex,  ) <$> p2^.evtMergeAdded ev eIndices
                 delParams  = (DeletedParam,) <$> p2^.evtMergeDel ev eIndices
             (isVar,v)  <- bind 
-                ([printf|'%s' is not a disappearing variable or a new index|] (render var))
+                ([s|'%s' is not a disappearing variable or a new index|] (render var))
                 (var `M.lookup` (disappear `M.union` newIndices `M.union` delParams))
             p  <- parse_expr'' (event_parser p2 ev &~ do 
                         is_step .= True
@@ -285,12 +285,12 @@ instance Scope EventExpr where
         where
             msg (Right k) sc 
                 | inheritedFrom sc `elem` [[],[k]]
-                    = ([printf|%s (event '%s')|] (kind sc) (pretty k) :: String, view lineInfo sc)
+                    = ([s|%s (event '%s')|] (kind sc) (pretty k) :: String, view lineInfo sc)
                 | otherwise
-                    = ([printf|%s (event '%s', from '%s')|] (kind sc) (pretty k) parents :: String, view lineInfo sc)
+                    = ([s|%s (event '%s', from '%s')|] (kind sc) (pretty k) parents :: String, view lineInfo sc)
                 where
                     parents = intercalate "," $ map pretty $ inheritedFrom sc
-            msg (Left _) sc = ([printf|%s (initialization)|] (kind sc) :: String, view lineInfo sc)
+            msg (Left _) sc = ([s|%s (initialization)|] (kind sc) :: String, view lineInfo sc)
     merge_scopes' (EventExpr m0) (EventExpr m1) = EventExpr <$> scopeUnion merge_scopes' m0 m1
     rename_events' lookup (EventExpr es) = map EventExpr $ concatMap f $ toList es
         where
@@ -309,22 +309,26 @@ checkLocalExpr' expKind free eid lbl sch = do
             mid <- view $ pMachineId.to pretty
             return $ case sch^.inhStatus of
                 InhAdd expr -> 
-                    let msg = [printf|In '%s', event '%s', %s '%s' refers to deleted symbols|] 
+                    let msg = [s|In '%s', event '%s', %s '%s' refers to deleted symbols|] 
                                     mid (pretty eid) expKind (pretty lbl)
                         fv = symbKind "variable"
                         fi = symbKind "index"
-                        symbKind sym = M.map $ first $ [printf|deleted %s '%s'|] sym . render . view name
+                        symbKind :: (HasName s1 Name)
+                                 => String 
+                                 -> Map k1 (s1, d1) 
+                                 -> Map k1 (String, d1)
+                        symbKind sym = M.map $ first $ [s|deleted %s '%s'|] sym . render . view name
                         fvars  = free expr
                         errs   = fv (vs `M.intersection` fvars) `M.union` fi (is `M.intersection` fvars)
-                        schLI  = ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
+                        schLI  = ([s|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
                         varsLI = M.elems errs
                         app (x :| xs) ys = x :| (xs ++ ys)
                     in if M.null errs 
                        then []
                        else [Left $ MLError msg $ setToNeList schLI `app` varsLI]
                 InhDelete Nothing -> 
-                    let msg = [printf|event '%s', %s '%s' was deleted but does not exist|] (pretty eid) expKind (pretty lbl)
-                        li  = isOne . setToNeList $ ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
+                    let msg = [s|event '%s', %s '%s' was deleted but does not exist|] (pretty eid) expKind (pretty lbl)
+                        li  = isOne . setToNeList $ ([s|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
                     in [Left $ either (MLError msg) (Error msg.snd) li]
                 _ -> []
     where
@@ -576,7 +580,7 @@ transient_prop = machineCmd "\\transient" $ \(evts', NewLabel lbl, Expr xs) _m 
             let withInd = L.filter (not . M.null . (^. eIndices) . ((p2 ^. pEvents) !)) (NE.toList es)
             toEither $ error_list 
                 [ ( not $ L.null withInd
-                  , [printf|event(s) %s have indices and require witnesses|] 
+                  , [s|event(s) %s have indices and require witnesses|] 
                         $ intercalate "," $ map pretty withInd) ]
             let vs = used_var' tr
                 fv = vs `M.intersection` (p2^.pDummyVars)
@@ -818,7 +822,7 @@ init_witness_decl = machineCmd "\\initwitness" $ \(VarName var, Expr xp) _m p2 -
             -- ev <- get_event p2 evt
             li <- ask
             p  <- parse_expr'' (p2^.pMchSynt) xp
-            v  <- bind ([printf|'%s' is not a disappearing variable|] $ render var)
+            v  <- bind ([s|'%s' is not a disappearing variable|] $ render var)
                 (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
             return [(label $ render var, makeEvtCell (Left InitEvent) (Witness v p Local $ pure li))]
 

@@ -85,7 +85,7 @@ read_ :: Read a
       -> Either [Error] a
 read_ li str' = do
     let str = strip str'
-    with_li li $ mapLeft (pure.[printf|Invalid value: %s|]) $ readEither str
+    with_li li $ mapLeft (pure.[s|Invalid value: %s|]) $ readEither str
 
 comma_sep :: String -> [String]
 comma_sep [] = []

@@ -115,9 +115,9 @@ make_machine (MId m) p4 = mch'
         concrEvt eid evt olds = do
             let n = length olds
                 absEvents = intercalate "," $ (traverse %~ prettyEvent.fst) $ NE.toList olds
-                missingErr e = [printf|The events merged into %s (%s) do not all have an action labelled %s|] e absEvents
-                oneActErr    = [printf|Event %s, action %s|]
-                diffActsErr  = [printf|The action %s of the events merged into %s differ|]
+                missingErr e = [s|The events merged into %s (%s) do not all have an action labelled %s|] e absEvents
+                oneActErr    = [s|Event %s, action %s|]
+                diffActsErr  = [s|The action %s of the events merged into %s differ|]
                 collapseActions :: Label
                                 -> NonEmpty (SkipOrEvent, (NonEmpty LineInfo, Action))
                                 -> Either [Error] Action

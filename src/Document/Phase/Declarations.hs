@@ -49,14 +49,14 @@ import qualified Data.Traversable as T
 
 import Test.QuickCheck hiding (Result(..),label)
 
-import Text.Printf.TH
+import Text.Printf.TH as Printf
 
 import Utilities.Syntactic
   
 run_phase2_vars :: Pipeline MM SystemP1 SystemP2
 run_phase2_vars = C.id &&& symbols >>> liftP wrapup
     where
-        err_msg = [printf|Multiple symbols with the name %s|] . render
+        err_msg = [s|Multiple symbols with the name %s|] . render
         wrap = L.map (second $ makeCell . uncurry3 TheoryDef)
         symbols = arr (view mchMap) >>> run_phase
             [ variable_decl
@@ -179,7 +179,7 @@ instance IsVarScope MachineVar where
     toMchDecl s (MchVar v Inherited _) = map Right [PAbstractVars s v,PStateVars s v]
     toMchDecl s (DelMchVar (Just v) Local li)     = map Right [PDelVars s (v,li),PAbstractVars s v]
     toMchDecl s (DelMchVar (Just v) Inherited li) = [Right $ PDelVars s (v,li)]
-    toMchDecl s (DelMchVar Nothing _ li)    = [Left $ Error ([printf|deleted variable '%s' does not exist|] $ render s) li]
+    toMchDecl s (DelMchVar Nothing _ li)    = [Left $ Error ([Printf.s|deleted variable '%s' does not exist|] $ render s) li]
 
 instance IsVarScope MachineDef where
     toOldEventDecl _ _ = []
@@ -225,7 +225,7 @@ promote_param = machineCmd "\\promote" $ \(Conc lbl,VarName n) _m p1 -> do
             let _    = lbl :: EventId
                 evts = L.view pEventIds p1 
             evt <- bind
-                ([printf|event '%s' is undeclared|] $ pretty lbl)
+                ([s|event '%s' is undeclared|] $ pretty lbl)
                 $ as_label lbl `M.lookup` evts
             li <- ask
             return $ [(n,makeCell $ Evt $ M.singleton (Right evt) 
@@ -293,7 +293,7 @@ event_var_decl escope kw = machineCmd kw $ \(Conc lbl,PlainText xs) _m p1 -> do
                 ts   = L.view pAllTypes p1
                 evts = L.view pEventIds p1 
             evt <- bind
-                ([printf|event '%s' is undeclared|] $ pretty lbl)
+                ([s|event '%s' is undeclared|] $ pretty lbl)
                 $ as_label lbl `M.lookup` evts
             li <- ask
             vs <- hoistEither $ get_variables' ts xs li

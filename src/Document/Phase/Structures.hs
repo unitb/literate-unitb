@@ -101,8 +101,8 @@ run_phase1_types = proc p0 -> do
                          <.> s <.> evts'
     returnA -< SystemP r_ord p1
   where
-    evtClash = [printf|Multiple events with the name %s|] . pretty
-    setClash = [printf|Multiple sets with the name %s|] . render
+    evtClash = [s|Multiple events with the name %s|] . pretty
+    setClash = [s|Multiple sets with the name %s|] . render
     thyClash _   = "Theory imported multiple times"
     refClash _   = "Multiple refinement clauses"
     verifClash _ = "Multiple verification timeouts"
@@ -169,14 +169,14 @@ refines_mch :: MPipeline MachineP0 [((), MachineId, LineInfo)]
 refines_mch = machineCmd "\\refines" $ \(Identity amch) cmch (MachineP0 ms _) -> do
             li <- ask
             unless (amch `M.member` ms) 
-                $ throwError [Error ([printf|Machine %s refines a non-existant machine: %s|] (pretty cmch) (pretty amch)) li]
+                $ throwError [Error ([s|Machine %s refines a non-existant machine: %s|] (pretty cmch) (pretty amch)) li]
                 -- check that mch is a machine
             return [((),amch,li)]
 
 import_theory :: MPipeline MachineP0 [(Name, Theory, LineInfo)]
 import_theory = machineCmd "\\with" $ \(Identity (TheoryName th_name)) _m _ -> do
         let th = supportedTheories
-            msg = [printf|Undefined theory: %s |]
+            msg = [s|Undefined theory: %s |]
                 -- add suggestions
         li <- ask
         case th_name `M.lookup` th of

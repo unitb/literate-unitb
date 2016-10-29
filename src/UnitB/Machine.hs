@@ -148,10 +148,10 @@ instance Traversable EventMap where
             pure g 
 
 instance Show DocItem where
-    show (DocVar xs) = [printf|%s (variable)|] $ render xs
-    show (DocEvent xs) = [printf|%s (event)|] $ show xs
-    show (DocInv xs) = [printf|%s (invariant)|] $ show xs
-    show (DocProg xs) = [printf|%s (progress)|] $ show xs
+    show (DocVar xs) = [s|%s (variable)|] $ render xs
+    show (DocEvent xs) = [s|%s (event)|] $ show xs
+    show (DocInv xs) = [s|%s (invariant)|] $ show xs
+    show (DocProg xs) = [s|%s (progress)|] $ show xs
 
 makeLenses ''EventMap
 makeClassy ''MachineBase
@@ -188,13 +188,13 @@ instance (HasExpr expr,ZoomEq expr) => HasInvariant (MachineBase expr) where
                 -- has skip and (a)skip refined by (b)skip
                 -- valid scopes
             forM_ (scopeCorrect m) $ \(x,y) -> 
-                [printf|inv4: %s\n%s|] x y ## False
+                [s|inv4: %s\n%s|] x y ## False
             "inv5" ## ((m^.abs_vars) `M.difference` (m^.variables)) `isSubmapOf'` (m^.del_vars)
                 -- Inv5 is not an equality because del_vars is cummulative
             "inv6" ## ((m^.abs_vars) `M.difference` (m^.del_vars)) `isSubmapOf'` (m^.variables)
             "inv7" ## noClashes (m^.inh_props) (m^.props)
             withPrefix "inv8" $ forM_ (all_refs m) $ \ev -> 
-                [printf|%s - %s|] (pretty $ ev^.abstract._1) (pretty $ ev^.concrete._1) 
+                [s|%s - %s|] (pretty $ ev^.abstract._1) (pretty $ ev^.concrete._1) 
                     ## (ev^.old.actions) .== (ev^.abs_actions)
                 -- Proofs match properties
             "inv9" ## Pretty ((m^.derivation) `M.difference` (m^.props.progress)) === Pretty M.empty

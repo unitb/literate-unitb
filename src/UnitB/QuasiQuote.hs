@@ -57,7 +57,7 @@ parseAction loc p str = Assign v e
         e  = parseExpr loc p' rExpr
         p' = p & expected_type .~ Just t
         li = asLI loc
-        err = error $ "\n"++ show_err [Error ([printf|misshapen assignment: '%s'|] str) li]
+        err = error $ "\n"++ show_err [Error ([s|misshapen assignment: '%s'|] str) li]
 
 parseSafetyProp :: Loc -> ParserSetting -> String -> SafetyProp
 parseSafetyProp = parseParts makeSafety "UNLESS" "safety property" parseExpr parseExpr

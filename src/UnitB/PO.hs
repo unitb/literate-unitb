@@ -238,7 +238,7 @@ proof_obligation' pos proofs m = do
             if lbl `M.member` pos
                 then return ()
                 else Left [Error 
-                    ([printf|a proof is provided for non-existant proof obligation %s|] $ pretty lbl)
+                    ([s|a proof is provided for non-existant proof obligation %s|] $ pretty lbl)
                         li])
         xs <- forM (M.toList pos) (\(lbl,po) -> do
             case M.lookup lbl proofs of
@@ -478,8 +478,8 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = provided (null inds) $ do
                                         all_fsch) 
                                 (progs ! lbl)
                         | otherwise -> error $ 
-                               [printf|transient predicate %s's side condition doesn't |] (pretty pname) 
-                            ++ [printf|match the fine schedule of event %s|]
+                               [s|transient predicate %s's side condition doesn't |] (pretty pname) 
+                            ++ [s|match the fine schedule of event %s|]
                                         (intercalate "," $ L.map pretty (NE.toList evt_lbl))
                     Nothing
                         | not $ all_fsch == ztrue -> do
@@ -1138,7 +1138,7 @@ dump :: String -> Map Label Sequent -> IO ()
 dump name pos = do
         withFile (name ++ ".z") WriteMode (\h -> do
             forM_ (M.toList pos) (\(lbl, po) -> do
-                hPutStrLn h ([printf|(echo \"> %s\")\n(push)|] $ pretty lbl)
+                hPutStrLn h ([s|(echo \\"> %s\\")\n(push)|] $ pretty lbl)
                 hPutStrLn h (z3_code po)
                 hPutStrLn h "(pop)"
                 hPutStrLn h ("; end of " ++ pretty lbl)

@@ -194,8 +194,8 @@ install:
     stack)
       # travis_wait 70 stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
       # travis_long stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
-      travis_long stack --no-terminal --install-ghc $ARGS build --bench --only-dependencies
-      # travis_long stack --no-terminal --install-ghc $ARGS install literate-unitb-config lens text
+      # travis_long stack --no-terminal --install-ghc $ARGS build --bench --only-dependencies
+      travis_long stack --no-terminal --install-ghc $ARGS install literate-unitb-config literate-unitb-latex lens text
       ;;
     cabal)
       cabal --version
@@ -245,3 +245,15 @@ script:
       ;;
   esac
   set +ex
+
+before_deploy:
+  - stack install 
+
+deploy:
+  provider: releases
+  api_key: 
+    secure: 
+  file: "FILE TO UPLOAD"
+  skip_cleanup: true
+  on:
+    tags: true

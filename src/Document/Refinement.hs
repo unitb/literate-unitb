@@ -1,5 +1,5 @@
 {-# LANGUAGE IncoherentInstances    #-}
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables     #-}
+{-# LANGUAGE ScopedTypeVariables     #-}
 {-# LANGUAGE BangPatterns, TypeFamilies       #-}
 module Document.Refinement where
 
@@ -78,7 +78,7 @@ getSafety = view pSafety . getMachine
 
 getGoalProp :: RuleParserParameter -> M ProgressProp
 getGoalProp p = do
-    bind ([printf|goal %s is not a valid progress property|] (pretty $ getGoal p)) 
+    bind ([s|goal %s is not a valid progress property|] (pretty $ getGoal p)) 
         (M.lookup (getGoal p) (getNewProgress p))
 
 type Rule = ProofTree
@@ -143,7 +143,7 @@ instance Parsable One where
             lift $ Identity <$> f x
           [] -> lift $ do
             li <- ask
-            raise $ Error ([printf|refinement (%s): expecting more properties|] (pretty rule)) li
+            raise $ Error ([s|refinement (%s): expecting more properties|] (pretty rule)) li
 instance Parsable [] where
     parseMany _ f = do
         xs <- get
@@ -159,7 +159,7 @@ instance Parsable Maybe where
             [x] -> Just <$> f x
             _   -> do
                 li <- ask
-                raise $ Error ([printf|refinement (%s): expecting at most one property|] (pretty rule)) li                
+                raise $ Error ([s|refinement (%s): expecting at most one property|] (pretty rule)) li                
 
 instance Parsable NonEmpty where
     parseMany r f = (:|) <$> parseOne r f
@@ -176,7 +176,7 @@ parseProgress r = do
             Just p -> return (PId x, getExpr <$> p)
             Nothing -> do
                 li <- ask
-                raise $ Error ([printf|refinement (%s): %s should be a progress property|] 
+                raise $ Error ([s|refinement (%s): %s should be a progress property|] 
                             (pretty rule) (pretty x)) li
 
 parseTransient :: (LivenessRule rule, Parsable f) 
@@ -190,7 +190,7 @@ parseTransient r = do
                 Just p -> return $ getExpr <$> p
                 Nothing -> do
                     li <- ask
-                    raise $ Error ([printf|refinement (%s): %s should be a safety property|] 
+                    raise $ Error ([s|refinement (%s): %s should be a safety property|] 
                             (pretty rule) (pretty lbl)) li
 
 parseSafety :: (LivenessRule rule, Parsable f) 
@@ -204,7 +204,7 @@ parseSafety r = do
                 Just p -> return $ getExpr <$> p
                 Nothing -> do
                     li <- ask
-                    raise $ Error ([printf|refinement (%s): %s should be a safety property|] 
+                    raise $ Error ([s|refinement (%s): %s should be a safety property|] 
                                 (pretty rule) (pretty x)) li
 
 instance RuleParser Induction where
@@ -244,7 +244,7 @@ instance RuleParser Induction where
                     return (SetVariant dum var bound dir)
                 else do
                     tell [Error 
-                        ([printf|invalid variant type\n\tExpecting: set or integer\n\tActual:  %s\n\t%s|] 
+                        ([s|invalid variant type\n\tExpecting: set or integer\n\tActual:  %s\n\t%s|] 
                             (pretty $ type_of var) syntax)
                         li]
                     return ($myError "")
@@ -268,7 +268,7 @@ instance RuleParser Reference where
     promoteRule m _ (Identity ref) _ = do
         let pid = PId ref
         unless (pid `M.member` (m^.pProgress))
-            $ raise' $ Error $ [printf|invalid progress property: %s|] $ pretty ref
+            $ raise' $ Error $ [s|invalid progress property: %s|] $ pretty ref
         return $ Reference pid
 instance RuleParser Ensure where
     makeEventList Proxy xs = do
@@ -276,7 +276,7 @@ instance RuleParser Ensure where
     promoteRule m proof evts hint = do
         let LeadsTo dum _ _ = proof^.goal
         evts' <- bind_all evts 
-            ([printf|invalid event name: %s|] . pretty) 
+            ([s|invalid event name: %s|] . pretty) 
             (`M.lookup` (m^.pEventIds))
         hint <- tr_hint m 
                 (symbol_table dum)
@@ -309,7 +309,7 @@ parse_discharge params = do
     --let hyps_lbls = getHypotheses params
     --li <- ask
     --when (1 > length hyps_lbls || length hyps_lbls > 2)
-    --    $ raise $ Error ([printf|too many hypotheses in the application of the rule: {0}|]
+    --    $ raise $ Error ([s|too many hypotheses in the application of the rule: {0}|]
     --                        $ intercalate "," $ map show hyps_lbls) li
     parse' params $ do
         --transient <- asks getTransient
@@ -319,13 +319,13 @@ parse_discharge params = do
         --        Just p -> return (lbl,getExpr <$> p)
         --        Nothing -> do
         --            li <- ask
-        --            raise $ Error ([printf|refinement ({0}): {1} should be a transient predicate|] rule lbl) li
+        --            raise $ Error ([s|refinement ({0}): {1} should be a transient predicate|] rule lbl) li
         parse_rule goal Discharge -- (Discharge lbl tr)
 
 parse_induction :: RuleParserParameter
                 -> M Rule
 parse_induction param = do
-        let rule = "induction"
+        let rule = "induction" 
             prog = getProgress param
             goal_lbl  = getGoal param
             hyps_lbls = getHypotheses param
@@ -334,15 +334,15 @@ parse_induction param = do
         li <- ask
         toEither $ error_list
             [   ( length hyps_lbls /= 1
-                , [printf|too many hypotheses in the application of the rule: %s|] 
+                , [s|too many hypotheses in the application of the rule: %s|] 
                     $ intercalate "," $ map pretty hyps_lbls)
             ]
         let h0 = head hyps_lbls
         toEither $ error_list
             [   ( not (goal_lbl `member` prog)
-                , [printf|refinement (%s): %s should be a progress property|] rule (pretty goal_lbl) )
+                , [s|refinement (%s): %s should be a progress property|] rule (pretty goal_lbl) )
             ,   ( not (h0 `member` prog)
-                , [printf|refinement (%s): %s should be a progress property|] rule (pretty h0) )
+                , [s|refinement (%s): %s should be a progress property|] rule (pretty h0) )
             ]
         let (LeadsTo fv0 _ _) = getExpr <$> (prog ! goal_lbl)
             (LeadsTo fv1 _ _) = getExpr <$> (prog ! h0)
@@ -377,7 +377,7 @@ parse_induction param = do
                     return (SetVariant dum var bound dir)
                 else do
                     tell [Error 
-                        ([printf|invalid variant type\n\tExpecting: set or integer\n\tActual:  %s|] 
+                        ([s|invalid variant type\n\tExpecting: set or integer\n\tActual:  %s|] 
                             (pretty $ type_of var))
                         li]
                     return ($myError "")

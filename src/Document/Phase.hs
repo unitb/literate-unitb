@@ -428,21 +428,21 @@ get_event :: (HasMachineP1 phase,MonadReader LineInfo m,MonadError [Error] m)
 get_event p2 ev_lbl = do
         let evts = p2^.pEventIds
         bind
-            ([printf|event '%s' is undeclared|] $ pretty ev_lbl)
+            ([s|event '%s' is undeclared|] $ pretty ev_lbl)
             $ ev_lbl `M.lookup` evts
 
 get_abstract_event :: HasMachineP1 phase => phase -> EventId -> M EventId
 get_abstract_event p2 ev_lbl = do
         let evts = p2^.pEventSplit & M.mapKeys as_label . M.mapWithKey const
         bind
-            ([printf|event '%s' is undeclared|] $ pretty ev_lbl)
+            ([s|event '%s' is undeclared|] $ pretty ev_lbl)
             $ as_label ev_lbl `M.lookup` evts
 
 get_concrete_event :: HasMachineP1 phase => phase -> EventId -> M EventId
 get_concrete_event p2 ev_lbl = do
         let evts = p2^.pEventMerge & M.mapKeys as_label . M.mapWithKey const
         bind
-            ([printf|event '%s' is undeclared|] $ pretty ev_lbl)
+            ([s|event '%s' is undeclared|] $ pretty ev_lbl)
             $ as_label ev_lbl `M.lookup` evts
 
 get_events :: ( Traversable f
@@ -454,7 +454,7 @@ get_events :: ( Traversable f
 get_events p2 ev_lbl = do
             let evts = p2^.pEventIds
             bind_all ev_lbl
-                ([printf|event '%s' is undeclared|] . pretty)
+                ([s|event '%s' is undeclared|] . pretty)
                 $ (`M.lookup` evts)
 
 --pParams   :: HasMachineP2 mch
@@ -625,7 +625,7 @@ topological_order = Pipeline empty_spec empty_spec $ \es' -> do
                 $ L.map (first pretty) $ M.toList
                 $ lis `M.intersection` fromList' vs ] 
             return Nothing -- (error "topological_order")
-        msg = [printf|A cycle exists in the %s|]
+        msg = [s|A cycle exists in the %s|]
 
 fromList' :: Ord a => [a] -> Map a ()
 fromList' xs = M.fromList $ L.zip xs $ L.repeat ()

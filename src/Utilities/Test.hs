@@ -180,10 +180,10 @@ test' :: TestCase
 test' = test_cases
         "Formatting utilities"
         [ stringCase "test 0" 
-                    (return $ [printf|hello %s name is %s and I'm %d years old|] "my" "Simon" 28) 
+                    (return $ [s|hello %s name is %s and I'm %d years old|] "my" "Simon" 28) 
                     ("hello my name is Simon and I'm 28 years old")
         , stringCase "test 1"
-                    (return $ [printf|this is a tree %s, its second leaf is %s|] (show t4) (show t2))
+                    (return $ [s|this is a tree %s, its second leaf is %s|] (show t4) (show t2))
                     (   "this is a tree Node \"Candide+Paul-Henri\" (Node \"Yves+Sylvie\" Leaf Leaf) "
                      ++ "(Node \"Danielle+Louis\" (Node \"Francois+Elsa\" Leaf Leaf) "
                      ++       "(Node \"Emilie+Vincent\" Leaf Leaf)), its second leaf is "

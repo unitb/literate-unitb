@@ -121,7 +121,7 @@ readEnv tag = LatexParser [tag] [] [tag] [] False $ \() -> EitherT $ do
                     | envType e == tag -> do
                         put xs
                         return $ Right e
-                _ -> return $ Left [Error ([printf|expecting environment '%s'|] tag) $ line_info xs]
+                _ -> return $ Left [Error ([s|expecting environment '%s'|] tag) $ line_info xs]
 
 insideOneEnvOf :: Pre
                => [String] 
@@ -158,7 +158,7 @@ readCommand tag = provided ("\\" `isPrefixOf` tag)
                     | t == tag -> do
                         put xs
                         return $ evalState (getCompose $ makeTuple' [pr|LatexArg|] next) x
-                _ -> return $ Left [Error ([printf|expecting command '%s'|] tag) $ line_info xs]
+                _ -> return $ Left [Error ([s|expecting command '%s'|] tag) $ line_info xs]
     where
         tupleType = Cell [pr|a|]
         next :: forall b. LatexArg b 
@@ -223,10 +223,10 @@ rewriteDoc es cs d = case unconsTex d of
                 argSpec <- M.lookup tag' cs
                 let n = readCell1 (len [pr|LatexArg|]) argSpec
                     docs = readCell1 (foldMapTupleType [pr|LatexArg|] ((:[]) . argKind)) argSpec
-                    docs' = concatMap ([printf|{%s}|]) docs :: String
+                    docs' = concatMap ([s|{%s}|]) docs :: String
                     (args,doc') = takeArgs n doc
                     checkedArgs | length args == n = pure args
-                                | otherwise        = Failure [Error ([printf|expecting %d arguments: %s|] n docs') li]
+                                | otherwise        = Failure [Error ([s|expecting %d arguments: %s|] n docs') li]
                 return $ consStream . (,li) . CmdMatch tag' 
                             <$> checkedArgs 
                             <*> rewriteDoc es cs doc'

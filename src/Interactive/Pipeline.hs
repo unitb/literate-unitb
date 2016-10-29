@@ -97,7 +97,7 @@ makeLenses ''Params'
 instance NFData Params where
 
 instance Show ParserState where
-    show (Idle x) = [printf|Idle %sms|] $ show $ round $ x * 1000
+    show (Idle x) = [s|Idle %sms|] $ show $ round $ x * 1000
     show Parsing  = "Parsing"
 
 parser :: Shared
@@ -176,7 +176,7 @@ prover (Shared { .. }) = do
         -- handler :: 
         handler lbl@(_,x) (ErrorCall msg) = do
             write_obs dump_cmd $ Just $ Only x
-            fail ([printf|During %s: %s|] (pretty lbl) msg)
+            fail ([s|During %s: %s|] (pretty lbl) msg)
         worker req = forever $ do
             -- (k,po) <- takeMVar req
             (k,po) <- atomically $ readTBQueue req
@@ -216,7 +216,7 @@ proof_report' showSuccess pattern outs es isWorking =
                 , "#"
                 ]
         foot _ = 
-                [ [printf|# hidden: %d failures|] (length xs - length ys)
+                [ [s|# hidden: %d failures|] (length xs - length ys)
                 ]
         xs = filter (failure . snd) (zip [0..] $ M.toAscList outs)
         ys = map f $ filter (match . snd) xs
@@ -225,7 +225,7 @@ proof_report' showSuccess pattern outs es isWorking =
         failure x
             | showSuccess = True
             | otherwise   = maybe False not $ snd $ snd x
-        f (n,((m,lbl),(_,_))) = [printf| x %s - %s  (%d)|] (pretty m) (pretty lbl) n
+        f (n,((m,lbl),(_,_))) = [s| x %s - %s  (%d)|] (pretty m) (pretty lbl) n
 
 run_all :: [IO (IO ())] -> IO [ThreadId]
 run_all xs = do
@@ -263,7 +263,7 @@ display (Shared { .. }) = do
             let u = M.size $ M.filter (isNothing.snd) outs
             st <- read_obs parser_state
             du <- isJust `liftM` read_obs dump_cmd
-            putStr $ [printf|number of workers: %d; untried: %d; parser: %s; dumping: %s|] w u (show st) (show du)
+            putStr $ [s|number of workers: %d; untried: %d; parser: %s; dumping: %s|] w u (show st) (show du)
             clearFromCursorToLineEnd 
             -- hFlush stdout
             putStrLn ""
@@ -370,7 +370,7 @@ keyboard sh@(Shared { .. }) = do
             else if take 1 ws == ["focus"] && length ws == 2 then do
                 write_obs focus $ Just (ws ! 1)
             else do
-                putStrLn $ [printf|Invalid command: '%s'|] xs
+                putStrLn $ [s|Invalid command: '%s'|] xs
             keyboard sh
 
 run_pipeline :: FilePath -> Params -> IO ()
