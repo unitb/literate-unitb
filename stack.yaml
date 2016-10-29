@@ -34,7 +34,7 @@ packages:
     commit: 78529049b88999df3eb76340db166d9892d46bfd
 - location:
     git: https://github.com/literate-unitb/literate-unitb-logic.git
-    commit: 7f68db17bde27748500f24895bf44f4e4ee7d080
+    commit: 1e38920e6ed760b6b87bd0b0decb50fea7ae9599
 - location:
     git: https://github.com/literate-unitb/unfoldable.git
     commit: 8dc15076a4c6c3efdb2c6680e6c5944633a25ae7
