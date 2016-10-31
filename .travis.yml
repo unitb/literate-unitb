@@ -253,10 +253,10 @@ before_deploy:
   - cp $HOME/.local/bin/unitb release/literate-unitb/
   - cp $HOME/.local/bin/unitb-option release/literate-unitb/
   - cp $HOME/z3/z3 release/literate-unitb/
-  - echo zip -r $HOME/`unitb-zip-name $TRAVIS_OS_NAME`.zip 
+  - echo zip -r $HOME/`unitb-zip-name $TRAVIS_OS_NAME`.zip 
   - ls release
   - ls release/literate-unitb
-  - zip -r $HOME/`unitb-zip-name $TRAVIS_OS_NAME`.zip release/literate-unitb
+  - zip -r $HOME/`unitb-zip-name $TRAVIS_OS_NAME`.zip release/literate-unitb
 
 deploy:
   provider: releases
