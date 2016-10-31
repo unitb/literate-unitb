@@ -12,6 +12,8 @@ import Documentation.SummaryGen
 
 import Logic.Expr
 
+import Paths_literate_unitb
+
 import UnitB.PO
 import UnitB.UnitB hiding (timeout)
 
@@ -27,8 +29,12 @@ import Control.Monad.Trans.Either
 import Control.Precondition
 
 import qualified Data.Map as M
+import Data.List
 import Data.Time
 import Data.Typeable
+import Data.Version
+
+import Development.GitRev
 
 import Interactive.Serialize hiding (dump_pos)
 
@@ -200,11 +206,23 @@ _myTimeout cmd = do
         timeout dt cmd
         putStrLn "!!!TIMEOUT!!!"
 
-main :: IO ()
-main = do
+printUnitBVersion :: IO ()
+printUnitBVersion = do
+        let v = showVersion version
+            h = take 12 $gitHash
+        printf "Literate Unit-B \nVersion %s, hashcode %s\n" v h
+
+printZ3Version :: IO ()
+printZ3Version = do
         (v,h) <- z3_version
         printf "using z3 version %s, hashcode %s\n" v h
         printf "built on %s at %s\n" $__DATE__ $__TIME__
+
+main :: IO ()
+-- main = print version
+main = do
+        printUnitBVersion
+        printZ3Version
         rawargs <- getArgs
         let (opts,args,_) = getOpt Permute options rawargs
         case args of

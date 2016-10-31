@@ -82,6 +82,7 @@ source-repository head
 library
   hs-source-dirs: src
   exposed-modules: 
+        Paths_literate_unitb
         Code.Synthesis
         Document.Document
         Document.ExprScope
@@ -165,7 +166,36 @@ executable unitb
   main-is:  Continuous.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.2.0, either, control-invariants, lens, literate-unitb, literate-unitb-logic, literate-unitb-utils, mtl, pseudomacros, time, file-system-mockup, literate-unitb-latex, containers, lens-extra, literate-unitb-config, syntax-error
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.2.0, either, control-invariants, lens, literate-unitb, literate-unitb-logic, literate-unitb-utils, mtl, pseudomacros, time, file-system-mockup, literate-unitb-latex, containers, lens-extra, literate-unitb-config, syntax-error, gitrev
+
+  ghc-options: -W -fwarn-missing-signatures 
+         -fwarn-incomplete-uni-patterns
+         -fwarn-missing-methods
+         -threaded  -fno-ignore-asserts
+         -fwarn-tabs
+         -j8
+  
+  -- LANGUAGE extensions used by modules in this package.
+  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
+
+executable unitb-zip-name
+  -- .hs or .lhs file containing the Main module.
+  hs-source-dirs: app
+  main-is:  ZipName.hs
+  default-language:    Haskell2010
+
+  build-depends:       base >=4.8 && < 5
+      -- , directory >= 1.2.2.0
+      -- , either
+      -- , control-invariants
+      -- , lens
+      , th-printf
+      , literate-unitb
+      -- , literate-unitb-logic
+      -- , literate-unitb-utils, mtl, pseudomacros, time, file-system-mockup, literate-unitb-latex, containers, lens-extra
+      , literate-unitb-config
+      -- , syntax-error
+      , gitrev
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
