@@ -219,7 +219,7 @@ script:
       # 
       pwd
       ls || echo "nothing"
-      travis_long stack --no-terminal $ARGS test --bench --no-run-benchmarks 
+      ((ls $HOME/.stack > /dev/null) && travis_long stack --no-terminal $ARGS test --bench --no-run-benchmarks) || echo skipping the build
       # echo $HOME
       # echo not calling stack
       ;;
@@ -253,6 +253,9 @@ before_deploy:
   - cp $HOME/.local/bin/unitb release/literate-unitb/
   - cp $HOME/.local/bin/unitb-option release/literate-unitb/
   - cp $HOME/z3/z3 release/literate-unitb/
+  - echo zip -r $HOME/`unitb-zip-name $TRAVIS_OS_NAME`.zip 
+  - ls release
+  - ls release/literate-unitb
   - zip -r $HOME/`unitb-zip-name $TRAVIS_OS_NAME`.zip release/literate-unitb
 
 deploy:
@@ -266,5 +269,5 @@ deploy:
     tags: true
     repo: literate-unitb/literate-unitb
     condition: $BUILD=stack 
-    condition: $ARGS="--resolver lts-6 --stack-yaml stack-lts-6.yaml"
+    condition: $ARGS="--resolver lts-6"
   
