@@ -247,7 +247,7 @@ script:
   set +ex
 
 before_deploy:
-  - stack install 
+  - travis_long stack --no-terminal $ARGS install
   - mkdir release
   - mkdir release/literate-unitb
   - cp $HOME/.local/bin/unitb release/literate-unitb/
