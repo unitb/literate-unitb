@@ -253,7 +253,7 @@ before_deploy:
   - cp $HOME/.local/bin/unitb release/literate-unitb/
   - cp $HOME/.local/bin/unitb-option release/literate-unitb/
   - cp $HOME/z3/z3 release/literate-unitb/
-  - zip -r $HOME/`unitb-zip-name $os`.zip release/literate-unitb
+  - zip -r $HOME/`unitb-zip-name $TRAVIS_OS_NAME`.zip release/literate-unitb
 
 deploy:
   provider: releases
@@ -261,7 +261,7 @@ deploy:
   api_key:
     secure: JEie98jM2ck58ODdz2t0kKfojSodrhRyfOklkJgRMqUC4OH5AAZ6Mn2dzxPcSPaUmRIUt3nzihD3T1DPWdzvRKKGMG2EClpXlsRn34gDJmQDwJF4zTxSxxH0xmAf6nmnDbybYIAri/NWTGieJjAERvCaj9wr1018Wtduy/zdyElQbR9Hfb9mDF9RASOnAMPHh9QHGz6ovDX3k0A92BCuUGiJOcSycW6Zl41d16UCL92nXZeomT3oE53jQQ73L7wiAd/Vh+dOAUrcONSU61UZPcG0mF6VkvogMajlA8YpXCuvjQU6P8s0wHoaKbCXxFK6PjxGONrDTBYr250CGH5zTRnFEiHGBYFOjWvyWSlfPTBpiUwYEgSo1Lqq+a3wkjYEMRS/b62VWOohbx3UkvxaLxk8lLF+m5hp44Vr1rXBQihVvuxnAjKRQ1YqmI/IvSY71oV2h7muFdcOxqJo2kYOFyLPnXbMJ7vRVRSHaMVfBeeStbw/Tz3CAlWbqS9vayBZBNi5ipYoMqKHj2IpMjb/c+Nrjpw3LIdQe3TnMlnlgyThfG0xLxCtiiWG019LvKffhp6h80QGOE5Z86hdkWxIZ9L6ufjq7kOpXHDTnOO5y1KYsnjPV59Gr6uxto5SSnoHsKUUJnXCTy2VlC+3+hN3KfVZDjQlocRui7U8T2BIeLI=
   file: 
-    - $HOME/`unitb-zip-name $os`.zip
+    - $HOME/`unitb-zip-name $TRAVIS_OS_NAME`.zip
   on:
     tags: true
     repo: literate-unitb/literate-unitb
