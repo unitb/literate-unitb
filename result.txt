@@ -367,10 +367,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   14412 total
+   14505 total
     1159 src/UnitB/PO.hs
      876 src/Document/Phase/Expressions.hs
      805 src/Document/Phase.hs
      795 src/Document/Visitor.lhs
      645 src/Code/Synthesis.hs
-Run time: 2m 18s
+Run time: 2m 20s

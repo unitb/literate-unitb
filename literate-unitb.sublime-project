@@ -66,8 +66,7 @@
 			[
 				"stack",
 				"test",
-				"tests",
-				"--",
+				"literate-unitb",
 				"--test-arguments",
 				"--selected-case"
 			],
