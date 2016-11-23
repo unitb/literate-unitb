@@ -21,67 +21,67 @@ compiler: ghc-7.10.3
 packages:
 - '.'
 - location:
-    git: https://github.com/literate-unitb/syntax-error.git
-    commit: 84af568ffd9427e66dc93abbe40d9c08715ba021
-- location:
-    git: https://github.com/literate-unitb/literate-unitb-config.git
+    git: https://github.com/unitb/literate-unitb-config.git
     commit: 118b906d59cf7586782d292baff5ae65988d0b63
 - location:
-    git: https://github.com/literate-unitb/literate-unitb-utils.git
+    git: https://github.com/unitb/literate-unitb-utils.git
     commit: 9e62be5a42bc11ecc89bd40284bb73fc2a8407fe
 - location:
-    git: https://github.com/literate-unitb/literate-unitb-latex.git
+    git: https://github.com/unitb/literate-unitb-latex.git
     commit: 78529049b88999df3eb76340db166d9892d46bfd
 - location:
-    git: https://github.com/literate-unitb/literate-unitb-logic.git
-    commit: 1e38920e6ed760b6b87bd0b0decb50fea7ae9599
+    git: https://github.com/unitb/literate-unitb-logic.git
+    commit: 729c5fee824d882d137ad7bdf9baedc56157d10b
 - location:
-    git: https://github.com/literate-unitb/unfoldable.git
+    git: https://github.com/unitb/syntax-error.git
+    commit: 84af568ffd9427e66dc93abbe40d9c08715ba021
+- location:
+    git: https://github.com/unitb/unfoldable.git
     commit: 8dc15076a4c6c3efdb2c6680e6c5944633a25ae7
 - location:
-    git: https://github.com/literate-unitb/partial-order.git
+    git: https://github.com/unitb/partial-order.git
     commit: 0f1629aa99c0a74bccd4e98e63960361175d16c6
 - location:
-    git: https://github.com/literate-unitb/unitb-testing.git
+    git: https://github.com/unitb/unitb-testing.git
     commit: 6098f62adcb956a5ba924b8cc2f6ac550d4f65f9
 - location:
-    git: https://github.com/literate-unitb/typelist-functor.git
+    git: https://github.com/unitb/typelist-functor.git
     commit: 58648576c10906df5b3de12ce27715e129e818d0
 - location:
-    git: https://github.com/literate-unitb/transformer-lenses.git
+    git: https://github.com/unitb/transformer-lenses.git
     commit: 405f81025293b9f9cd25145644ca86fe88a69388
 - location:
-    git: https://github.com/literate-unitb/string-lenses.git
+    git: https://github.com/unitb/string-lenses.git
     commit: 0d616b2f754391ba62581348464f45bcb8561019
 - location:
-    git: https://github.com/literate-unitb/show-with.git
+    git: https://github.com/unitb/show-with.git
     commit: 6be72dbe945cae0945dd18a835f56c7a807937a7
 - location:
-    git: https://github.com/literate-unitb/generic-instances.git
+    git: https://github.com/unitb/generic-instances.git
     commit: 8d67a6479d3b5a38c69efd114c1d59d2b81c813c
 - location:
-    git: https://github.com/literate-unitb/lens-extra.git
+    git: https://github.com/unitb/lens-extra.git
     commit: 16029e2eb4fd94d73bd96120aa59c3586bf5e109
 - location:
-    git: https://github.com/literate-unitb/co-applicative.git
+    git: https://github.com/unitb/co-applicative.git
     commit: 6ccc3764141bc014426ee9109315afa8d6e7d353
 - location:
-    git: https://github.com/literate-unitb/file-system-mockup.git
+    git: https://github.com/unitb/file-system-mockup.git
     commit: 681bd9905e0b3b0480e023147d788fc5a64e6cbb
 - location:
-    git: https://github.com/literate-unitb/bipartite-graph.git
+    git: https://github.com/unitb/bipartite-graph.git
     commit: 0e430c7a0571b31d980bf4141197ec6c19b964b6
 - location:
-    git: https://github.com/literate-unitb/data-compressed.git
+    git: https://github.com/unitb/data-compressed.git
     commit: adc46a9bee9db68a72e09504c410abb5611ecad1
 - location:
-    git: https://github.com/literate-unitb/classy-lens-hierarchy.git
+    git: https://github.com/unitb/classy-lens-hierarchy.git
     commit: a82197c81f2f8cdb4ecce54495ca62a6c10ad3d1
 - location:
-    git: https://github.com/literate-unitb/pretty-printable.git
+    git: https://github.com/unitb/pretty-printable.git
     commit: 1adc34c9f88a5e9fec25d39cd193aec65c4625e9
 - location:
-    git: https://github.com/literate-unitb/data-packaged.git
+    git: https://github.com/unitb/data-packaged.git
     commit: 25bb09dcdd5220d457b6801fd9c6a2c376343a9f
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps: 

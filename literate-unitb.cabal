@@ -77,7 +77,7 @@ Flag PackagedNames
 
 source-repository head
   type:     git
-  location: https://github.com/literate-unitb/literate-unitb
+  location: https://github.com/unitb/literate-unitb
 
 library
   hs-source-dirs: src

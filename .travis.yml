@@ -22,6 +22,7 @@ cache:
   - $HOME/.stack
   - $HOME/z3
   - $HOME/literate-unitb/literate-unitb/.stack-work
+  - $HOME/unitb/literate-unitb/.stack-work
 
 # The different configurations we want to test. We have BUILD=cabal which uses
 # cabal-install, and BUILD=stack which uses Stack. More documentation on each
@@ -125,6 +126,7 @@ matrix:
 
 before_install:
 # Using compiler above sets CC to an invalid value, so unset it
+- cp -rp $HOME/literate-unitb $HOME/unitb
 - unset CC
 
 # We want to always allow newer versions of packages when building on GHC HEAD
@@ -248,11 +250,14 @@ script:
 
 before_deploy:
   - travis_long stack --no-terminal $ARGS install
+  - pwd
   - mkdir release
   - mkdir release/literate-unitb
-  - cp $HOME/.local/bin/unitb release/literate-unitb/
-  - cp $HOME/.local/bin/unitb-option release/literate-unitb/
-  - cp $HOME/z3/z3 release/literate-unitb/
+  - mkdir release/literate-unitb/sty
+  - cp Tests/*.sty release/literate-unitb/sty/
+  - cp $HOME/.local/bin/unitb release/unitb/
+  - cp $HOME/.local/bin/unitb-option release/unitb/
+  - cp $HOME/z3/z3 release/unitb/
   - echo zip -r $HOME/`unitb-zip-name $TRAVIS_OS_NAME`.zip 
   - ls release
   - ls release/literate-unitb
@@ -267,7 +272,7 @@ deploy:
     - $HOME/`unitb-zip-name $TRAVIS_OS_NAME`.zip
   on:
     tags: true
-    repo: literate-unitb/literate-unitb
+    repo: unitb/literate-unitb
     condition: $BUILD=stack 
     condition: $ARGS="--resolver lts-6"
   

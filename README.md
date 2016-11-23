@@ -1,4 +1,4 @@
-OS X / Linux: [![Build Status](https://travis-ci.org/literate-unitb/literate-unitb.svg?branch=master)](https://travis-ci.org/literate-unitb/literate-unitb)
+OS X / Linux: [![Build Status](https://travis-ci.org/unitb/literate-unitb.svg?branch=master)](https://travis-ci.org/unitb/literate-unitb)
 
 Windows: [![Build status](https://ci.appveyor.com/api/projects/status/ftkjg65dda28qir7?svg=true)](https://ci.appveyor.com/project/cipher1024/literate-unitb)
 
