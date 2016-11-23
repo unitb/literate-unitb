@@ -21,7 +21,6 @@ cache:
   - $HOME/.cabal
   - $HOME/.stack
   - $HOME/z3
-  - $HOME/literate-unitb/literate-unitb/.stack-work
   - $HOME/unitb/literate-unitb/.stack-work
 
 # The different configurations we want to test. We have BUILD=cabal which uses
@@ -126,7 +125,6 @@ matrix:
 
 before_install:
 # Using compiler above sets CC to an invalid value, so unset it
-- cp -rp $HOME/literate-unitb $HOME/unitb
 - unset CC
 
 # We want to always allow newer versions of packages when building on GHC HEAD
@@ -221,7 +219,7 @@ script:
       # 
       pwd
       ls || echo "nothing"
-      ((ls $HOME/.stack > /dev/null) && travis_long stack --no-terminal $ARGS test --bench --no-run-benchmarks) || echo skipping the build
+      (test "ls $HOME/.stack" && echo skipping the build) || travis_long stack --no-terminal $ARGS test --bench --no-run-benchmarks
       # echo $HOME
       # echo not calling stack
       ;;
