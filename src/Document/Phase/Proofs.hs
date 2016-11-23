@@ -400,7 +400,7 @@ stepList' :: MachineP3
                 (RawProgressProp,Inst1 Proxy RuleParser rule) 
                 (Inference (Proxy rule))
 stepList' m = 
-                arr (Inference . fst)
+                arr (Inference . fst)
             <*> arr (view inst1 . snd)
             <*> (consume' <<< buildProgress (Sub Dict) (withLookAhead $ liveness m) <<< pre) 
             <*> (consume' <<< buildTransient (Sub Dict) (withLookAhead transient) <<< pre)

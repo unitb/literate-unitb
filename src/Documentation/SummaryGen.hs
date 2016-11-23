@@ -66,7 +66,7 @@ makeRef p pre lbl
 
 combineLblExpr :: ExprDispOpt label expr
                -> EventId -> label -> String -> M String
-combineLblExpr opts pre lbl expr = case opts^.style of 
+combineLblExpr opts pre lbl expr = case opts^.style of 
                     Untagged   -> [s|  \\item[ ]%s\n  %%%s|] 
                                             -- <$> makeRef opts pre lbl
                                             <$> format_formula expr
@@ -348,7 +348,7 @@ isMember t = join (preview (_FromSort.to f) t) <|> ((" \\in " ++) <$> typeToSet 
         f _ = Nothing
 
 
-typeToSet :: Bool -> Type -> Maybe String
+typeToSet :: Bool -> Type -> Maybe String
 typeToSet paren = join . preview (_FromSort.to f)
     where
         f (DefSort n _ _ _,ts) 

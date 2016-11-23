@@ -221,7 +221,7 @@ raw_machine_pos' m' = eval_generator $
                     mapM_ (prog_wd_po m) $ M.toList $ _progress p
                     run $ foldMapWithKey (fmap Cons . ref_po m) (m!.derivation)
     where 
-        m = raw m'
+        m = raw m'
         syn = mconcat $ L.map (view syntacticThm) $ all_theories $ m!.theory
         p = m!.props
         unnamed = theory_facts (m!.theory) `M.difference` named_f
@@ -384,7 +384,7 @@ expected_leadsto_po (LeadsTo vs p0 q0) (LeadsTo vs' p1 q1) = do
         emit_goal ["lhs"] $ zforall (vs ++ vs') p0 p1
         emit_goal ["rhs"] $ zforall (vs ++ vs') q1 q0
 
-assume_old_guard :: HasExpr expr => EventMerging expr -> POCtx ()
+assume_old_guard :: HasExpr expr => EventMerging expr -> POCtx ()
 assume_old_guard evt = do
     case evt^.abstract_evts of
         e :| [] -> named_hyps $ e^._2.old.guards

@@ -358,9 +358,9 @@ instance (PrettyPrintable expr,Typeable expr) => PrettyPrintable (AbstrEvent' ex
     pretty = prettyRecord
 instance (PrettyPrintable expr,Typeable expr) => PrettyPrintable (ConcrEvent' expr) where
     pretty = prettyRecord
-instance PrettyPrintable expr => PrettyPrintable (Event' expr) where
+instance PrettyPrintable expr => PrettyPrintable (Event' expr) where
     pretty = prettyRecord
-instance PrettyPrintable expr => PrettyPrintable (Witness' expr) where
+instance PrettyPrintable expr => PrettyPrintable (Witness' expr) where
     pretty (WitEq v e)   = pretty v ++ " := " ++ pretty e
     pretty (WitSuch v e) = pretty v ++ " :| " ++ pretty e
     pretty (WitIn v e)   = pretty v ++ " :∈ " ++ pretty e
@@ -437,7 +437,7 @@ data Changes = Old | New | All | Kept
 {-# INLINE changes #-}
 changes :: (HasExpr expr)
         => Changes
-        -> Getter (EventRef expr) (Event' expr)
+        -> Getter (EventRef expr) (Event' expr)
 changes ch = to $ \(EvtRef (_,aevt) (_,cevt)) -> create $ do 
         indices .= ( aevt^.indices ) `diff` ( cevt^.indices )
         raw_coarse_sched .= combine ( aevt^.raw_coarse_sched ) ( cevt^.raw_coarse_sched )
@@ -517,7 +517,7 @@ actions_changes :: (Map Label (Action' expr) -> Map Label (Action' expr) -> Map 
 actions_changes diff = to $ \em -> (em^.abs_actions) `diff` (em^.new.actions) 
     -- \(EvtM aevts cevt) -> (snd (NE.head aevts)^.actions) `diff` (cevt^._2.actions)
 
-new_actions :: Getter (EventMerging expr) (Map Label (Action' expr))
+new_actions :: Getter (EventMerging expr) (Map Label (Action' expr))
 new_actions = actions_changes $ flip const
 
 old_actions :: Getter (EventMerging expr) (Map Label (Action' expr))

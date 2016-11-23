@@ -603,7 +603,7 @@ machine_code name m _exit = do
             emit $ trans "proc" "s'" 
         indent 4 $ do
             emit "where"
-            indent 4 $ do
+            indent 4 $ do
                 init_code m
                 emit "proc ="
                 indent 7 $ write_seq_code m cfg

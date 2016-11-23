@@ -78,7 +78,7 @@ make_machine (MId m) p4 = mch'
             inits .= p4^.pInit
             props .= p4^.pNewPropSet 
             derivation .= (ref_prog 
-                    `union` (makeRule Add <$> (p4^.pNewPropSet.progress))) 
+                    `union` (makeRule Add <$> (p4^.pNewPropSet.progress))) 
             inh_props .= p4^.pOldPropSet
             comments  .= p4^.pComments
             timeout   .= p4^.pVerTimeOut

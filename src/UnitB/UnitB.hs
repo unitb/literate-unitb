@@ -252,7 +252,7 @@ str_verify_machine_with :: HasExpr expr
                         -> Machine' expr 
                         -> IO (String,Int,Int)
 str_verify_machine_with opt m = do
-        let pos = mapMaybeWithKey opt $ proof_obligation m
+        let pos = mapMaybeWithKey opt $ proof_obligation m
         xs <- verify_all pos
         format_result xs
 

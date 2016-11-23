@@ -59,8 +59,8 @@ prop_expr_parser (ExprNotation ctx n e) =
         counterexample (pretty ctx) $
         e' === parse (withLI text)
     where
-        text = showExpr n $ getExpr e
-        parse  = fmap getExpr . parse_expr (setting_from_context n ctx & expected_type .~ Nothing)
+        text = showExpr n $ getExpr e
+        parse  = fmap getExpr . parse_expr (setting_from_context n ctx & expected_type .~ Nothing)
         e' = Right e
         li = LI "" 0 0
         withLI xs = StringLi (map (\x -> (x,li)) xs) li
@@ -69,7 +69,7 @@ data ExprNotation = ExprNotation Context Notation RawExpr
     deriving Generic
 
 instance Show ExprNotation where
-     show (ExprNotation _ n e) = showExpr n e
+     show (ExprNotation _ n e) = showExpr n e
 
 instance Arbitrary ExprNotation where
     arbitrary = sized $ \n -> resize (n `min` 20) $ do

@@ -89,7 +89,7 @@ read_all = do
               []     -> lift $ left [Error "expecting more arguments" li]
     makeTuple' p read_one'
 
-parseArgs :: (IsTuple LatexArg a,Pre)
+parseArgs :: (IsTuple LatexArg a,Pre)
           => ([LatexDoc], LineInfo)
           -> M a
 parseArgs xs = do
@@ -733,8 +733,8 @@ layeredUpgradeRecM :: ( HasMachineP1' mch1, HasMachineP1' mch0
                , MonadFix f)
             => (thy0 -> thy1 -> f thy1)
             -> (mch0 aevt0 cevt0 thy1 -> mch1 aevt0 cevt0 thy1 -> f (mch1 aevt0 cevt0 thy1))
-            -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> aevt0 -> aevt1 -> f aevt1)
-            -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> cevt0 -> cevt1 -> f cevt1)
+            -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> aevt0 -> aevt1 -> f aevt1)
+            -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> cevt0 -> cevt1 -> f cevt1)
             -> mch0 aevt0 cevt0 thy0 -> f (mch1 aevt1 cevt1 thy1)
 layeredUpgradeRecM thyF mchF oldEvF newEvF = layeredUpgradeM
         (mfix.thyF) 

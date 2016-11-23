@@ -142,7 +142,7 @@ all_proof_obligations' path = do
     else left $ [s|file does not exist: %s|] path
 
 all_proof_obligations :: FilePath -> IO (Either String [Map Label String])
-all_proof_obligations = runEitherT . all_proof_obligations'
+all_proof_obligations = runEitherT . all_proof_obligations'
 
 withLI :: Pre => Either String a -> Either [Error] a
 withLI = mapLeft $ errorTrace [] ?loc

@@ -185,7 +185,7 @@ getLatexBlocks (DocSpec envs cmds) xs = execWriter (f $ unconsTex xs)
                         let (args,rest) = brackets (argCount nargs) ys
                             li' = line_info rest 
                         tell (DocBlocks (item name 
-                            $ BlockEnv (args,li') rest li) mempty) 
+                            $ BlockEnv (args,li') rest li) mempty) 
                     Nothing -> f $ unconsTex ys
                 f $ unconsTex xs
         f (Just ((BracketNode (Bracket _ _ ys _),xs))) = do

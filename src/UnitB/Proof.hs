@@ -159,7 +159,7 @@ instance
         , SafetyHyp rule0 ~ SafetyHyp rule1
         , TransientHyp rule0 ~ TransientHyp rule1 )
     => HasRuleLens (Inference rule0) (Inference rule1) rule0 rule1 where
-        ruleLens f (Inference g r ps ts safs) = (\r' -> Inference g r' ps ts safs) <$> f r
+        ruleLens f (Inference g r ps ts safs) = (\r' -> Inference g r' ps ts safs) <$> f r
 
 instance (LivenessRule rule) 
       => ZoomEq (Inference rule) where
@@ -178,7 +178,7 @@ instance Show ProofTree where
     showsPrec n = readCell1' (showsPrec n)
 
 instance NFData ProofTree where
-    rnf = readCell1' $ \(Inference x y z v w) -> 
+    rnf = readCell1' $ \(Inference x y z v w) -> 
             x `deepseq` 
             y `deepseq` 
             z `deepseq1` 
@@ -188,7 +188,7 @@ instance NFData ProofTree where
 instance Eq ProofTree where
     (==) = cell1Equal' (==)
 
-instance LivenessRule rule => PrettyPrintable (Inference rule) where
+instance LivenessRule rule => PrettyPrintable (Inference rule) where
     pretty (Inference x y z v w) = printf "%s (%s) (%s) (%s) (%s)" 
             (pretty x)
             (show y)
@@ -196,13 +196,13 @@ instance LivenessRule rule => PrettyPrintable (Inference rule) where
             (show1 $ Pretty <$> v)
             (show1 $ first Pretty <$> w)
 
-instance LivenessRule rule => Tree (Inference rule) where
+instance LivenessRule rule => Tree (Inference rule) where
     rewriteM _ = pure
     as_tree' (Inference g r ps ts ss) = E.List <$> sequenceA 
         [ pure $ Str (pretty g)
         , pure $ Str (pretty $ rule_name r)
         , E.List . concat <$> sequenceA
-            [ traverse as_tree' $ F.toList ps 
+            [ traverse as_tree' $ F.toList ps 
             , traverse (pure . Str . pretty) $ F.toList ts 
             , traverse (pure . Str . pretty . fst) $ F.toList ss ] ]
 

@@ -45,7 +45,7 @@ import Control.Applicative
 import Control.Arrow (second)
 import Control.DeepSeq
 
-import Control.Lens as L 
+import Control.Lens as L 
 import Control.Lens.Extras
 import Control.Lens.Misc
 import Control.Monad.Identity
@@ -286,7 +286,7 @@ make_table f xs = validationToEither $ M.traverseWithKey failIf' $ M.fromListWit
     where
         mkCell' (x,y,z) = (x,(y,z) :| [])
         failIf' _ (x :| []) = pure x
-        failIf' k xs = Failure $ err k (snd <$> xs)
+        failIf' k xs = Failure $ err k (snd <$> xs)
         err x li = [MLError (f x) (fmap (pretty x,) li)]
 
 make_all_tables' :: (Scope b, Show a, Ord a, Ord k) 
@@ -395,7 +395,7 @@ instance ( Eq expr, ClashImpl a, Show a
         => ClashImpl (Redundant expr a) where
     makeInheritedImpl = fmap Redundant . makeInheritedImpl . getRedundant
     keepFromImpl s = fmap Redundant . keepFromImpl s . getRedundant
-    mergeScopesImpl (Redundant x) (Redundant y) = Redundant <$> ((reSort <$> mergeScopesImpl x y) <|> g x y)
+    mergeScopesImpl (Redundant x) (Redundant y) = Redundant <$> ((reSort <$> mergeScopesImpl x y) <|> g x y)
         where
             reSort = lineInfo .~ (x^.lineInfo <> y^.lineInfo)
             g :: a -> a -> Maybe a

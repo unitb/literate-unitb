@@ -18,7 +18,7 @@ import Data.Default
 import Data.Foldable
 #if MIN_VERSION_transformers(0,5,0)
 import           Prelude.Extras hiding (Lift1)
-import qualified Data.Functor.Classes as F
+import qualified Data.Functor.Classes as F
 #else
 #endif
 import Data.Hashable

@@ -228,7 +228,7 @@ instance RuleParser Induction where
                         return (error "induction: unreadable")
                 var   <- fromEither ztrue $ _unM $
                     getExpr <$> parse_expr'' 
-                        (parser `with_vars` symbol_table fv0
+                        (parser `with_vars` symbol_table fv0
                                & free_dummies  .~ True
                                & expected_type .~ Nothing )
                         (flatten_li' var)
@@ -361,7 +361,7 @@ parse_induction param = do
                 li    <- ask
                 var   <- fromEither ztrue $ _unM $
                     getExpr <$> parse_expr'' 
-                        (parser `with_vars` symbol_table fv0
+                        (parser `with_vars` symbol_table fv0
                                & free_dummies  .~ True
                                & expected_type .~ Nothing )
                         (flatten_li' var)

@@ -185,7 +185,7 @@ result4 = Right $ fromRight' $ runMap $ do
         "dir/file/m1_m0-enter.tex"   ## True
         "dir/file/m1_m0-leave.tex"   ## True 
         "dir/file/m1_m1-moveout.tex" ## True
-        "dir/file/m1_m1-movein.tex"  ## True
+        "dir/file/m1_m1-movein.tex"  ## True
         "dir/file/m2_m0-enter.tex"   ## True
         "dir/file/m2_m0-leave.tex"   ## True 
         "dir/file/m2_m1-moveout.tex" ## True

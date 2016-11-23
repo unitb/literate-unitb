@@ -77,7 +77,7 @@ data MachineP2'' def ae ce thy = MachineP2
 
 instance IsMachine (MachineP2'' def ae ce thy) where
     type DefType (MachineP2'' def ae ce thy) = def
-    type MchType (MachineP2'' def ae ce thy) = MachineP2'' def
+    type MchType (MachineP2'' def ae ce thy) = MachineP2'' def
     type AEvtType (MachineP2'' def ae ce thy) = ae
     type CEvtType (MachineP2'' def ae ce thy) = ce
     type ThyType (MachineP2'' def ae ce thy) = thy

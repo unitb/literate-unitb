@@ -205,7 +205,7 @@ parseLatexT :: Monad m
 parseLatexT (LatexParser env cmd _eLu _cLu _e f) xs x = runEitherT $ do
     --fmap join $  fmap (fmap validationToEither)
     --          $  fmap validationToEither
-        pruned <- hoistEither $ validationToEither 
+        pruned <- hoistEither $ validationToEither 
             $ rewriteDoc (fromList $ (,()) <$> env) (fromList cmd) xs
         EitherT $ evalStateT (runEitherT $ f x) pruned
 

@@ -138,7 +138,7 @@ class ( Eq a, Ord a, Typeable a
                       => EventId 
                       -> NonEmptyListSet LineInfo
                       -> a -> a
-    setSource ev li x = x & inhStatus.traverse._1 .~ fmap (ev,) li
+    setSource ev li x = x & inhStatus.traverse._1 .~ fmap (ev,) li
     inheritedFrom :: a -> [EventId]
     default inheritedFrom :: HasInhStatus a (EventInhStatus b) => a -> [EventId]
     inheritedFrom = fromMaybe [].fmap (fmap fst.setToList'.fst).contents
@@ -484,7 +484,7 @@ prop_axiom_Scope_clashesOverMerge = regression (axiom_Scope_clashesOverMerge^.un
     where
         li = LI "file" 1 1
         a = EventId "a"
-        e = DispExpr "-" $ Word (Var [smt|-|] (Gen RealSort []))
+        e = DispExpr "-" $ Word (Var [smt|-|] (Gen RealSort []))
         g0 = Guard { _guardInhStatus = InhAdd (pure (a,li),e)
                    , _guardDeclSource = Local
                    , _guardLineInfo = nonEmptyListSet $ (LI "file" 10 0) :| []}

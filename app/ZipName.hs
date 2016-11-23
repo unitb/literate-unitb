@@ -9,7 +9,7 @@ import Paths_literate_unitb
 import System.Environment
 import Text.Printf.TH
 
-printUnitBZipName :: [String] -> IO ()
+printUnitBZipName :: [String] -> IO ()
 printUnitBZipName os = do
         let v = showVersion version
             h = take 12 $gitHash

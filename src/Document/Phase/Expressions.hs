@@ -253,7 +253,7 @@ remove_assgn :: MPipeline MachineP2 [(Label,ExprScope)]
 remove_assgn = machineCmd "\\removeact" $ \(Conc evt, lbls) _m p2 -> do
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- ask
-            return [(lbl,evtScope ev (Action (InhDelete Nothing) Local $ pure li)) | Abs (ActionLbl lbl) <- lbls ]
+            return [(lbl,evtScope ev (Action (InhDelete Nothing) Local $ pure li)) | Abs (ActionLbl lbl) <- lbls ]
 
 witness_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 witness_decl = machineCmd "\\witness" $ \(Conc evt, VarName var, Expr xp) _m p2 -> do
@@ -304,7 +304,7 @@ checkLocalExpr' :: ( HasInhStatus decl (InhStatus expr)
                 -> EventId -> Label -> decl
                 -> Reader MachineP2 [Either Error a]
 checkLocalExpr' expKind free eid lbl sch = do
-            vs  <- view pDelVars
+            vs  <- view pDelVars
             is  <- view $ getEvent eid.eDelIndices
             mid <- view $ pMachineId.to pretty
             return $ case sch^.inhStatus of
@@ -467,7 +467,7 @@ instance IsExprScope Axiom where
 
 assumption :: MPipeline MachineP2
                     [(Label,ExprScope)]
-assumption = machineCmd "\\assumption" $ \(NewLabel lbl,Expr xs) _m p2 -> do
+assumption = machineCmd "\\assumption" $ \(NewLabel lbl,Expr xs) _m p2 -> do
             li <- ask
             xp <- parse_expr'' (p2^.pCtxSynt) xs
             return [(lbl,makeCell $ Axiom xp Local li)]
@@ -568,7 +568,7 @@ instance IsExprScope TransientProp where
 
 transient_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
-transient_prop = machineCmd "\\transient" $ \(evts', NewLabel lbl, Expr xs) _m p2 -> do
+transient_prop = machineCmd "\\transient" $ \(evts', NewLabel lbl, Expr xs) _m p2 -> do
             let evts = map (as_label.getConcrete) evts'
                 _ = evts' :: [Conc EventId]
             es   <- get_events p2 
@@ -663,7 +663,7 @@ safety_prop lbl pCt qCt _m p2 = do
             p <- trigger p
             q <- trigger q
             let new_prop = unlessProp p2 p q
-            return [(lbl,makeCell $ SafetyProp new_prop Local li)]
+            return [(lbl,makeCell $ SafetyProp new_prop Local li)]
 
 safetyA_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]

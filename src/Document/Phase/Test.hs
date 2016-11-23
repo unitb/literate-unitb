@@ -464,7 +464,7 @@ result4 = (mchMap.withKey.traverse %~ uncurry upgradeAll) <$> result3
             | eid `elem` ["ae0","ce0a","ce0b"] = makeEventP3 e $ evtField mid eid
             | otherwise = makeEventP3 e $ [ ECoarseSched "default" zfalse] ++ evtField mid eid
         newEvt _mid _m (Left SkipEvent) e = makeEventP3 e [ECoarseSched "default" zfalse]
-        lis = pure . LI "file.ext" 1
+        lis = pure . LI "file.ext" 1
         evtField mid eid
             | eid == "ae0"                 = [ EGuards  "grd0" $ c [expr|x = 0|]
                                              , ECoarseSched "sch0" $ c [expr|y = y|] 
@@ -638,7 +638,7 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
                 inh_props.inv  .= M.fromList [("inv0",c [expr| x \le y |])]
                 props.progress .= M.fromList [("prog0",pprop),("prog1",pprop)]
                 props.safety .= M.singleton "saf0" sprop
-                derivation .= M.fromList [("prog0",makeRule' Monotonicity pprop "prog1" pprop'),("prog1",makeRule Add pprop)]
+                derivation .= M.fromList [("prog0",makeRule' Monotonicity pprop "prog1" pprop'),("prog1",makeRule Add pprop)]
         --y = Var "y" int
         skipLbl = Left SkipEvent
         ae0sched = create $ do
