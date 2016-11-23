@@ -17,9 +17,9 @@ import Control.Lens hiding (Const,elements)
 import Data.Default
 import Data.Foldable
 #if MIN_VERSION_transformers(0,5,0)
-import           Prelude.Extras hiding (Lift1)
 import qualified Data.Functor.Classes as F
 #else
+import           Prelude.Extras hiding (Lift1)
 #endif
 import Data.Hashable
 import Data.List as L
@@ -44,13 +44,15 @@ type RawConstraint = Constraint' RawExpr
 
 data Constraint' expr = 
         Co [Var] expr
-    deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
+    deriving (Eq,Ord,Show,Functor,Foldable,Traversable
+             ,Generic,Generic1)
 
 type TrHint = TrHint' Expr
 type RawTrHint = TrHint' RawExpr
 
 data TrHint' expr = TrHint (Map Name (Type,expr)) (Maybe ProgId)
-    deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
+    deriving (Eq,Ord,Show,Functor,Foldable,Traversable
+             ,Generic,Generic1)
 
 
 empty_hint :: TrHint' expr
@@ -65,7 +67,8 @@ data Transient' expr =
             expr                 -- Predicate
             (NonEmpty EventId)   -- Event, Schedule 
             (TrHint' expr)       -- Hints for instantiation
-    deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
+    deriving (Eq,Ord,Show,Functor,Foldable,Traversable
+             ,Generic,Generic1)
 
 data Direction = Up | Down
     deriving (Eq,Show,Generic)
@@ -118,7 +121,8 @@ data PropertySet' expr = PS
         , _progress     :: Map ProgId (ProgressProp' expr)
         , _safety       :: Map Label (SafetyProp' expr)
         }
-    deriving (Eq,Functor,Foldable,Traversable,Generic,Show)
+    deriving (Eq,Functor,Foldable,Traversable
+             ,Generic,Generic1,Show)
 
 newtype ProgId = PId { getProgId :: Label }
     deriving (Eq,Ord,IsString,Typeable,Generic,Hashable)
@@ -136,13 +140,15 @@ type ProgressProp = ProgressProp' Expr
 type RawProgressProp = ProgressProp' RawExpr
 
 data ProgressProp' expr = LeadsTo [Var] expr expr
-    deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable,Generic,Show)
+    deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable
+             ,Generic,Generic1,Show)
 
 type SafetyProp = SafetyProp' Expr
 type RawSafetyProp = SafetyProp' RawExpr
 
 data SafetyProp' expr = Unless [Var] expr expr
-    deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable,Generic,Show)
+    deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable
+             ,Generic,Generic1,Show)
 
 instance PrettyPrintable expr => PrettyPrintable (Constraint' expr) where
     pretty (Co _ p) = "constraint:  " ++ pretty p
@@ -290,6 +296,33 @@ instance Arbitrary ProgId where
 instance ZoomEq expr => ZoomEq (TrHint' expr) where
 instance Arbitrary expr => Arbitrary (TrHint' expr) where
     arbitrary = TrHint <$> (M.fromList <$> arbitrary) <*> arbitrary
+
+#if MIN_VERSION_transformers(0,5,0)
+instance F.Show1 ProgressProp' where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Eq1 ProgressProp' where
+    liftEq = genericLiftEq
+instance F.Show1 SafetyProp' where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Eq1 SafetyProp' where
+    liftEq = genericLiftEq
+instance F.Show1 PropertySet' where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Eq1 PropertySet' where
+    liftEq = genericLiftEq
+instance F.Show1 Transient' where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Eq1 Transient' where
+    liftEq = genericLiftEq
+instance F.Show1 TrHint' where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Eq1 TrHint' where
+    liftEq = genericLiftEq
+instance F.Show1 Constraint' where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Eq1 Constraint' where
+    liftEq = genericLiftEq
+#endif
 
 instance ZoomEq Direction where
 instance ZoomEq Variant where

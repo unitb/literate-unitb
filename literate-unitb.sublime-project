@@ -4,6 +4,81 @@
 		{
 			"cmd":
 			[
+				"stack",
+				"build",
+				"--test",
+				"--no-run-tests",
+				"--resolver",
+				"lts-3"
+			],
+			"file_regex": "^([^\\s=:\\(\\)][^\\n:\\(\\)]+?hs):([0-9]*):?([0-9]*)",
+			"name": "Haskell / stack lts-3",
+			"selector": "source.haskell",
+			"working_dir": "${project_path}"
+		},
+		{
+			"cmd":
+			[
+				"stack",
+				"build",
+				"--test",
+				"--no-run-tests",
+				"--resolver",
+				"lts-6"
+			],
+			"file_regex": "^([^\\s=:\\(\\)][^\\n:\\(\\)]+?hs):([0-9]*):?([0-9]*)",
+			"name": "Haskell / stack lts-6",
+			"selector": "source.haskell",
+			"working_dir": "${project_path}"
+		},
+		{
+			"cmd":
+			[
+				"stack",
+				"build",
+				"--test",
+				"--no-run-tests",
+				"--resolver",
+				"lts-7"
+			],
+			"file_regex": "^([^\\s=:\\(\\)][^\\n:\\(\\)]+?hs):([0-9]*):?([0-9]*)",
+			"name": "Haskell / stack lts-7",
+			"selector": "source.haskell",
+			"working_dir": "${project_path}"
+		},
+		{
+			"cmd":
+			[
+				"stack",
+				"build",
+				"--test",
+				"--no-run-tests",
+				"--resolver",
+				"nightly"
+			],
+			"file_regex": "^([^\\s=:\\(\\)][^\\n:\\(\\)]+?hs):([0-9]*):?([0-9]*)",
+			"name": "Haskell / stack nightly",
+			"selector": "source.haskell",
+			"working_dir": "${project_path}"
+		},
+		{
+			"cmd":
+			[
+				"stack",
+				"test",
+				"tests",
+				"--",
+				"--test-arguments",
+				"--selected-case"
+			],
+			"file_regex": "^([^\\s=:\\(\\)][^\\n:\\(\\)]+?hs):([0-9]*):?([0-9]*)",
+			"name": "Haskell / stack test",
+			"selector": "source.haskell",
+			"working_dir": "${project_path}"
+		},
+		{
+			"cmd":
+			[
 				// "cabal",
 				"stack",
 				// "exec",

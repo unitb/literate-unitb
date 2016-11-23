@@ -33,6 +33,7 @@ import           Data.Compressed
 import           Data.Either.Validation
 #if MIN_VERSION_transformers(0,5,0)
 import Prelude.Extras hiding (Lift1)
+import qualified Data.Functor.Classes as F
 #else
 import Data.Functor.Classes
 #endif
@@ -46,6 +47,7 @@ import qualified Data.Map as M
 import           Data.Serialize
 import qualified Data.Set as S
 
+import GHC.Generics (Generic1)
 import GHC.Generics.Instances
 
 import Test.QuickCheck.ZoomEq
@@ -81,7 +83,7 @@ data MachinePO' expr = MachinePO
     , _proofs     :: Map Label Proof    
     , _raw_proof_obligation_field :: Box (Map Label Sequent)
     , _proof_obligation_field :: MemBox (Map Label Sequent) }
-    deriving (Functor,Foldable,Traversable,Show,Generic,Eq)
+    deriving (Functor,Foldable,Traversable,Show,Generic,Generic1,Eq)
 
 newtype Box a = Box (() -> a)
     deriving (Generic)
@@ -172,8 +174,15 @@ instance HasExpr expr => HasInvariant (MachinePO' expr) where
         where
             b = box $ \() -> raw_machine_pos' $ m^.syntax
             pos = unbox b
+#if MIN_VERSION_transformers(0,5,0)
+instance F.Eq1 MachinePO' where
+    liftEq = genericLiftEq
+instance F.Show1 MachinePO' where
+    liftShowsPrec = genericLiftShowsPrec
+#else
 instance Eq1 MachinePO' where
     eq1 = (==)
+#endif
 instance PrettyPrintable expr => PrettyPrintable (MachinePO' expr) where
 instance NFData expr => NFData (MachinePO' expr) where
 instance NFData expr => NFData (MachineWithProofs' expr) where

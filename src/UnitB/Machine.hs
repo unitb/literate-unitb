@@ -54,6 +54,7 @@ import           Data.String
 import qualified Data.Traversable as T
 import           Data.Typeable
 
+import GHC.Generics (Generic1)
 import GHC.Generics.Instances
 
 import Test.QuickCheck.ZoomEq
@@ -93,7 +94,7 @@ data MachineBase expr =
         , _derivation :: Map ProgId ProofTree         
         , _comments   :: Map DocItem String 
         , _machineBaseTimeout :: Float }
-    deriving (Eq,Show,Typeable,Functor,Foldable,Traversable,Generic)
+    deriving (Eq,Show,Typeable,Functor,Foldable,Traversable,Generic,Generic1)
 
 instance ZoomEq expr => ZoomEq (MachineBase expr) where
 instance ZoomEq expr => ZoomEq (EventMap expr) where
@@ -103,6 +104,26 @@ instance Eq1 MachineBase where
     (==#) x y = x == y
 #else
     eq1 x y = x == y
+#endif
+
+#if MIN_VERSION_transformers(0,5,0)
+instance F.Eq1 EventMap where
+    liftEq f (EventMap m0) (EventMap m1) = 
+            liftEqGraph 
+                (==) (F.liftEq f) 
+                (==) (F.liftEq f)
+                (==) 
+                m0 m1
+instance F.Show1 EventMap where
+    liftShowsPrec showA _showAs = lmap _table . 
+            liftShowsGraph 
+                showsPrec (F.liftShowsPrec showA $ G.liftShowsListPrec showA 0)
+                showsPrec (F.liftShowsPrec showA $ G.liftShowsListPrec showA 0)
+                showsPrec
+instance F.Show1 MachineBase where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Eq1 MachineBase where
+    liftEq = genericLiftEq
 #endif
 
 instance Show1 MachineBase where

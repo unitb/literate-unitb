@@ -25,33 +25,34 @@ test :: TestCase
 test = test_cases "small machine example" [
         (aCase "test 0" 
             case0 $ 
-            Right $ [m0_machine]),
-        (aCase "test 1 (separate machine blocks)" 
-            case1 $ 
-            Right $ [m1_machine]),
-        (poCase "test 2 (verification, one failure)" 
-            case2 result2),
-        (poCase "test 3 (verification)" 
-            case3 result3),
-        (stringCase "test 4 (proof obligation, invariance)" 
-            case4 result4),
-        (stringCase "test 5 (co, 'skip' proof obligation)" 
-            case5 result5),
-        (poCase "test 6 (verification, coarse schedule stronger than guard)" 
-            case6 result6),
-        (stringCase "test 7 (schedulability proof obligation)" 
-            case7 result7),
-        (stringCase "test 8 (schedulability without selecting schedules (trivially true))" 
-            case8 result8),
-            -- default: false is no longer weakened away
-        --(stringCase "test 9 (coarse schedule weakening, PO)" 
-        --    case9 result9),
-        (stringCase "test 10 (transient PO, enablement)" 
-            case10 result10), 
-        (stringCase "test 11 (transient PO, negation)" 
-            case11 result11),
-        (stringCase "test 12 name clash between coarse schedule and co properties" 
-            case12 result12) ]
+            Right $ [m0_machine])
+        -- (aCase "test 1 (separate machine blocks)" 
+        --     case1 $ 
+        --     Right $ [m1_machine]),
+        -- (poCase "test 2 (verification, one failure)" 
+        --     case2 result2),
+        -- (poCase "test 3 (verification)" 
+        --     case3 result3),
+        -- (stringCase "test 4 (proof obligation, invariance)" 
+        --     case4 result4),
+        -- (stringCase "test 5 (co, 'skip' proof obligation)" 
+        --     case5 result5),
+        -- (poCase "test 6 (verification, coarse schedule stronger than guard)" 
+        --     case6 result6),
+        -- (stringCase "test 7 (schedulability proof obligation)" 
+        --     case7 result7),
+        -- (stringCase "test 8 (schedulability without selecting schedules (trivially true))" 
+        --     case8 result8),
+        --     -- default: false is no longer weakened away
+        -- --(stringCase "test 9 (coarse schedule weakening, PO)" 
+        -- --    case9 result9),
+        -- (stringCase "test 10 (transient PO, enablement)" 
+        --     case10 result10), 
+        -- (stringCase "test 11 (transient PO, negation)" 
+        --     case11 result11),
+        -- (stringCase "test 12 name clash between coarse schedule and co properties" 
+        --     case12 result12) 
+        ]
 
 path0 :: FilePath
 path0 = [path|Tests/small_machine_t0.tex|]

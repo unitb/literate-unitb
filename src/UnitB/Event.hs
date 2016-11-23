@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings,CPP #-}
 module UnitB.Event 
     ( module UnitB.Event
     , EventId (..) )
@@ -18,6 +18,9 @@ import Control.Lens.HierarchyTH
 import Control.Lens.Misc
 
 import Data.Default
+#if MIN_VERSION_transformers(0,5,0)
+import qualified Data.Functor.Classes as F
+#endif
 import Data.Foldable as F
 import Data.Hashable
 import Data.List as L
@@ -44,7 +47,7 @@ data Action' expr =
         Assign Var expr 
         | BcmSuchThat [Var] expr
         | BcmIn Var expr
-    deriving (Eq,Ord,Functor,Foldable,Traversable,Generic,Show)
+    deriving (Eq,Ord,Functor,Foldable,Traversable,Generic,Generic1,Show)
 
 instance PrettyPrintable expr => PrettyPrintable (Action' expr) where
     pretty (Assign v e) = printf "%s := %s" (render $ v^.name) (pretty e)
@@ -79,7 +82,7 @@ data Witness' expr =
         WitEq { witVar :: Var, witExpr :: expr }
         | WitSuch { witVar :: Var, witExpr :: expr }
         | WitIn { witVar :: Var, witExpr :: expr }
-    deriving (Eq, Show,Functor,Foldable,Traversable,Generic)
+    deriving (Eq, Show,Functor,Foldable,Traversable,Generic,Generic1)
 
 type Witness = Witness' Expr
 type RawWitness = Witness' RawExpr
@@ -101,7 +104,7 @@ data Event' expr = Event
         , _params     :: Map Name Var
         , _raw_guards :: Map Label expr
         , _actions  :: Map Label (Action' expr)
-        } deriving (Eq, Show,Functor,Foldable,Traversable,Generic)
+        } deriving (Eq, Show,Functor,Foldable,Traversable,Generic,Generic1)
 
 type AbstrEvent = AbstrEvent' Expr
 
@@ -110,7 +113,7 @@ data AbstrEvent' expr = AbsEvent
         , _f_sched_ref :: Maybe (Label,ProgressProp' expr)
         , _c_sched_ref :: [ScheduleChange' expr]
         , _ind_witness :: Map Name (Witness' expr)
-        } deriving (Eq, Show,Functor,Foldable,Traversable,Generic)
+        } deriving (Eq, Show,Functor,Foldable,Traversable,Generic,Generic1)
 
 type ConcrEvent = ConcrEvent' Expr
 
@@ -120,7 +123,7 @@ data ConcrEvent' expr = CEvent
         , _param_witness :: Map Name (Witness' expr)
         , _eql_vars  :: Map Name Var
         , _abs_actions :: Map Label (Action' expr)
-        } deriving (Eq,Show,Functor,Foldable,Traversable,Generic)
+        } deriving (Eq,Show,Functor,Foldable,Traversable,Generic,Generic1)
 
 type RawEventMerging = EventMerging RawExpr
 type EventMerging' = EventMerging Expr
@@ -156,7 +159,7 @@ data ScheduleChange' expr = ScheduleChange
         { _add    :: Map Label ()
         , _sch_prog :: (Label,ProgressProp' expr) 
         }
-    deriving (Show,Eq,Typeable,Functor,Foldable,Traversable,Generic)
+    deriving (Show,Eq,Typeable,Functor,Foldable,Traversable,Generic,Generic1)
 
 makePrisms ''Action'
 makeFields ''EventRef
@@ -543,6 +546,33 @@ compact = to $ \m -> EvtRef
 
 replace :: (Label, ProgressProp) -> ScheduleChange
 replace prog = ScheduleChange def prog
+
+#if MIN_VERSION_transformers(0,5,0)
+instance F.Show1 Event' where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Show1 Action' where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Show1 AbstrEvent' where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Show1 ConcrEvent' where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Show1 Witness' where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Show1 ScheduleChange' where
+    liftShowsPrec = genericLiftShowsPrec
+instance F.Eq1 Event' where
+    liftEq = genericLiftEq
+instance F.Eq1 Action' where
+    liftEq = genericLiftEq
+instance F.Eq1 AbstrEvent' where
+    liftEq = genericLiftEq
+instance F.Eq1 ConcrEvent' where
+    liftEq = genericLiftEq
+instance F.Eq1 Witness' where
+    liftEq = genericLiftEq
+instance F.Eq1 ScheduleChange' where
+    liftEq = genericLiftEq
+#endif
 
 instance NFData expr => NFData (Event' expr)
 instance NFData expr => NFData (AbstrEvent' expr)
