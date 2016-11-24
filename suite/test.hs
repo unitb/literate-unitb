@@ -8,6 +8,7 @@ import Control.Monad
 
 import Data.Functor.Compose
 import Data.List
+import Data.Monoid ((<>))
 
 import Document.Document
 import Document.Tests.SmallMachine as SM
