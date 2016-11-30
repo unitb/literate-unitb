@@ -55,7 +55,7 @@ instance (Show mch,HasMachine mch expr,HasExpr expr,ZoomEq expr)
         => HasInvariant (SystemBase mch) where
     invariant s = do 
         "inv4" ## M.keys (s^.ref_struct) === M.keys (s^.machines)
-        traverseWithKey (mch match) $ s^.ref_struct
+        _ <- traverseWithKey (mch match) $ s^.ref_struct
         return ()
         where
             mch cmd m0 m1 = 

@@ -73,7 +73,7 @@ test = do
         o2 <- new_obs "allo"
         observe_with o1 ch "salut"
         observe_with o2 ch "bonjour"
-        forkIO $ forM_ [1..3] $ const $ do
+        _ <- forkIO $ forM_ [1..3] $ const $ do
             x <- readChan ch 
             putStrLn x
             threadDelay 1000000

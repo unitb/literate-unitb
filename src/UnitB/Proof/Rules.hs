@@ -7,6 +7,7 @@
         , TypeFamilies
         , StandaloneDeriving
         #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module UnitB.Proof.Rules where
 
     -- Modules

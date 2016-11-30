@@ -223,9 +223,6 @@ data Hierarchy k = Hierarchy
 instance Eq k => Eq (Hierarchy k) where
     h0 == h1 = edges h0 == edges h1
 
-instance IsLabel ContextId where
-    as_label (CId x) = label x
-
 type MMap = M.Map MachineId
 type CMap = M.Map ContextId
 
@@ -248,9 +245,6 @@ instance NFData TheoryP0
 instance NFData TheoryP1
 instance NFData TheoryP2
 instance NFData TheoryP3
-
-instance NFData (Tactic Proof) where
-    rnf x = seq x () 
 
 makeRecordConstr ''MachineP2''
 makeRecordConstr ''MachineP3'
@@ -346,3 +340,8 @@ deriving instance Generic EventP3Field
 deriving instance Generic EventP4Field
 
 deriving instance Show EventP3Field
+
+instance HasMachineP1' MachineP2RawDef' where
+    machineP1' = $(oneLens '_p1)
+instance HasMachineP2' MachineP2RawDef' where
+    machineP2' = id

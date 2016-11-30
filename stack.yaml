@@ -32,10 +32,10 @@ packages:
     commit: 78529049b88999df3eb76340db166d9892d46bfd
 - location:
     git: https://github.com/unitb/literate-unitb-logic.git
-    commit: ca3fba46c45801ac1202d965612b75c9e154e591
+    commit: 8104bd3e39c9f861ab8b791ad297052637d37b9c
 - location:
     git: https://github.com/unitb/syntax-error.git
-    commit: 84af568ffd9427e66dc93abbe40d9c08715ba021
+    commit: 764f224e42816961ae5742996d7c8eedcd145fde
 - location:
     git: https://github.com/unitb/unfoldable.git
     commit: 8dc15076a4c6c3efdb2c6680e6c5944633a25ae7
@@ -80,7 +80,7 @@ packages:
     commit: a82197c81f2f8cdb4ecce54495ca62a6c10ad3d1
 - location:
     git: https://github.com/unitb/pretty-printable.git
-    commit: 1adc34c9f88a5e9fec25d39cd193aec65c4625e9
+    commit: 85485a415d2098bb1a7ed8dc1ca412221a09720b
 - location:
     git: https://github.com/unitb/data-packaged.git
     commit: 25bb09dcdd5220d457b6801fd9c6a2c376343a9f

@@ -740,7 +740,7 @@ weaken_csched_po m (lbl,evt) = do
                     _context $ assert_ctx m
                     _context $ step_ctx m
                     POG.variables $ evt^.indices
-                    T.forM (evt^.evt_pairs) $ \e -> -- indices
+                    F.for_ (evt^.evt_pairs) $ \e -> -- indices
                         POG.variables $ e^.added.indices
                     named_hyps $ invariants m 
                     named_hyps $ M.mapKeys as_label $ witnessDef <$> evt^.ind_witness

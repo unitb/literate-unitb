@@ -9,6 +9,7 @@ module Document.Pipeline where
 import Document.Phase.Parameters
 import Latex.Parser as P 
 import Logic.Names
+import Logic.Expr
 import UnitB.Syntax
 
     -- Libraries
@@ -71,6 +72,9 @@ convertInput (Input mch ctx) = Input
 
 newtype ContextId = CId { getCId :: String }
     deriving (Eq,Ord,Hashable)
+
+instance IsLabel ContextId where
+    as_label (CId x) = label x
 
 instance Show ContextId where
     show = getCId

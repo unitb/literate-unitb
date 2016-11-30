@@ -2,6 +2,7 @@
         , RecursiveDo
         , LambdaCase
         , ConstraintKinds #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Document.Phase.Declarations where
 
     --
@@ -193,7 +194,7 @@ instance IsVarScope MachineDef where
 remove_ind :: MPipeline MachineP1 [(Name,VarScope)]
 remove_ind = machineCmd "\\removeind" $ \(Conc evt,xs) _m _p1 -> do
         li <- ask
-        get_concrete_event _p1 evt
+        _  <- get_concrete_event _p1 evt
         return [ (x,makeCell $ Evt $ M.singleton (Right evt) 
                 $ EventDecl (Index $ InhDelete Nothing) (pure (Right evt)) Local li) 
             | IndName x <- xs ]

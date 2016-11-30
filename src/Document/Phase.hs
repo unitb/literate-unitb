@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeOperators,TypeFamilies     #-}
 {-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE StandaloneDeriving, UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Document.Phase where
 
     -- Modules
@@ -27,7 +28,6 @@ import Control.Arrow hiding (ArrowChoice(..))
 import Control.CoApplicative
 import Control.Lens as L hiding ((<.>))
 import Control.Lens.Misc
-import Control.Lens.HierarchyTH
 
 import Control.Monad.Except (MonadError)
 import Control.Monad.Reader.Class 
@@ -514,11 +514,6 @@ instance ( IsMachine p
           , HasEventP2  (CEvtType p)
           , HasTheoryP2 (ThyType p) ) 
     => HasMachineP2 p where
-
-instance HasMachineP1' MachineP2RawDef' where
-    machineP1' = $(oneLens '_p1)
-instance HasMachineP2' MachineP2RawDef' where
-    machineP2' = id
 
 class ( IsMachine p
       , HasMachineP3' (MchType p)

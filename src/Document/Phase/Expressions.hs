@@ -4,6 +4,7 @@
     , OverloadedStrings
     , ViewPatterns
     #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Document.Phase.Expressions where
 
     --
@@ -183,7 +184,7 @@ bcmeq_assgn = machineCmd "\\evbcmeq" $ \(Conc evt, NewLabel lbl, VarName v, Expr
             xp <- parse_expr''
                 (event_parser p2 ev & expected_type .~ Just t)
                 xs
-            check_types
+            _ <- check_types
                 $ Right (Word var :: RawExpr) `mzeq` Right (asExpr xp)
             let act = Assign var xp
             return [(lbl,evtScope ev (Action (InhAdd (pure (ev,li),act)) Local $ pure li))]
@@ -214,7 +215,7 @@ bcmin_assgn = machineCmd "\\evbcmin" $ \(Conc evt, NewLabel lbl, VarName v, Expr
                     (event_parser p2 ev & expected_type .~ Just (set_type t) )
                     xs
             let act = BcmIn var xp
-            check_types $ Right (Word var) `zelem` Right (asExpr xp)
+            _ <- check_types $ Right (Word var) `zelem` Right (asExpr xp)
             return [(lbl,evtScope ev (Action (InhAdd (pure (ev,li),act)) Local $ pure li))]
 
 instance IsExprScope Initially where
