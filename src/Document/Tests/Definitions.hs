@@ -46,6 +46,7 @@ result2 = unlines
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
+    , "(define-sort guarded (a) (Maybe a))"
     , "; comment: we don't need to declare the sort Bool"
     , "; comment: we don't need to declare the sort Int"
     , "; comment: we don't need to declare the sort Real"

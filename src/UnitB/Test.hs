@@ -26,6 +26,7 @@ import Z3.Z3
 import Control.Monad
 import Control.Lens hiding (indices)
 import Control.Lens.Misc
+import Control.Precondition
 
 import           Data.List ( sort )
 import qualified Data.List.NonEmpty as NE
@@ -155,11 +156,12 @@ result_example0_tr_en_po = unlines [
 
 result_train_m0_tr_en_po :: String
 result_train_m0_tr_en_po = unlines 
-    [ " sort: Pair [a,b], set [a]"
+    [ " sort: Pair [a,b], guarded [a], set [a]"
     , " card[_a]: (set a) -> Int"
     , " const[_a,_b]: b -> (Array a b)"
     , " finite[_t]: (set t) -> Bool"
     , " ident[_a]: (Array a a)"
+    , " is-def[_a]: (guarded a) -> Bool"
     , " mk-set[_t]: t -> (set t)"
     , " pow[_a]: (set a) -> (set (set a))"
     , " qsum[_a]: (set a) x (Array a Int) -> Int"
@@ -216,6 +218,7 @@ result_train_m0_tr_en_po = unlines
     , "           (y _t1) )"
     , "         (=> true (= (select (const@@_t1@@_t0 x) y) x)))"
     , " (forall ( (x _t0) ) (=> true (= (select ident@@_t0 x) x)))"
+    , " (forall ( (x _t0) ) (=> true (is-def@@_t0 (Just@@_t0 x))))"
     , " (forall ( (x _t)"
     , "           (y _t) )"
     , "         (=> true (= (elem@@_t x (mk-set@@_t y)) (= x y))))"
@@ -288,11 +291,12 @@ result_train_m0_tr_en_po = unlines
 
 result_train_m0_tr_neg_po :: String
 result_train_m0_tr_neg_po = unlines 
-    [ " sort: Pair [a,b], set [a]"
+    [ " sort: Pair [a,b], guarded [a], set [a]"
     , " card[_a]: (set a) -> Int"
     , " const[_a,_b]: b -> (Array a b)"
     , " finite[_t]: (set t) -> Bool"
     , " ident[_a]: (Array a a)"
+    , " is-def[_a]: (guarded a) -> Bool"
     , " mk-set[_t]: t -> (set t)"
     , " pow[_a]: (set a) -> (set (set a))"
     , " qsum[_a]: (set a) x (Array a Int) -> Int"
@@ -351,6 +355,7 @@ result_train_m0_tr_neg_po = unlines
     , "           (y _t1) )"
     , "         (=> true (= (select (const@@_t1@@_t0 x) y) x)))"
     , " (forall ( (x _t0) ) (=> true (= (select ident@@_t0 x) x)))"
+    , " (forall ( (x _t0) ) (=> true (is-def@@_t0 (Just@@_t0 x))))"
     , " (forall ( (x _t)"
     , "           (y _t) )"
     , "         (=> true (= (elem@@_t x (mk-set@@_t y)) (= x y))))"
@@ -461,7 +466,7 @@ case3 :: IO [([Var], [Expr])]
 result3 :: [([Var], [Expr])]
 case4 :: IO ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
 result4 :: ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
-(case3, result3, case4, result4) = ($typeCheck) $ do
+(case3, result3, case4, result4) = fromRight' $ do
             e0 <- a
             e1 <- d `mzplus` b
             e2 <- b `mzplus` c

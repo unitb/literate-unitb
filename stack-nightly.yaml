@@ -32,9 +32,11 @@ packages:
     commit: 78529049b88999df3eb76340db166d9892d46bfd
 - location:
     git: https://github.com/unitb/literate-unitb-logic.git
+    # commit: master
     commit: f61377e9b031100edaa2c2dbe5e4eb22dfd98ad2
 - location:
     git: https://github.com/unitb/syntax-error.git
+    # commit: master
     commit: 764f224e42816961ae5742996d7c8eedcd145fde
 - location:
     git: https://github.com/unitb/unfoldable.git
@@ -80,6 +82,7 @@ packages:
     commit: a82197c81f2f8cdb4ecce54495ca62a6c10ad3d1
 - location:
     git: https://github.com/unitb/pretty-printable.git
+    # commit: master
     commit: 85485a415d2098bb1a7ed8dc1ca412221a09720b
 - location:
     git: https://github.com/unitb/data-packaged.git
@@ -92,6 +95,7 @@ extra-deps:
 - pseudomacros-0.0.2
 - map-syntax-0.2.0.1
 - MissingH-1.3.0.2
+- lens-4.14
 - pseudomacros-0.0.2
 - th-printf-0.3.1
 - quickcheck-report-0.1.0.0

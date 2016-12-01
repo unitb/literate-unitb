@@ -12,7 +12,8 @@ import Logic.Proof
 import UnitB.Expr
 
     -- Libraries
-import Control.Lens -- ((.=))
+import Control.Lens
+import Control.Precondition
 
 import Data.List hiding (inits)
 import Data.Map hiding ( map )
@@ -58,9 +59,9 @@ machine6 :: RawMachineAST
 machine6 = newMachine [tex|m0|] $ do
         variables .= fromList (map as_pair [var_a,var_b,var_c,var_n])
         inits .= fromList
-                  [ (label "in2", $typeCheck$ c .=. 6)
-                  , (label "in1", $typeCheck$ b .=. 1)
-                  , (label "init0", $typeCheck$ (n .=. 0) /\ (a .=. 0) )
+                  [ (label "in2", fromRight' $ c .=. 6)
+                  , (label "in1", fromRight' $ b .=. 1)
+                  , (label "init0", fromRight' $ (n .=. 0) /\ (a .=. 0) )
                   ]
         props .= prop_set6
         event_table .= newEvents [("evt",event6_evt)]
@@ -74,11 +75,11 @@ prop_set6 :: PropertySet' RawExpr
 prop_set6 = empty_property_set {
         _inv = fromList $ zip 
                 (map label ["inv0","inv1","inv2"]) 
-                [ $typeCheck$ a .=. (n .^ 3)
-                , $typeCheck$ b .=.    3 * (n .^ 2)
+                [ fromRight' $ a .=. (n .^ 3)
+                , fromRight' $ b .=.    3 * (n .^ 2)
                                    + 3 * n
                                    + 1     
-                , $typeCheck$ c .=. 6 * n + 6 ] }
+                , fromRight' $ c .=. 6 * n + 6 ] }
     where
         a = Right $ Word var_a
         b = Right $ Word var_b
@@ -163,6 +164,7 @@ result8 = unlines
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
+    , "(define-sort guarded (a) (Maybe a))"
     , "; comment: we don't need to declare the sort Bool"
     , "; comment: we don't need to declare the sort Int"
     , "; comment: we don't need to declare the sort Real"

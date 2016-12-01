@@ -221,9 +221,9 @@ raw_machine_pos' m' = eval_generator $
                     mapM_ (prog_wd_po m) $ M.toList $ _progress p
                     run $ foldMapWithKey (fmap Cons . ref_po m) (m!.derivation)
     where 
-        m = raw m'
-        syn = mconcat $ L.map (view syntacticThm) $ all_theories $ m!.theory
-        p = m!.props
+        m   = raw m'
+        syn = allSyntacticThms (m!.theory)
+        p   = m!.props
         unnamed = theory_facts (m!.theory) `M.difference` named_f
         named_f = theory_facts (m!.theory) { _extends = M.empty }
 
@@ -721,7 +721,7 @@ replace_csched_po m (lbl,evt') = do
                                         cs :| [] -> cs
                                         cs -> singleton "split" $ zsome $ NE.map zall cs
                     forM_ (M.toList new_part') $ \(lbl,sch) -> do
-                        emit_goal ["prog",plbl,"rhs",lbl] $ $typeCheck$
+                        emit_goal ["prog",plbl,"rhs",lbl] $ fromRight'$
                             Right q0 .=> Right sch \/ mznot (Right $ zall old_c)
 
 weaken_csched_po :: RawMachineAST -> (EventId,RawEventSplitting) -> M ()
@@ -817,7 +817,7 @@ replace_fsched_po m (lbl,aevt) = do
                             nameless_hyps new_c
                             named_hyps old_c -- is this sound?
                             named_hyps kept_f) $
-                        emit_goal ["eqv"] $ $typeCheck$
+                        emit_goal ["eqv"] $ fromRight'$
                             Right (zsome add_f) .=. Right (zsome del_f)
 
 intersections :: Ord k => [Map k a] -> Map k a

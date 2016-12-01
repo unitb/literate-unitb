@@ -2,6 +2,14 @@
 	"build_systems":
 	[
 		{
+            "cmd":
+            [
+                "diff_fail"
+            ],
+            "name": "Check test results",
+            "working_dir": "${project_path}"
+        },
+        {
 			"cmd":
 			[
 				"stack",

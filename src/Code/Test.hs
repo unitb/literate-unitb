@@ -19,7 +19,7 @@ import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Control.Precondition
 
-import Data.Either.Combinators
+import Data.Either.Combinators hiding (fromRight')
 import Data.List as L
 import Data.Map hiding ((!))
 
@@ -140,8 +140,8 @@ case3 = do let x = do
                 run $ machine_code "find_cubes" m $ n `zeq` bigN
            return $ either id id x    
     where
-        (n)      = ($typeCheck) $ fst $ var "n" int
-        (bigN)   = ($typeCheck) $ fst $ var "N" int
+        (n)      = fromRight' $ fst $ var "n" int
+        (bigN)   = fromRight' $ fst $ var "N" int
      
 result4 :: String
 result4 = unlines
@@ -201,8 +201,8 @@ case4 = do let x = do
                 source_file "find_cubes" m $ n `zeq` bigN
            return $ either id id x    
     where
-        (n)      = ($typeCheck) $ fst $ var "n" int
-        (bigN)   = ($typeCheck) $ fst $ var "N" int
+        (n)      = fromRight' $ fst $ var "n" int
+        (bigN)   = fromRight' $ fst $ var "N" int
 
 result7 :: String
 result7 = unlines
@@ -274,8 +274,8 @@ case7 = do let x = do
                 source_file' vars "find_cubes" m $ n `zeq` bigN
            return $ either id id x    
     where
-        (n)      = ($typeCheck) $ fst $ var "n" int
-        (bigN)   = ($typeCheck) $ fst $ var "N" int
+        (n)      = fromRight' $ fst $ var "n" int
+        (bigN)   = fromRight' $ fst $ var "N" int
 
 result8 :: String
 result8 = unlines 
@@ -298,8 +298,8 @@ case8 = do  xs <- runEitherT $ do
                     return rs
             return $ either id id xs    
     where
-        (n)      = ($typeCheck) $ fst $ var "n" int
-        (bigN)   = ($typeCheck) $ fst $ var "N" int
+        (n)      = fromRight' $ fst $ var "n" int
+        (bigN)   = fromRight' $ fst $ var "N" int
 
 result5 :: String
 result5 = unlines
@@ -331,8 +331,8 @@ case5 = do  xs <- runEitherT $ do
                     return rs
             return $ either id id xs    
     where
-        (n)      = ($typeCheck) $ fst $ var "n" int
-        (bigN)   = ($typeCheck) $ fst $ var "N" int
+        (n)      = fromRight' $ fst $ var "n" int
+        (bigN)   = fromRight' $ fst $ var "N" int
 
 result6 :: String
 result6 = unlines 

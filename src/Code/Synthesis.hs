@@ -547,7 +547,8 @@ write_seq_code m (Event _pre wait cond lbl)
             emit $ [s|if %s then do|] expr
             indent 2 $ do
                 s' <- event_body_code m (upward_event m (Right lbl)^.new)
-                f s'
+                _  <- f s'
+                return ()
             emit $ [s|else|]    
             indent 2 $ f "s"
     | otherwise = lift $ Left "Waiting is not allowed in sequential code"

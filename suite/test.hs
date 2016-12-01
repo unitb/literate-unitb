@@ -10,7 +10,7 @@ import Data.Functor.Compose
 import Data.List
 import Data.Monoid ((<>))
 
-import Document.Document
+import Document.Document hiding (system)
 import Document.Tests.SmallMachine as SM
 import qualified UnitB.Test as UB
 import qualified Latex.Test as LT
@@ -27,6 +27,7 @@ import Options.Applicative
 
 import System.Directory
 import System.Exit
+import System.Process
 
 import Test.UnitTest hiding (QuickCheckProps)
 import Test.QuickCheck.Lens 
@@ -103,13 +104,7 @@ trashTestFiles :: IO ()
 trashTestFiles = do
     xs <- getDirectoryContents "."
     setNumCapabilities 8
-    let prefix ys = any (ys `isPrefixOf`) xs
-    when (prefix "actual-") $
-        shelly $ rm_f "actual-*.txt"
-    when (prefix "expected-") $
-        shelly $ rm_f "expected-*.txt"
-    when (prefix "po-") $
-        shelly $ rm_f "po-*.z3"
+    void $ system "rm actual* expected* po-* log*.z3"
 
 main :: IO ()
 main = timeIt $ do

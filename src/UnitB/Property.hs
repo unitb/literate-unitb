@@ -13,6 +13,7 @@ import UnitB.Expr
 import Control.DeepSeq
 import Control.Invariant as I
 import Control.Lens hiding (Const,elements)
+import Control.Precondition
 
 import Data.Default
 import Data.Foldable
@@ -215,19 +216,19 @@ variant_equals_dummy (IntegerVariant d var _ _) = Word d `zeq` asExpr var
 variant_equals_dummy (SetVariant d var _ _) = Word d `zeq` asExpr var
 
 variant_decreased :: Variant -> RawExpr
-variant_decreased (SetVariant d var _ Up)       = ($typeCheck) $ Right (Word d) `zsubset` Right (asExpr var)
+variant_decreased (SetVariant d var _ Up)       = fromRight' $ Right (Word d) `zsubset` Right (asExpr var)
 variant_decreased (IntegerVariant d var _ Up)   = Word d `zless` asExpr var
-variant_decreased (SetVariant d var _ Down)     = ($typeCheck) $ Right (asExpr var) `zsubset` Right (Word d)
+variant_decreased (SetVariant d var _ Down)     = fromRight' $ Right (asExpr var) `zsubset` Right (Word d)
 variant_decreased (IntegerVariant d var _ Down) = asExpr var `zless` Word d
 
 variant_bounded :: Variant -> RawExpr
 --variant_bounded (SetVariant d var _ _)     = error "set variants unavailable"
 variant_bounded (IntegerVariant _ var b Down) = asExpr b `zle` asExpr var
 variant_bounded (IntegerVariant _ var b Up)   = asExpr var `zle` asExpr b
-variant_bounded (SetVariant _ var b Down) = ($typeCheck) $ 
+variant_bounded (SetVariant _ var b Down) = fromRight' $ 
     mzand (Right (asExpr b) `zsubset` Right (asExpr var))
           (mzfinite $ Right (asExpr var) `zsetdiff` Right (asExpr b))
-variant_bounded (SetVariant _ var b Up)   = ($typeCheck) $ 
+variant_bounded (SetVariant _ var b Up)   = fromRight' $ 
     mzand (Right (asExpr var) `zsubset` Right (asExpr b))
           (mzfinite $ Right (asExpr b) `zsetdiff` Right (asExpr var))
 

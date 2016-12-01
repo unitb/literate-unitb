@@ -286,5 +286,5 @@ lookup k m = maybe (left $ errorTrace [$__FILE__] ?loc (show k)) return $ m^?ix 
 
 edit :: FilePath -> IO ()
 edit str = do
-    readProcess "edit" [] str
+    _ <- readProcess "edit" [] str
     return ()
