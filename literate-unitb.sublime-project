@@ -122,7 +122,7 @@
 		{
 			"file_include_patterns":
 			[
-				"*.cabal", "stack.yaml"
+				"*.cabal", "*.yaml", "*.yml"
 			],
 			"path": "."
 		},

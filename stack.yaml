@@ -32,7 +32,7 @@ packages:
     commit: 78529049b88999df3eb76340db166d9892d46bfd
 - location:
     git: https://github.com/unitb/literate-unitb-logic.git
-    commit: f61377e9b031100edaa2c2dbe5e4eb22dfd98ad2
+    commit: 090b923af7365eb1c85bea1093d3736aa7647d28
 - location:
     git: https://github.com/unitb/syntax-error.git
     commit: 764f224e42816961ae5742996d7c8eedcd145fde
@@ -44,7 +44,7 @@ packages:
     commit: 0f1629aa99c0a74bccd4e98e63960361175d16c6
 - location:
     git: https://github.com/unitb/unitb-testing.git
-    commit: 62b4a3ab00527dfda35f5f70394bacf2bfb4c5e5
+    commit: 9d3036afb6adf9ee00435fc6fa98e6a3cc604241
 - location:
     git: https://github.com/unitb/typelist-functor.git
     commit: 58648576c10906df5b3de12ce27715e129e818d0
