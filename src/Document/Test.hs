@@ -29,6 +29,7 @@ import qualified Document.Tests.TerminationDetection as Term
 import qualified Document.Phase.Test as PhTest
 import Document.Tests.Suite (find_errors)
 
+import Document.Phase.Declarations as PDecl
 import Document.Phase.Expressions as PExp 
 
 import Latex.Parser

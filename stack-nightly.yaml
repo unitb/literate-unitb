@@ -32,7 +32,7 @@ packages:
     commit: 78529049b88999df3eb76340db166d9892d46bfd
 - location:
     git: https://github.com/unitb/literate-unitb-logic.git
-    commit: 090b923af7365eb1c85bea1093d3736aa7647d28
+    commit: 0888bf907d3826f8861f5618778524bb5496c556
 - location:
     git: https://github.com/unitb/syntax-error.git
     commit: 764f224e42816961ae5742996d7c8eedcd145fde
