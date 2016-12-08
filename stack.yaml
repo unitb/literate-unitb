@@ -84,6 +84,9 @@ packages:
 - location:
     git: https://github.com/unitb/data-packaged.git
     commit: 25bb09dcdd5220d457b6801fd9c6a2c376343a9f
+- location:
+    git: https://github.com/unitb/existential.git
+    commit: d3b6a4e5fc82893459fe1985bd96c55b0742aa21
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps: 
 - assert-0.0.1.2
@@ -98,7 +101,6 @@ extra-deps:
 - portable-template-haskell-lens-0.1.0.0
 - serialize-instances-0.1.0.0
 - control-invariants-0.1.0.0
-- existential-0.2.0.0
 - axiomatic-classes-0.1.0.0
 - unfoldable-0.1.0.0
 - zlib-0.6.1.0
