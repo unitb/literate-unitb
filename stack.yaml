@@ -23,16 +23,17 @@ packages:
 - '.'
 - location:
     git: https://github.com/unitb/literate-unitb-config.git
-    commit: 118b906d59cf7586782d292baff5ae65988d0b63
+    commit: b100889b5b3989b9693c4628ed942a44acd1a9c1
 - location:
     git: https://github.com/unitb/literate-unitb-utils.git
     commit: 9e62be5a42bc11ecc89bd40284bb73fc2a8407fe
 - location:
     git: https://github.com/unitb/literate-unitb-latex.git
     commit: 78529049b88999df3eb76340db166d9892d46bfd
-- location:
-    git: https://github.com/unitb/literate-unitb-logic.git
-    commit: 0888bf907d3826f8861f5618778524bb5496c556
+- ../literate-unitb-logic
+# - location:
+#     git: https://github.com/unitb/literate-unitb-logic.git
+#     commit: 0888bf907d3826f8861f5618778524bb5496c556
 - location:
     git: https://github.com/unitb/syntax-error.git
     commit: 764f224e42816961ae5742996d7c8eedcd145fde
@@ -68,7 +69,7 @@ packages:
     commit: 6ccc3764141bc014426ee9109315afa8d6e7d353
 - location:
     git: https://github.com/unitb/file-system-mockup.git
-    commit: 681bd9905e0b3b0480e023147d788fc5a64e6cbb
+    commit: 911f0e672618fac47bc997c507305691ff433c39
 - location:
     git: https://github.com/unitb/bipartite-graph.git
     commit: 96675f958d34e8d14d1b2a928f544d4be5719f56

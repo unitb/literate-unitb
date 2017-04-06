@@ -52,12 +52,15 @@ matrix:
   #- env: BUILD=cabal GHCVER=7.8.4 CABALVER=1.18 HAPPYVER=1.19.5 ALEXVER=3.1.7
   #  compiler: ": #GHC 7.8.4"
   #  addons: {apt: {packages: [cabal-install-1.18,ghc-7.8.4,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
-  - env: BUILD=cabal GHCVER=7.10.3 CABALVER=1.22 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  - env: BUILD=cabal GHCVER=7.10.3 CABALVER=1.22 HAPPYVER=1.19.5 ALEXVER=3.1.7 STACKARGS=""
     compiler: ": #GHC 7.10.3"
     addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
-  - env: BUILD=cabal GHCVER=8.0.1 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  - env: BUILD=cabal GHCVER=8.0.1 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7 STACKARGS=""
     compiler: ": #GHC 8.0.1"
     addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.1,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  - env: BUILD=cabal GHCVER=8.0.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7 STACKARGS="--stack-yaml stack-nightly.yaml"
+    compiler: ": #GHC 8.0.2"
+    addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
 
   # Build with the newest GHC and cabal-install. This is an accepted failure,
   # see below.
@@ -71,9 +74,9 @@ matrix:
     compiler: ": #stack default"
     addons: {apt: {packages: [libgmp-dev]}}
 
-  - env: BUILD=stack ARGS="--resolver lts-2"
-    compiler: ": #stack 7.8.4"
-    addons: {apt: {packages: [libgmp-dev]}}
+  #- env: BUILD=stack ARGS="--resolver lts-2"
+  #  compiler: ": #stack 7.8.4"
+  #  addons: {apt: {packages: [libgmp-dev]}}
 
   - env: BUILD=stack ARGS="--resolver lts-3"
     compiler: ": #stack 7.10.2"
@@ -85,6 +88,10 @@ matrix:
 
   - env: BUILD=stack ARGS="--resolver lts-7"
     compiler: ": #stack 8.0.1"
+    addons: {apt: {packages: [libgmp-dev]}}
+
+  - env: BUILD=stack ARGS="--resolver lts-8 --stack-yaml stack-nightly.yaml"
+    compiler: ": #stack 8.0.2"
     addons: {apt: {packages: [libgmp-dev]}}
 
   # Nightly builds are allowed to fail
@@ -111,6 +118,10 @@ matrix:
 
   - env: BUILD=stack ARGS="--resolver lts-7"
     compiler: ": #stack 8.0.1 osx"
+    os: osx
+
+  - env: BUILD=stack ARGS="--resolver lts-8 --stack-yaml stack-nightly.yaml"
+    compiler: ": #stack 8.0.2 osx"
     os: osx
 
   # - env: BUILD=stack ARGS="--resolver nightly"
@@ -203,7 +214,7 @@ install:
       travis_retry cabal update
 
       # Get the list of packages from the stack.yaml file
-      PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@')
+      PACKAGES=$(stack $STACKARGS --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@')
 
       cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
       ;;

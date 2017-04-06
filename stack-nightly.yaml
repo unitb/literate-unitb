@@ -23,7 +23,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/unitb/literate-unitb-config.git
-    commit: 118b906d59cf7586782d292baff5ae65988d0b63
+    commit: b100889b5b3989b9693c4628ed942a44acd1a9c1
 - location:
     git: https://github.com/unitb/literate-unitb-utils.git
     commit: 9e62be5a42bc11ecc89bd40284bb73fc2a8407fe
@@ -68,7 +68,7 @@ packages:
     commit: 6ccc3764141bc014426ee9109315afa8d6e7d353
 - location:
     git: https://github.com/unitb/file-system-mockup.git
-    commit: 681bd9905e0b3b0480e023147d788fc5a64e6cbb
+    commit: 911f0e672618fac47bc997c507305691ff433c39
 - location:
     git: https://github.com/unitb/bipartite-graph.git
     commit: 96675f958d34e8d14d1b2a928f544d4be5719f56
@@ -94,15 +94,15 @@ extra-deps:
 - monoid-transformer-0.0.3
 - portable-lines-0.1
 - pseudomacros-0.0.2
-- MissingH-1.3.0.2
 - lens-4.14
-- pseudomacros-0.0.2
 - quickcheck-report-0.1.0.0
 - portable-template-haskell-lens-0.1.0.0
 - serialize-instances-0.1.0.0
 - control-invariants-0.1.0.0
 - axiomatic-classes-0.1.0.0
-- zlib-0.6.1.0
+- distributive-0.5.1
+- map-syntax-0.2.0.2
+- th-printf-0.3.1
 
 # Override default flag values for local packages and extra-deps
 flags: {}
