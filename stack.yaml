@@ -26,13 +26,13 @@ packages:
     commit: b100889b5b3989b9693c4628ed942a44acd1a9c1
 - location:
     git: https://github.com/unitb/literate-unitb-utils.git
-    commit: 8badf2117e84a7cc1e99583e24db0ef3bdad386a
+    commit: f5425397d730ba0282884f96ed7f8161109ba5ce
 - location:
     git: https://github.com/unitb/literate-unitb-latex.git
     commit: 9dba5727b0a0739a77071bd12bb020afb1f687ae
 - location:
     git: https://github.com/unitb/literate-unitb-logic.git
-    commit: 696be88b4db7f45e194259846f8a1a1008d8f6f6
+    commit: a2a5e2a9f937e62b73d56fb16b4ad4a09d70cab1
 - location:
     git: https://github.com/unitb/syntax-error.git
     commit: 4afedb21cdce20c6cff8cb6b4f8375a99a080ec9
@@ -61,6 +61,9 @@ packages:
     git: https://github.com/unitb/generic-instances.git
     commit: 342e88e34ff238ee432d1ef783ff6275b7d8934d
 - location:
+    git: https://github.com/unitb/serialize-instances.git
+    commit: ff3faa9cf976e68be8d769b5960a1b4db3b9bf63
+- location:
     git: https://github.com/unitb/lens-extra.git
     commit: bb7ff20059db94e2174925f848121dcbd4d50c76
 - location:
@@ -84,6 +87,12 @@ packages:
 - location:
     git: https://github.com/unitb/data-packaged.git
     commit: 7e4d427b271573a3fa64625816eeb950c85d171b
+- location:
+    git: https://github.com/unitb/quickcheck-report.git
+    commit: 1bcc8cd5a91bc660346d1df7eb6ebb1a8152e865
+- location:
+    git: https://github.com/unitb/axiomatic-classes.git
+    commit: 24ce269668f39a74ba1fe0628c4f6d65e092870c
 - location:
     git: https://github.com/unitb/existential.git
     commit: c3ebd7b2b0d20a471c51bcd391dab649a9693606
