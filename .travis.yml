@@ -292,3 +292,9 @@ deploy:
 notifications:
   slack:
     secure: JWlYO2l7UrcbmH82nhusqYyI6z5utqcfkiBA3gLxjWUn6c/UuesDXxRlZczG/8ZOANOylR7bKdfNBT4ninPcz3iB2eJ+J81+Q27AsjKvbn9Jl9OGDlz7R11havy8P1wI5MmpHyeJVaUnJTMN5KY3/WGqB/tLEQCZv3hplAYVCzt3Ko3nxdQr2w2Iy117KcQ4V3TR6wwmu6EB6PYl0NQ9yiN8ff/aw46CiYCxRrgvRLENqUt7ifF1AlOPg6BxcytW1Dv4rrAmmm4PSZpQyzPYCPnALwgqMr9IIfVjfYEw8XgpueK3vhKOYi2U2KTklMTp3w9dhH3HP3prFmT8R85jva0o5mlSFD1NSRVKdFtP2EZ6zF6jyinFIlOrfhEH4ihEqLe/wi9LlsG7HY7rRoMjBOtKlVnHNG3pWz1UG/KkBh3qKx6Ga++asrMLl47Ip+SkWzOBwcc1lijMrzOfFxLy9ghSPzavUpLbD2+9DsL5CBVsquSMY/XTtK6pAkFL+8LeaA2C3mwbthfMPNZs503u02H+FgLpCFMbNr52DtIdyrIqj/XywMrWrD/RgN+cvCwAApYvq3l7aDSQJkwfF26ofBfVzGuVix6xECLSfX2AO4DkallqvpXEXUx4e7eI3QS3ROBSKMsbOBUS5/gcSWRNKZZ9PRmwlh7ryMiIFqGCHzM=
+  webhooks:
+    urls:
+      - "https://scalar.vector.im/api/neb/services/hooks/dHJhdmlzLWNpLyU0MGFtaW5iJTNBbWF0cml4Lm9yZy8lMjF4eUlwdkJPc3FYWWhVRmdWWVclM0FtYXRyaXgub3Jn"
+    on_success: always  # always|never|change
+    on_failure: always
+    on_start: never
