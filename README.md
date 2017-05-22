@@ -72,6 +72,11 @@ A series of test results should appear ending with
 Using Literate Unit-B
 =====================
 
+First off, use the `install-stylesheets-macosx.hs` script in the
+[unitb/literate-unitb-scripts](https://github.com/unitb/literate-unitb-scripts)
+repo to copy the required LaTeX style files to their destination.
+On Linux, the destination path is `~/texmf/tex/`.
+
 In a terminal, launch
 
 	> unitb -c source-file.tex
