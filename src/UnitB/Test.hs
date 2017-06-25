@@ -461,7 +461,7 @@ case3 :: IO [([Var], [Expr])]
 result3 :: [([Var], [Expr])]
 case4 :: IO ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
 result4 :: ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
-(case3, result3, case4, result4) = ($typeCheck) $ do
+(case3, result3, case4, result4) = fromRight' $ do
             e0 <- a
             e1 <- d `mzplus` b
             e2 <- b `mzplus` c
